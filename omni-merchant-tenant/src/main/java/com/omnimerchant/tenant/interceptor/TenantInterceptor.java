@@ -33,7 +33,8 @@ public class TenantInterceptor implements HandlerInterceptor {
             throws IOException {
         String requestPath = request.getRequestURI();
 
-        if (EXCLUDE_PATHS.stream().anyMatch(requestPath::startsWith)
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())
+                || EXCLUDE_PATHS.stream().anyMatch(requestPath::startsWith)
                 || TenantContextHolder.isTenantFilterDisabled()) {
             return true;
         }
