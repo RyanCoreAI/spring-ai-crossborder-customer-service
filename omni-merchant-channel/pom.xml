@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.omnimerchant</groupId>
+        <artifactId>omni-merchant</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>omni-merchant-channel</artifactId>
+    <packaging>jar</packaging>
+    <description>渠道模块：Shopify/Amazon/TikTok Shop 平台适配器</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.omnimerchant</groupId>
+            <artifactId>omni-merchant-tenant</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
+</project>

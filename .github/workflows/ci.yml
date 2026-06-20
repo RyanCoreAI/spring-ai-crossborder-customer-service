@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+      - name: Run unit tests
+        run: mvn -q test
+      - name: Package backend
+        run: mvn -q -DskipTests package
+
+  integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+      - name: Run Testcontainers integration tests
+        run: mvn -q -Pintegration verify
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: omnimerchant-web
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: omnimerchant-web/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Build frontend
+        run: npm run build
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
+  compose:
+    name: Docker Compose Config
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate docker compose config
+        env:
+          ADMIN_EMAIL: ci-admin@example.com
+          ADMIN_PASSWORD: ci-only-password
+          JWT_SECRET: 01234567890123456789012345678901
+          MYSQL_ROOT_PASSWORD: ci-mysql-root-password
+          MYSQL_PASSWORD: ci-mysql-password
+          PG_PASSWORD: ci-postgres-password
+          OPENAI_API_KEY: ci-placeholder
+          ANTHROPIC_API_KEY: ci-placeholder
+          DEEPSEEK_API_KEY: ci-placeholder
+        run: docker compose config --quiet

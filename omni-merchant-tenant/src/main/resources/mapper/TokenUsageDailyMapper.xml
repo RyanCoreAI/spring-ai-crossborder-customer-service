@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.omnimerchant.tenant.mapper.TokenUsageDailyMapper">
+
+    <select id="selectByTenantAndDateRange" resultType="com.omnimerchant.tenant.entity.TokenUsageDaily">
+        SELECT * FROM token_usage_daily
+        WHERE tenant_id = #{tenantId}
+          AND usage_date BETWEEN #{startDate} AND #{endDate}
+        ORDER BY usage_date DESC, model_name
+    </select>
+
+    <select id="selectByTenantAndDate" resultType="com.omnimerchant.tenant.entity.TokenUsageDaily">
+        SELECT * FROM token_usage_daily
+        WHERE tenant_id = #{tenantId}
+          AND usage_date = #{usageDate}
+          AND model_name = #{modelName}
+        LIMIT 1
+    </select>
+</mapper>

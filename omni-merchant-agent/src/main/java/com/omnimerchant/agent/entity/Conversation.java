@@ -1,0 +1,54 @@
+package com.omnimerchant.agent.entity;
+
+import com.baomidou.mybatisplus.annotation.*;
+import lombok.Data;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+@Data
+@TableName("conversation")
+public class Conversation {
+
+    @TableId(type = IdType.ASSIGN_ID)
+    private Long id;
+
+    private String conversationUuid;
+    private Long tenantId;
+    private Long customerId;
+    private String externalCustomerId;
+    private String customerEmail;
+    private String customerName;
+    private String relatedOrderId;
+    private String channel;
+    private String language;
+    private String intentPrimary;
+    private String sentiment;
+    private Integer status;
+    private Integer escalated;
+    private String escalationReason;
+    private LocalDateTime escalatedAt;
+    private Integer priority;
+    private Integer messageCount;
+    private Integer toolCallCount;
+    private Long totalPromptTokens;
+    private Long totalCompletionTokens;
+    private BigDecimal totalCostUsd;
+    private Integer firstResponseMs;
+    private Integer avgResponseMs;
+    private Integer csatScore;
+    private String csatComment;
+    private Integer resolved;
+    private LocalDateTime startedAt;
+    private LocalDateTime lastMessageAt;
+    private LocalDateTime endedAt;
+    private Integer durationSeconds;
+
+    @TableLogic
+    private Integer isDeleted;
+
+    @TableField(fill = FieldFill.INSERT)
+    private LocalDateTime createdAt;
+
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private LocalDateTime updatedAt;
+}

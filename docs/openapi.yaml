@@ -1,0 +1,181 @@
+openapi: 3.0.3
+info:
+  title: OmniMerchant API
+  version: 0.1.0
+  description: Spring AI cross-border ecommerce customer-service platform API.
+servers:
+  - url: http://localhost:8090
+security:
+  - bearerAuth: []
+paths:
+  /api/health:
+    get:
+      summary: Health check
+      security: []
+      responses:
+        '200': { description: OK }
+  /api/admin/login:
+    post:
+      summary: Admin login
+      security: []
+      responses:
+        '200': { description: JWT response }
+  /api/widget/session:
+    post:
+      summary: Create public buyer widget session
+      security: []
+      responses:
+        '200': { description: Widget session response with customerSessionToken and expiresAt }
+  /api/widget/chat/stream:
+    post:
+      summary: Public buyer SSE chat
+      security:
+        - bearerAuth: []
+      responses:
+        '200': { description: text/event-stream }
+        '401': { description: Missing, invalid, or expired customerSessionToken }
+        '403': { description: Token tenant or conversation mismatch }
+  /api/chat/stream:
+    post:
+      summary: Authenticated merchant test SSE chat
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: text/event-stream }
+        '401': { description: Invalid JWT }
+        '403': { description: Tenant membership mismatch }
+  /api/customers:
+    get:
+      summary: List customers
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: keyword, in: query, schema: { type: string } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: size, in: query, schema: { type: integer, default: 20 } }
+      responses:
+        '200': { description: Customer page }
+  /api/orders:
+    get:
+      summary: List orders
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: keyword, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string } }
+      responses:
+        '200': { description: Order page }
+  /api/orders/by-number/{orderNumber}:
+    get:
+      summary: Get order by display number
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: orderNumber, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Order detail }
+  /api/products:
+    get:
+      summary: List products
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: keyword, in: query, schema: { type: string } }
+        - { name: category, in: query, schema: { type: string } }
+      responses:
+        '200': { description: Product page }
+  /api/products/reindex:
+    post:
+      summary: Mark products for vector reindex
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Queued count }
+  /api/escalations:
+    get:
+      summary: List escalation tickets
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: status, in: query, schema: { type: integer } }
+      responses:
+        '200': { description: Escalation page }
+    post:
+      summary: Create escalation ticket
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Escalation detail }
+  /api/escalations/{id}/assign:
+    put:
+      summary: Assign escalation
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200': { description: Escalation detail }
+  /api/escalations/{id}/resolve:
+    put:
+      summary: Resolve escalation
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200': { description: Escalation detail }
+  /api/tool-calls:
+    get:
+      summary: List tool audit records
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Tool-call page }
+  /api/dashboard/commerce:
+    get:
+      summary: Commerce dashboard metrics
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Dashboard metrics }
+  /api/integrations/shopify/connect:
+    post:
+      summary: Save encrypted Shopify credentials
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Connection status }
+  /api/integrations/shopify/sync:
+    post:
+      summary: Sync Shopify customers, products, and orders
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Sync summary }
+  /api/webhooks/shopify:
+    post:
+      summary: Shopify webhook receiver
+      security: []
+      responses:
+        '200': { description: Webhook accepted or rejected with app error code }
+  /api/evals:
+    get:
+      summary: List golden eval cases
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Eval case page }
+  /api/evals/run:
+    post:
+      summary: Run deterministic tenant evals
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Eval run report }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    TenantId:
+      name: X-Tenant-Id
+      in: header
+      required: true
+      schema:
+        type: integer
+        format: int64
