@@ -28,7 +28,8 @@ public class AdminAuthFilter implements Filter {
             "/api/health",
             "/api/admin/login",
             "/api/widget",
-            "/api/webhooks/shopify"
+            "/api/webhooks/shopify",
+            "/api/integrations/shopify/oauth/callback"
     );
 
     private static final Set<String> ADMIN_PATHS = Set.of(
@@ -46,6 +47,8 @@ public class AdminAuthFilter implements Filter {
             "/api/dashboard",
             "/api/integrations",
             "/api/evals",
+            "/api/observability",
+            "/api/rag",
             "/api/admin"
     );
 

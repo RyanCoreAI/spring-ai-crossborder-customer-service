@@ -50,6 +50,18 @@
           <el-icon><Coin /></el-icon>
           <span>用量计费</span>
         </el-menu-item>
+        <el-menu-item index="/admin/observability">
+          <el-icon><Monitor /></el-icon>
+          <span>观测</span>
+        </el-menu-item>
+        <el-menu-item index="/admin/traces">
+          <el-icon><Share /></el-icon>
+          <span>轨迹</span>
+        </el-menu-item>
+        <el-menu-item index="/admin/rag-safety">
+          <el-icon><Lock /></el-icon>
+          <span>RAG 安全</span>
+        </el-menu-item>
         <el-menu-item index="/admin/evals">
           <el-icon><Checked /></el-icon>
           <span>评测</span>
@@ -84,6 +96,9 @@ import {
   Connection,
   Coin,
   Checked,
+  Monitor,
+  Share,
+  Lock,
 } from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 

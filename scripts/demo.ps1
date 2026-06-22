@@ -15,6 +15,10 @@ function Invoke-SqlFile($Path) {
 if (-not $SkipDb) {
     Invoke-SqlFile "sql/db_main.sql"
     Invoke-SqlFile "sql/db_extensions.sql"
+    Invoke-SqlFile "sql/db_observability.sql"
+    Invoke-SqlFile "sql/db_eval_v2.sql"
+    Invoke-SqlFile "sql/db_shopify_v2.sql"
+    Invoke-SqlFile "sql/db_rag_safety.sql"
     Invoke-SqlFile "sql/demo_seed.sql"
     Write-Host "Applying sql/db_vector.sql"
     Get-Content -Raw -Encoding UTF8 "sql/db_vector.sql" | docker exec -i $PostgresContainer sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'

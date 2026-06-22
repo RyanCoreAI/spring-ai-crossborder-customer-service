@@ -17,6 +17,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
         registry.addInterceptor(tenantInterceptor)
                 .addPathPatterns("/api/**")
                 .excludePathPatterns("/api/health", "/api/tenants", "/api/admin/**",
-                        "/api/widget/**", "/api/webhooks/**");
+                        "/api/widget/**", "/api/webhooks/**",
+                        "/api/integrations/shopify/oauth/callback");
     }
 }

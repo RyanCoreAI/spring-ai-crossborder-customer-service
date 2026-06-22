@@ -25,6 +25,8 @@ const TENANT_SCOPED_PATHS = [
   '/dashboard',
   '/integrations',
   '/evals',
+  '/observability',
+  '/rag',
 ]
 
 function isTenantScoped(url?: string) {

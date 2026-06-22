@@ -53,7 +53,7 @@ The hardening targets the OWASP Top 10 for LLM Applications 2025 risk classes mo
 - Sensitive information disclosure: credit-card and SSN-like values are masked before LLM submission.
 - Improper output handling: chat Markdown is sanitized with a DOMPurify allowlist before rendering through `v-html`.
 - Excessive agency and misinformation: LLM tools require tenant context, read from tenant-scoped commerce services, and write `tool_call_log`; high-risk actions such as refund, replacement, and address change create internal approval records instead of mutating external systems directly.
-- Data/model poisoning: knowledge ingestion and RAG retrieval require tenant context; PGVector queries and embedding cache keys are tenant-scoped.
+- Data/model poisoning: knowledge ingestion and RAG retrieval require tenant context; PGVector queries and embedding cache keys are tenant-scoped. New or updated knowledge documents are scanned by `RagSafetyScanner`; risky prompt-injection, hidden instruction, secret/PII, or cross-tenant leakage patterns are quarantined until manually approved.
 
 ## Test Coverage
 

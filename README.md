@@ -3,7 +3,60 @@
 [![CI](https://github.com/RyanCoreAI/spring-ai-crossborder-customer-service/actions/workflows/ci.yml/badge.svg)](https://github.com/RyanCoreAI/spring-ai-crossborder-customer-service/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/RyanCoreAI/spring-ai-crossborder-customer-service/actions/workflows/codeql.yml/badge.svg)](https://github.com/RyanCoreAI/spring-ai-crossborder-customer-service/actions/workflows/codeql.yml)
 
-跨境电商多语言 AI 客服平台。基于 Spring AI Tool Calling / ReAct 风格编排，提供买家聊天入口、商家客服工作台、订单查询、物流追踪、商品推荐、退换货政策 RAG、退货/退款审批请求、多语言翻译、人工升级、Shopify 接入骨架、租户隔离、用量计费和 Agent 评测。
+Open-source Spring AI cross-border ecommerce customer-service platform with multi-tenant security, commerce tools, billing controls, deterministic evals, trace replay, RAG safety, and Shopify connector backbone.
+
+这不是只接一个聊天接口的 RAG demo。OmniMerchant 的公开展示重点是：订单/物流/商品/政策/退货/人工升级的业务闭环，多租户 fail-closed 安全边界，付费 LLM 成本控制，可重复 Agent eval，trajectory replay，RAG ingestion safety，以及 Shopify OAuth/webhook/sync 生产化骨架。
+
+## 公开核验证据
+
+| 证据 | 文件或命令 | 证明内容 |
+|------|------------|----------|
+| 一键本地 demo | `scripts/demo.ps1` / `scripts/demo.sh` | schema、v2 扩展表、seed commerce 数据和 eval cases 可从 fresh clone 初始化 |
+| Deterministic Agent eval | `scripts/run-evals.ps1` | 无 LLM key 也能生成 JSON/Markdown/JUnit 报告 |
+| Trace replay | `/admin/traces` + `agent_run` / `agent_step` | 每次回答可回放 intent、tool、latency、failure category |
+| Observability | `/admin/observability` | AI resolution、tool success、cost、P95 latency、RAG citation、eval pass |
+| RAG safety | `/admin/rag-safety` + `RagSafetyScanner` | prompt injection、hidden HTML/Markdown、PII/secret、cross-tenant 诱导进入审核 |
+| Shopify connector | OAuth/HMAC/cursor sync/webhook replay tests | 证明是 connector backbone，不冒充 App Store 生产 app |
+| API contract | [`docs/openapi.yaml`](docs/openapi.yaml) | v2 管理、eval、trace、RAG safety、Shopify 接口静态契约 |
+
+## 截图矩阵
+
+运行 `.\scripts\capture-screenshots.ps1` 后会生成下面这些页面证据。脚本会登录后台、注入短期 JWT 到临时 Chrome profile，并截图至少 8 个真实路由。
+
+| 页面 | 路由 | 产物 |
+|------|------|------|
+| Buyer Widget | `/widget` | `docs/assets/screenshots/widget.png` |
+| Merchant Login | `/login` | `docs/assets/screenshots/login.png` |
+| Dashboard | `/admin` | `docs/assets/screenshots/dashboard.png` |
+| Inbox | `/admin/inbox` | `docs/assets/screenshots/inbox.png` |
+| Orders | `/admin/orders` | `docs/assets/screenshots/orders.png` |
+| Products | `/admin/products` | `docs/assets/screenshots/products.png` |
+| Tickets | `/admin/tickets` | `docs/assets/screenshots/tickets.png` |
+| Integrations | `/admin/integrations` | `docs/assets/screenshots/integrations.png` |
+| Evals | `/admin/evals` | `docs/assets/screenshots/evals.png` |
+| Observability | `/admin/observability` | `docs/assets/screenshots/observability.png` |
+| Trace Replay | `/admin/traces` | `docs/assets/screenshots/traces.png` |
+| RAG Safety | `/admin/rag-safety` | `docs/assets/screenshots/rag-safety.png` |
+
+当前仓库保留两个轻量示例图，完整后台矩阵由 release smoke 在本地 runtime 生成：
+
+![Widget](docs/assets/screenshots/widget.png)
+
+![Login](docs/assets/screenshots/login.png)
+
+## Eval 证据
+
+默认 deterministic eval 覆盖 30 条 seeded golden conversations，按租户持久化 `agent_eval_run` / `agent_eval_result`，并输出：
+
+| Metric | Source |
+|--------|--------|
+| Pass rate | `reports/agent-eval-report.md` summary table |
+| Tool precision / recall | `agent_eval_run.tool_precision` / `tool_recall` |
+| Citation coverage | `agent_eval_run.citation_coverage` |
+| Poisoning block rate | `agent_eval_run.poisoning_block_rate` |
+| Failed case replay | `agent_eval_result.trace_id` -> `/admin/traces` |
+
+`LIVE_AGENT` 使用真实 LLM，只在显式配置 secret 后运行；默认 CI 和本地验收不依赖外部模型。
 
 ## 技术栈
 
@@ -65,6 +118,10 @@ docker-compose up -d
 # MySQL 建表
 docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_main.sql
 docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_extensions.sql
+docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_observability.sql
+docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_eval_v2.sql
+docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_shopify_v2.sql
+docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_rag_safety.sql
 docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/demo_seed.sql
 
 # PGVector 建表
@@ -172,12 +229,13 @@ mvn -q -Pintegration verify
 .\scripts\run-evals.ps1
 ```
 
-该 eval runner 是基于 seed 数据和业务服务的 keyless deterministic checker；真实 LLM 输出质量评测仍属于后续 v2/CI 扩展项。
+该 eval runner 是基于 seed 数据和业务服务的 keyless deterministic checker；会持久化 eval run/result，并生成可回放 trace。`LIVE_AGENT` 真实模型评测需要显式启用，不作为默认 CI 依赖。
 
 输出：
 
 - `reports/agent-eval-report.json`
 - `reports/agent-eval-report.md`
+- `reports/agent-eval-junit.xml`
 
 ## API 概览
 
@@ -216,10 +274,25 @@ mvn -q -Pintegration verify
 | PUT | `/api/escalations/{id}/resolve` | 解决工单 |
 | GET | `/api/tool-calls` | 工具调用审计 |
 | GET | `/api/dashboard/commerce` | 客服运营指标 |
-| POST | `/api/integrations/shopify/connect` | 保存加密 Shopify 凭证 |
+| POST | `/api/integrations/shopify/connect` | 保存加密 Shopify Custom App 凭证 |
+| GET | `/api/integrations/shopify/install` | 生成 Shopify OAuth 安装 URL |
+| GET | `/api/integrations/shopify/oauth/callback` | Shopify OAuth 回调，验签、校验 state、保存离线 token |
 | POST | `/api/integrations/shopify/sync` | 同步 Shopify 商品/客户/订单 |
+| GET | `/api/integrations/shopify/jobs` | Shopify sync job 列表 |
+| POST | `/api/integrations/shopify/jobs/{jobId}/retry` | 重试失败 sync job |
+| GET | `/api/integrations/shopify/webhooks` | Webhook 入库与处理状态列表 |
+| POST | `/api/integrations/shopify/webhooks/{eventId}/replay` | 重放失败/待处理 webhook |
 | GET | `/api/evals` | Agent golden case 列表 |
-| POST | `/api/evals/run` | 执行当前租户 deterministic Agent eval |
+| POST | `/api/evals/run` | 执行 deterministic 或 opt-in live Agent eval |
+| GET | `/api/evals/runs` | Eval run history |
+| GET | `/api/evals/runs/{runId}` | Eval run detail |
+| GET | `/api/observability/summary` | AI 解决率、升级率、成本、延迟、失败率等汇总 |
+| GET | `/api/observability/failures` | 失败归因 bucket |
+| GET | `/api/observability/traces` | Agent trace 列表 |
+| GET | `/api/observability/traces/{traceId}` | Agent trajectory replay 明细 |
+| GET | `/api/rag/safety/docs` | RAG ingestion safety review 列表 |
+| POST | `/api/rag/safety/docs/{docUuid}/approve` | 允许文档进入索引 |
+| POST | `/api/rag/safety/docs/{docUuid}/reject` | 拒绝/隔离风险文档 |
 
 ### 对话接口（需 JWT + X-Tenant-Id 头）
 
@@ -230,7 +303,7 @@ mvn -q -Pintegration verify
 
 ## 核心能力
 
-**客服工作台** — `/admin/inbox`、`/admin/orders`、`/admin/products`、`/admin/customers`、`/admin/tickets`、`/admin/integrations`、`/admin/usage`、`/admin/evals` 覆盖商家客服日常操作。
+**客服工作台** — `/admin/inbox`、`/admin/orders`、`/admin/products`、`/admin/customers`、`/admin/tickets`、`/admin/integrations`、`/admin/usage`、`/admin/evals`、`/admin/observability`、`/admin/traces`、`/admin/rag-safety` 覆盖客服操作、回归评测、失败归因和 RAG 审核。
 
 **买家 Widget** — `/widget` 公开聊天入口，不依赖管理员 JWT；创建 session 后使用短期 `WIDGET_CUSTOMER` token 绑定 tenant 与 conversation，订单敏感信息必须通过订单邮箱或手机号校验。
 
@@ -238,7 +311,7 @@ mvn -q -Pintegration verify
 
 **9 大业务工具** — `queryOrder`、`trackLogistics`、`searchProductCatalog`、`refundPolicyRAG`、`createReturnRequest`、`requestRefundOrReplacement`、`requestAddressChange`、`translate`、`escalateToHuman`。查询类可自动执行；退款、补发、改地址只创建内部审批请求，不让 LLM 直接修改外部平台。
 
-**Demo 数据闭环** — `sql/demo_seed.sql` 提供 2 个租户、10 个客户、20 个商品、30 个订单、物流轨迹、政策文档和 10 条 Agent 评测用例。推荐演示问题：
+**Demo 数据闭环** — `sql/demo_seed.sql` 提供 2 个租户、10 个客户、20 个商品、30 个订单、物流轨迹、政策文档和 30 条 Agent 评测用例。推荐演示问题：
 
 - `Where is my order #1001? My email is ava@example.com.`
 - `Can I return my rain jacket from #1002? lucia@example.es`
@@ -255,10 +328,20 @@ mvn -q -Pintegration verify
 
 **多租户隔离** — JWT claims 绑定平台管理员或租户授权，X-Tenant-Id 必须通过 membership 校验后才写入上下文；MyBatis-Plus TenantLineInnerInterceptor 自动注入 WHERE tenant_id = ?，缺租户上下文时拒绝业务表 SQL。PGVector 查询手动带 tenant_id。
 
-### v1 Scope Notes
+**Agent Eval 与 Trace Replay** — `agent_eval_run`、`agent_eval_result`、`agent_run`、`agent_step` 持久化评测和执行轨迹；deterministic eval 默认无 LLM key 可跑，失败 case 可跳转 trace timeline 做工具选择和失败归因。
 
-- Shopify 是 Custom App token + webhook HMAC + 同步导入骨架，不是完整 Shopify App Store 安装流程，也不会由 LLM 直接执行退款/取消/改地址等外部写操作。
-- Agent eval 是 deterministic service-level 回归，用来证明工具选择边界、身份校验和拒绝策略；端到端 LLM judge/在线指标看板留到 v2。
+**RAG Safety** — 文档入库后先经过 `RagSafetyScanner` 生成 `rag_safety_review`，高风险 prompt injection、隐藏 HTML/Markdown 指令、疑似密钥/PII、跨租户诱导默认隔离，人工 approve 后才允许索引。
+
+**Observability** — `/admin/observability` 和 `/admin/traces` 从本地 MySQL 聚合 AI resolution、升级、工具成功率、失败类别、RAG citation coverage、eval pass rate、成本和 P95 latency；Actuator 暴露 health/prometheus。
+
+**Shopify v2 connector backbone** — 保留 Custom App token 开发路径，同时增加 OAuth install/callback、cursor sync job、GraphQL throttle backoff、webhook status/DLQ/replay 和 order/product/customer/fulfillment/refund cache mutation。当前不声称 Shopify App Store 上架、embedded admin billing 或真实退款写操作。
+
+### v2 Scope Notes
+
+- Shopify 已有 OAuth install/callback、HMAC、cursor sync job、GraphQL throttle backoff、webhook 入库、payload-specific cache mutation 和 replay/DLQ 管理面；App Store embedded/billing、token rotation 自动化和真实外部写操作仍是后续生产化工作。
+- Agent eval 已有 30 条 seed golden cases、持久化 run/result、tool-selection scorer、citation faithfulness checker、JSON/Markdown/JUnit 报告和 trace link；`LIVE_AGENT` 真实模型评测是 opt-in，不污染默认 CI。
+- Observability 是本地 DB + Micrometer/Prometheus 的最小可展示方案；没有强依赖 Langfuse、Jaeger 或 Grafana。
+- RAG safety 是 deterministic ingestion scanner + 人工 approve/reject + citation faithfulness checker；更细粒度 sentence-level unsupported-claim 检查仍可继续加强。
 - Testcontainers profile 已提供 MySQL、Redis、PostgreSQL/pgvector 回归入口；本地 Docker 不可用时默认单测和 package 不依赖真实外部服务。
 
 ## Security model
@@ -279,6 +362,12 @@ mvn -q -Pintegration verify
 - 架构图与数据边界：[`docs/architecture.md`](docs/architecture.md)
 - OpenAPI 草案：[`docs/openapi.yaml`](docs/openapi.yaml)
 - Demo 发布脚本与截图清单：[`docs/demo-launch.md`](docs/demo-launch.md)
+- v2 求职旗舰收口清单：[`docs/v2-release-checklist.md`](docs/v2-release-checklist.md)
+- Agent eval 设计与命令：[`docs/evals.md`](docs/evals.md)
+- Trace replay 与观测：[`docs/observability.md`](docs/observability.md)
+- RAG 安全审核：[`docs/rag-security.md`](docs/rag-security.md)
+- Shopify 生产化 connector 边界：[`docs/shopify-production-connector.md`](docs/shopify-production-connector.md)
+- 90 秒 demo 录制脚本：[`scripts/demo-recording.md`](scripts/demo-recording.md)
 - 开源可信度审计：[`docs/open-source-audit-2026-06-20.md`](docs/open-source-audit-2026-06-20.md)
 
 截图生成：
@@ -286,10 +375,6 @@ mvn -q -Pintegration verify
 ```powershell
 .\scripts\capture-screenshots.ps1
 ```
-
-![Buyer widget](docs/assets/screenshots/widget.png)
-
-![Merchant login](docs/assets/screenshots/login.png)
 
 ## 配置参考
 

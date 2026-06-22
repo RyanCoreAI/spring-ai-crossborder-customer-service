@@ -223,6 +223,167 @@ public final class CommerceDtos {
             List<EvalRunResult> results) {
     }
 
+    public record EvalRunRequest(
+            String mode,
+            java.util.List<String> caseCodes,
+            Boolean failOnThreshold) {
+    }
+
+    public record EvalRunVO(
+            Long id,
+            String runUuid,
+            String runMode,
+            String status,
+            int totalCases,
+            int passedCases,
+            int failedCases,
+            java.math.BigDecimal passRate,
+            java.math.BigDecimal toolPrecision,
+            java.math.BigDecimal toolRecall,
+            java.math.BigDecimal citationCoverage,
+            java.math.BigDecimal poisoningBlockRate,
+            String failureSummary,
+            java.time.LocalDateTime startedAt,
+            java.time.LocalDateTime finishedAt) {
+    }
+
+    public record EvalResultVO(
+            String caseCode,
+            String intent,
+            String status,
+            String expectedOutcome,
+            String actualObservation,
+            String expectedTools,
+            String actualTools,
+            String forbiddenTools,
+            java.math.BigDecimal toolPrecision,
+            java.math.BigDecimal toolRecall,
+            boolean argumentMatch,
+            boolean forbiddenToolViolation,
+            boolean citationRequired,
+            boolean citationPassed,
+            boolean poisoningCase,
+            boolean safetyPassed,
+            String traceId,
+            String failureCategory) {
+    }
+
+    public record TraceSummaryVO(
+            String traceId,
+            String conversationUuid,
+            String runType,
+            String intent,
+            String modelName,
+            String status,
+            String failureCategory,
+            Integer toolCallCount,
+            Integer citationCount,
+            Integer firstTokenLatencyMs,
+            Integer totalLatencyMs,
+            java.math.BigDecimal costUsd,
+            java.time.LocalDateTime startedAt,
+            java.time.LocalDateTime finishedAt) {
+    }
+
+    public record TraceStepVO(
+            Integer stepIndex,
+            String stepType,
+            String name,
+            String status,
+            String inputSummary,
+            String outputSummary,
+            String toolCallId,
+            Integer latencyMs,
+            String failureCategory,
+            String failureReason,
+            String metadataJson,
+            java.time.LocalDateTime createdAt) {
+    }
+
+    public record TraceDetailVO(
+            TraceSummaryVO run,
+            java.util.List<TraceStepVO> steps) {
+    }
+
+    public record ObservabilitySummaryVO(
+            long conversations,
+            long aiResolved,
+            long escalations,
+            long toolCalls,
+            long failedToolCalls,
+            long traces,
+            long failedTraces,
+            long safetyBlocks,
+            long ragCitationRuns,
+            long evalRuns,
+            java.math.BigDecimal latestEvalPassRate,
+            double aiResolutionRate,
+            double escalationRate,
+            double toolSuccessRate,
+            double fallbackRate,
+            double safetyBlockRate,
+            double ragCitationCoverage,
+            java.math.BigDecimal estimatedCost,
+            Integer p95FirstTokenLatencyMs,
+            Integer p95FullResponseLatencyMs,
+            long shopifyWebhookBacklog) {
+    }
+
+    public record FailureBucketVO(
+            String category,
+            long count,
+            double rate) {
+    }
+
+    public record RagSafetyReviewVO(
+            Long id,
+            String docUuid,
+            String sourceType,
+            String riskLevel,
+            String status,
+            Integer indexAllowed,
+            String matchedRules,
+            String redactedExcerpt,
+            String reviewNote,
+            java.time.LocalDateTime reviewedAt,
+            java.time.LocalDateTime createdAt) {
+    }
+
+    public record ShopifyInstallResponse(
+            String status,
+            String installUrl,
+            String state,
+            String message) {
+    }
+
+    public record ShopifyJobVO(
+            Long id,
+            String shopDomain,
+            String resource,
+            String cursorValue,
+            String status,
+            Integer attempts,
+            String lastError,
+            java.time.LocalDateTime nextRunAt,
+            java.time.LocalDateTime lastRunAt,
+            Integer importedCount,
+            String throttleStatusJson) {
+    }
+
+    public record ShopifyWebhookVO(
+            Long id,
+            String eventUuid,
+            String topic,
+            String resourceType,
+            Integer signatureValid,
+            Integer status,
+            Integer processAttempts,
+            String lastError,
+            java.time.LocalDateTime nextRetryAt,
+            java.time.LocalDateTime processedAt,
+            java.time.LocalDateTime createdAt) {
+    }
+
     public record PageResult<T>(long total, List<T> records) {
     }
 }

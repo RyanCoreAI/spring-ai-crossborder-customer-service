@@ -1,0 +1,39 @@
+package com.omnimerchant.agent.entity;
+
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.Data;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+@Data
+@TableName("agent_eval_run")
+public class AgentEvalRun {
+    @TableId(type = IdType.ASSIGN_ID)
+    private Long id;
+    private Long tenantId;
+    private String runUuid;
+    private String runMode;
+    private String gitCommit;
+    private String modelConfig;
+    private String status;
+    private Integer totalCases;
+    private Integer passedCases;
+    private Integer failedCases;
+    private BigDecimal passRate;
+    private BigDecimal toolPrecision;
+    private BigDecimal toolRecall;
+    private BigDecimal citationCoverage;
+    private BigDecimal poisoningBlockRate;
+    private String failureSummary;
+    private LocalDateTime startedAt;
+    private LocalDateTime finishedAt;
+    @TableField(fill = FieldFill.INSERT)
+    private LocalDateTime createdAt;
+    @TableField(fill = FieldFill.INSERT_UPDATE)
+    private LocalDateTime updatedAt;
+}

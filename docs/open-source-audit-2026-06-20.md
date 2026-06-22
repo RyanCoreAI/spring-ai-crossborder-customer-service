@@ -6,20 +6,20 @@ Audience: GitHub readers evaluating whether this is a credible Spring AI multi-t
 
 ## Verdict
 
-**Updated score: 79 / 100**
+**Updated score: 86 / 100**
 
-OmniMerchant has moved from a security-focused Spring AI sample into a credible **open-source cross-border ecommerce AI customer-service platform v1**. The project now has tenant-scoped commerce APIs, real order/logistics/product/customer/ticket data models, structured tool outputs, tool-call audit logging, buyer widget entrypoint, merchant workbench pages, Shopify connector skeleton with encrypted credentials and webhook HMAC verification, deterministic demo seed data, and an Agent eval dataset.
+OmniMerchant has moved from a security-focused Spring AI sample into a credible **open-source cross-border ecommerce AI customer-service platform v2 baseline**. The project now has tenant-scoped commerce APIs, real order/logistics/product/customer/ticket data models, structured tool outputs, tool-call audit logging, buyer widget entrypoint, merchant workbench pages, Shopify OAuth + cursor sync + webhook processors, deterministic demo seed data, persisted Agent eval runs, trajectory replay, observability APIs, and RAG safety review.
 
-It is still not a production replacement for Gorgias, Fin, Zendesk, or Dify. The remaining gap is operational maturity: real hosted demo assets, screenshots/GIF, deeper agent eval automation, observability dashboards, and hardened live Shopify sync coverage.
+It is still not a production replacement for Gorgias, Fin, Zendesk, or Dify. The remaining gap is production operations and market proof: real hosted demo assets, screenshots/GIF, provider-backed live eval evidence, Shopify App Store embedded/billing flow, token rotation automation, and broader channel integrations.
 
 | Area | Score | Reason |
 |---|---:|---|
 | Security and multi-tenant credibility | 22 / 25 | JWT membership, tenant fail-closed, SQL fail-closed, DOMPurify output handling, Redis fail-closed, customer order verification, and approval-gated actions are strong. |
-| Engineering verifiability | 18 / 20 | Maven, npm, audit, package, compose config, CI, CodeQL, deterministic SQL seed, and Testcontainers profile are present; Docker was unavailable locally so containers were skipped. |
-| AI architecture quality | 12 / 15 | Tool calling, product/order/logistics/policy/escalation tools, Reactor resilience, model routing, and tool audit logging are present; durable ReAct trace UI and automated eval runner remain next. |
-| Product and competitor differentiation | 11 / 15 | The app now has a real helpdesk console, widget, demo commerce data, and Shopify-first connector shape; commercial-grade channel breadth and outcome analytics remain incomplete. |
-| Open-source packaging and docs | 10 / 15 | README, setup path, API list, demo scripts/data, and positioning are clearer; screenshots, GIF/video, and public hosted demo are still missing. |
-| Maintainability and ops readiness | 6 / 10 | Modules remain understandable and scoped; monitoring, migrations, deployment runbooks, and dependency freshness still need work. |
+| Engineering verifiability | 18 / 20 | Maven, npm, audit, package, compose config, deterministic SQL seed, eval reports, and Testcontainers profile are present; Docker-based integration still depends on local environment. |
+| AI architecture quality | 14 / 15 | Tool calling, product/order/logistics/policy/escalation tools, Reactor resilience, model routing, tool audit logging, persisted traces, eval runner, and citation checker are present. |
+| Product and competitor differentiation | 12 / 15 | The app has a real helpdesk console, widget, demo commerce data, and Shopify-first connector; commercial-grade channel breadth and live outcome benchmarks remain incomplete. |
+| Open-source packaging and docs | 12 / 15 | README, setup path, API list, demo scripts/data, v2 docs, eval docs, and launch script are present; screenshots, GIF/video, and public hosted demo are still missing. |
+| Maintainability and ops readiness | 8 / 10 | Modules remain scoped; observability, failure categories, Prometheus, and replay exist. Real migrations, deployment runbooks, token rotation, and external monitoring remain work. |
 
 ## Current Repository Evidence
 
@@ -32,8 +32,12 @@ Implemented platform evidence:
 - Refund, replacement, return, and address-change tools create internal approval requests only; they do not write external ecommerce systems.
 - Commerce APIs now cover customers, orders, products, escalations, tool calls, dashboard metrics, integrations, evals, widget sessions, and Shopify webhooks.
 - Tool calls are persisted to `tool_call_log` with tenant, conversation, params summary, result summary, latency, status, and error fields.
-- Demo data includes 2 tenants, 10 customers, 20 products, 30 orders, shipping histories, policy docs, widget channel installs, and 10 eval cases.
-- Frontend now includes merchant pages for inbox, customers, orders, products, tickets, integrations, usage, evals, and a public widget page.
+- Demo data includes 2 tenants, 10 customers, 20 products, 30 orders, shipping histories, policy docs, widget channel installs, and 30 eval cases.
+- Frontend now includes merchant pages for inbox, customers, orders, products, tickets, integrations, usage, evals, observability, trace replay, RAG safety, and a public widget page.
+- Agent eval runs are persisted to `agent_eval_run` / `agent_eval_result`, scored with tool selection precision/recall, poisoning block rate, and citation coverage.
+- Agent execution traces are persisted to `agent_run` / `agent_step`, with failure attribution and replay APIs.
+- RAG documents are scanned by `RagSafetyScanner`; policy answers are checked by `CitationFaithfulnessChecker`.
+- Shopify sync jobs track resource cursors and GraphQL throttle status; verified webhooks update product, customer, order, fulfillment, and refund cache data.
 - Local verification passed:
   - `mvn -q test`
   - `mvn -q -DskipTests package`
@@ -45,10 +49,10 @@ Implemented platform evidence:
 
 Remaining credibility gaps:
 
-- No screenshots, GIF, video, or hosted demo yet.
-- Agent eval cases are seeded but not yet executed by a CI-visible eval runner.
-- Shopify sync is a v1 Admin GraphQL import path, not a fully hardened production connector.
-- No OpenAPI spec or generated API docs yet.
+- Screenshot capture script and README matrix exist; hosted demo, GIF, and video are still missing.
+- Live provider-backed eval is opt-in and not run by default.
+- Shopify connector is stronger but still not an App Store embedded/billing app and does not execute external write actions.
+- Static OpenAPI spec is present, but it must stay in sync with DTOs because it is not generated from code.
 - Frontend still reports a Vite large chunk warning.
 - Spring Boot remains at 3.2.5 while dependency freshness should be revisited before public launch.
 
@@ -67,7 +71,7 @@ Security and LLM risk baseline:
 - [OWASP LLM Top 10 2025](https://genai.owasp.org/llm-top-10/) includes Prompt Injection, Sensitive Information Disclosure, Data and Model Poisoning, Improper Output Handling, Excessive Agency, Vector and Embedding Weaknesses, Misinformation, and Unbounded Consumption.
 - OmniMerchant now directly addresses Excessive Agency by gating refunds, replacements, returns, and address changes behind internal approval requests.
 - DOMPurify output sanitization addresses Improper Output Handling on the frontend.
-- The seeded eval cases cover prompt injection, RAG poisoning, customer/order data leakage, and unsafe tool use, but need automated scoring.
+- The seeded eval cases cover prompt injection, RAG poisoning, customer/order data leakage, and unsafe tool use; deterministic scoring now records pass rate, tool precision/recall, citation coverage, and poisoning block rate.
 
 Commercial and open-source competitors:
 
@@ -79,37 +83,37 @@ Commercial and open-source competitors:
 
 ## Top Risks
 
-### P0 - No visual proof path yet
+### P0 - No hosted visual proof yet
 
-Evidence: The backend and frontend now build, and seed data exists, but there are no screenshots, GIF, or hosted demo.
+Evidence: The backend and frontend now build, seed data exists, and `scripts/capture-screenshots.ps1` captures public and authenticated routes. A hosted demo and GIF/video are still missing.
 
 Impact: GitHub visitors cannot judge product completeness in under a minute.
 
-Fix: Add screenshots for widget, inbox, order detail/list, product catalog, ticket queue, integrations, and evals; add a 90-second GIF using seeded scenarios.
+Fix: Commit the screenshot matrix generated from seeded data and add a 90-second GIF using the fixed demo script.
 
-### P1 - Eval runner is not automated
+### P1 - Live eval and hosted evidence are still missing
 
-Evidence: `agent_eval_case` seed data exists, but there is no command that runs those cases and reports pass/fail.
+Evidence: Deterministic eval and trace replay exist, but provider-backed `LIVE_AGENT` eval requires explicit secrets and there is no published hosted demo/GIF.
 
-Impact: The project cannot yet prove correct tool use, refusal behavior, groundedness, or escalation quality.
+Impact: GitHub readers can verify engineering depth locally, but cannot see model-quality evidence instantly.
 
-Fix: Add a keyless eval runner for deterministic tool/service cases and an opt-in LLM eval profile for provider-backed runs.
+Fix: Run live eval in a secret-backed environment, publish the report artifact, and add the 90-second GIF using seeded scenarios.
 
-### P1 - Shopify connector needs production hardening
+### P1 - Shopify connector is not App Store production complete
 
-Evidence: Encrypted credential storage, Admin GraphQL sync, and HMAC webhook recording exist, but sync coverage is intentionally small.
+Evidence: OAuth, HMAC, cursor sync, throttle backoff, webhook processors, and replay exist. Missing pieces are embedded app UI, billing, token rotation automation, captured fixture breadth, and approved external write execution.
 
-Impact: It is a credible connector skeleton, not a merchant-ready app install flow.
+Impact: It is a credible production connector backbone, not a merchant-ready Shopify App Store app.
 
-Fix: Add cursor pagination, webhook event processors, retry status transitions, token rotation docs, and integration tests with captured Shopify payload fixtures.
+Fix: Add fixture-backed webhook/sync tests, token rotation docs, OAuth install UX, and explicit approval execution for selected non-LLM writes.
 
-### P1 - API documentation is still manual
+### P1 - API documentation is static, not generated
 
-Evidence: README lists endpoints, but there is no OpenAPI spec.
+Evidence: `docs/openapi.yaml` documents the v2 public, admin, eval, observability, RAG safety, and Shopify endpoints, but it is maintained manually.
 
-Impact: Integrators and reviewers need to inspect code to know request/response shapes.
+Impact: Integrators can inspect the contract quickly, but drift is possible unless API changes update the spec in the same commit.
 
-Fix: Add springdoc-openapi or a static OpenAPI file generated from current DTOs.
+Fix: Keep `docs/openapi.yaml` in the release gate now; consider `springdoc-openapi` later if runtime-generated docs become worth the dependency.
 
 ### P2 - Frontend bundle warning remains
 
@@ -127,21 +131,21 @@ Fix: Add manual chunks for Element Plus and Markdown/DOMPurify after screenshots
 - Add `scripts/demo.ps1` and `scripts/demo.sh` to load schema, extensions, seed, and print demo questions.
 - Add docs explaining order verification and approval-gated actions.
 
-### Week 2 - Eval automation
+### Week 2 - Live eval proof
 
-- Build an offline eval runner around `agent_eval_case`.
-- Score expected tool calls, safe refusal, customer verification, and action gating.
-- Publish eval output as a Markdown/JSON artifact.
+- Run `LIVE_AGENT` eval in a secret-backed environment.
+- Publish deterministic and live Markdown/JSON/JUnit reports.
+- Add trace links for failed cases in README screenshots.
 
-### Week 3 - Shopify hardening
+### Week 3 - Shopify proof
 
-- Add cursor pagination and fixture-backed tests.
-- Implement webhook event processors for order/customer/product/fulfillment updates.
-- Add retry and replay controls for failed webhook events.
+- Add captured Shopify payload fixtures for orders/products/customers/fulfillments/refunds.
+- Smoke OAuth install with a development store.
+- Document token rotation and rate-limit recovery behavior.
 
 ### Week 4 - API and launch polish
 
-- Add OpenAPI docs.
+- Keep OpenAPI docs synced with v2 endpoints.
 - Add architecture diagram and data-flow diagram.
 - Split frontend chunks if needed.
 - Re-run dependency freshness review for Spring Boot and core libraries.

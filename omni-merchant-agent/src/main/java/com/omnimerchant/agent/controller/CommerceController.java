@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
@@ -137,8 +138,19 @@ public class CommerceController {
     }
 
     @PostMapping("/evals/run")
-    public R<?> runEvals() {
-        return R.ok(evalRunnerService.runEnabledCases());
+    public R<?> runEvals(@RequestBody(required = false) CommerceDtos.EvalRunRequest request) {
+        return R.ok(evalRunnerService.runCases(request));
+    }
+
+    @GetMapping("/evals/runs")
+    public R<?> evalRuns(@RequestParam(defaultValue = "1") int page,
+                         @RequestParam(defaultValue = "20") int size) {
+        return R.ok(evalRunnerService.listRuns(page, size));
+    }
+
+    @GetMapping("/evals/runs/{runId}")
+    public R<?> evalRun(@PathVariable Long runId) {
+        return R.ok(evalRunnerService.getRun(runId));
     }
 
     @PostMapping("/widget/session")
@@ -186,9 +198,43 @@ public class CommerceController {
         return R.ok(shopifyService.connect(request));
     }
 
+    @GetMapping("/integrations/shopify/install")
+    public R<?> installShopify(@RequestParam String shop) {
+        return R.ok(shopifyService.install(shop));
+    }
+
+    @GetMapping("/integrations/shopify/oauth/callback")
+    public R<?> shopifyOAuthCallback(HttpServletRequest request) {
+        var params = request.getParameterMap().entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().length == 0 ? "" : e.getValue()[0]));
+        return R.ok(shopifyService.completeOAuthCallback(params));
+    }
+
     @PostMapping("/integrations/shopify/sync")
     public R<?> syncShopify() {
         return R.ok(shopifyService.sync());
+    }
+
+    @GetMapping("/integrations/shopify/jobs")
+    public R<?> shopifyJobs(@RequestParam(defaultValue = "1") int page,
+                            @RequestParam(defaultValue = "20") int size) {
+        return R.ok(shopifyService.listJobs(page, size));
+    }
+
+    @PostMapping("/integrations/shopify/jobs/{jobId}/retry")
+    public R<?> retryShopifyJob(@PathVariable Long jobId) {
+        return R.ok(shopifyService.retryJob(jobId));
+    }
+
+    @GetMapping("/integrations/shopify/webhooks")
+    public R<?> shopifyWebhooks(@RequestParam(defaultValue = "1") int page,
+                                @RequestParam(defaultValue = "20") int size) {
+        return R.ok(shopifyService.listWebhooks(page, size));
+    }
+
+    @PostMapping("/integrations/shopify/webhooks/{eventId}/replay")
+    public R<?> replayShopifyWebhook(@PathVariable Long eventId) {
+        return R.ok(shopifyService.replayWebhook(eventId));
     }
 
     @PostMapping("/webhooks/shopify")
@@ -216,7 +262,8 @@ public class CommerceController {
         if (!valid) {
             return R.fail("C001", "Shopify webhook signature verification failed");
         }
-        return R.ok(Map.of("eventId", event.getId(), "status", "accepted"));
+        var processed = shopifyService.processWebhookEvent(event.getId());
+        return R.ok(Map.of("eventId", event.getId(), "status", "accepted", "processor", processed.status()));
     }
 
     private SseEmitter streamChat(Long tenantId, String conversationUuid, String message, String intent) {

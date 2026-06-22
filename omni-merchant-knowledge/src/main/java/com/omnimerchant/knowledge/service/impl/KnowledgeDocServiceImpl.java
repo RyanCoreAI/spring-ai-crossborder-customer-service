@@ -11,9 +11,11 @@ import com.omnimerchant.knowledge.dto.KnowledgeDocVO;
 import com.omnimerchant.knowledge.entity.KnowledgeDoc;
 import com.omnimerchant.knowledge.mapper.KnowledgeDocMapper;
 import com.omnimerchant.knowledge.service.KnowledgeDocService;
+import com.omnimerchant.knowledge.service.RagSafetyReviewService;
 import com.omnimerchant.tenant.context.TenantContextHolder;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +25,9 @@ import java.util.UUID;
 @Service
 public class KnowledgeDocServiceImpl extends ServiceImpl<KnowledgeDocMapper, KnowledgeDoc>
         implements KnowledgeDocService {
+
+    @Autowired(required = false)
+    private RagSafetyReviewService ragSafetyReviewService;
 
     @Override
     public IPage<KnowledgeDocVO> listDocs(Long tenantId, String docType, int page, int size) {
@@ -61,6 +66,7 @@ public class KnowledgeDocServiceImpl extends ServiceImpl<KnowledgeDocMapper, Kno
         doc.setPriority(dto.getPriority() != null ? dto.getPriority() : 0);
         doc.setStatus(dto.getStatus() != null ? dto.getStatus() : 1);
         save(doc);
+        scanForRagSafety(doc);
         log.info("知识文档创建成功: docUuid={}, title={}", doc.getDocUuid(), doc.getTitle());
         return toVO(doc);
     }
@@ -76,8 +82,11 @@ public class KnowledgeDocServiceImpl extends ServiceImpl<KnowledgeDocMapper, Kno
         BeanUtils.copyProperties(dto, doc, "tenantId");
         if (dto.getRawContent() != null) {
             doc.setCharCount(dto.getRawContent().length());
+            doc.setVectorSynced(0);
+            doc.setVectorSyncedAt(null);
         }
         updateById(doc);
+        scanForRagSafety(doc);
         return toVO(doc);
     }
 
@@ -93,6 +102,12 @@ public class KnowledgeDocServiceImpl extends ServiceImpl<KnowledgeDocMapper, Kno
         log.info("知识文档已删除: docUuid={}", docUuid);
     }
 
+
+    private void scanForRagSafety(KnowledgeDoc doc) {
+        if (ragSafetyReviewService != null) {
+            ragSafetyReviewService.scanAndStore(doc);
+        }
+    }
     private KnowledgeDocVO toVO(KnowledgeDoc doc) {
         var vo = new KnowledgeDocVO();
         BeanUtils.copyProperties(doc, vo);

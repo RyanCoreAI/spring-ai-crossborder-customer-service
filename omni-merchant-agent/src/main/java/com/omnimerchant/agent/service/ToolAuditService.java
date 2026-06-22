@@ -27,6 +27,7 @@ public class ToolAuditService {
 
     private final ToolCallLogMapper mapper;
     private final ObjectMapper objectMapper;
+    private final AgentTraceService agentTraceService;
 
     public <T> T record(String toolName, Map<String, Object> params, Supplier<T> supplier) {
         var started = LocalDateTime.now();
@@ -73,6 +74,7 @@ public class ToolAuditService {
             log.setRetryCount(0);
             log.setIsRetry(0);
             mapper.insert(log);
+            agentTraceService.recordToolStep(log);
         } catch (Exception e) {
             log.warn("Failed to write tool audit log for {}: {}", toolName, e.getMessage());
         }

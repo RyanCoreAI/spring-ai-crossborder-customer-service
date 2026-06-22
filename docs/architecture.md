@@ -17,7 +17,11 @@ flowchart LR
   Tools --> Policies["Hybrid RAG Policy Search"]
   Tools --> Tickets["Escalation + Approval Requests"]
   Tools --> Audit["tool_call_log"]
+  Agent --> Trace["agent_run / agent_step Trace Replay"]
+  Trace --> Obs["Observability + Failure Attribution"]
+  Policies --> RagSafety["RAG Safety Review"]
   Shopify["Shopify Webhooks / Sync"] --> Webhook["HMAC + Idempotent webhook_event"]
+  Shopify --> Jobs["shopify_sync_job"]
   Webhook --> Orders
   Webhook --> Products
   Webhook --> Customers["Customer Cache"]
@@ -39,6 +43,11 @@ flowchart TB
   Tenant --> Integration["integration_credential"]
   Tenant --> Webhook["webhook_event"]
   Tenant --> Eval["agent_eval_case"]
+  Eval --> EvalRun["agent_eval_run / agent_eval_result"]
+  Tenant --> Trace["agent_run / agent_step"]
+  Knowledge --> RagReview["rag_safety_review"]
+  Integration --> SyncJob["shopify_sync_job"]
+  Tenant --> ActionRequest["commerce_action_request"]
 ```
 
 All business tables are tenant-scoped. `tenant` is the only global table ignored by the MyBatis tenant interceptor.
@@ -51,7 +60,7 @@ All business tables are tenant-scoped. `tenant` is the only global table ignored
 - Query tools may return data after verification.
 - Refund, replacement, return, cancellation, and address-change flows create internal approval requests only.
 - Shopify webhook deliveries require HMAC validation and idempotent event recording.
-- Tool calls are logged for audit, latency, success rate, and future eval traces.
+- Tool calls are logged for audit, latency, success rate, eval scoring, and trace replay.
 
 ## Demo Data
 
@@ -63,7 +72,7 @@ All business tables are tenant-scoped. `tenant` is the only global table ignored
 - 30 orders with realistic statuses and tracking histories
 - policy documents
 - widget channel installs
-- 10 eval cases covering normal and adversarial scenarios
+- 30 eval cases covering normal and adversarial scenarios
 
 ## Extension Points
 

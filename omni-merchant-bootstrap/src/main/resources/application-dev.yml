@@ -99,6 +99,27 @@ omnimerchant:
   integrations:
     encryption-key: ${INTEGRATION_ENCRYPTION_KEY:}
 
+  app-base-url: ${APP_BASE_URL:http://localhost:8090}
+  eval:
+    live-agent-enabled: ${EVAL_LIVE_AGENT_ENABLED:false}
+  rag-safety:
+    strict: ${RAG_SAFETY_STRICT:true}
+  shopify:
+    client-id: ${SHOPIFY_CLIENT_ID:}
+    client-secret: ${SHOPIFY_CLIENT_SECRET:}
+    scopes: ${SHOPIFY_SCOPES:read_products,read_customers,read_orders,read_fulfillments}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: when_authorized
+  metrics:
+    tags:
+      application: omni-merchant
 mybatis-plus:
   configuration:
     log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl

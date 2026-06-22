@@ -30,6 +30,7 @@ public class PolicyIndexService {
     private final KnowledgeDocMapper docMapper;
     private final DocumentChunkingService chunkingService;
     private final EmbeddingService embeddingService;
+    private final RagSafetyReviewService ragSafetyReviewService;
 
     @Autowired
     @Qualifier("pgVectorJdbcTemplate")
@@ -43,6 +44,11 @@ public class PolicyIndexService {
             doc = docMapper.selectById(docId);
             if (doc == null) {
                 throw new IllegalArgumentException("Document not found: " + docId);
+            }
+            if (!ragSafetyReviewService.isIndexAllowed(doc)) {
+                markIndexFailed(doc, "RAG safety review blocked indexing");
+                log.warn("Indexing blocked by RAG safety review: docId={}", docId);
+                return;
             }
             markIndexing(doc);
 

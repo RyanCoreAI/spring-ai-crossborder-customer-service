@@ -18,33 +18,39 @@ This guide defines the public demo story for Phase 7. It intentionally uses seed
    - `/admin/products`
    - `/admin/tickets`
    - `/admin/evals`
+   - `/admin/traces`
+   - `/admin/observability`
+   - `/admin/rag-safety`
+   - `/admin/integrations`
 7. Run evals from `/admin/evals` or `scripts/run-evals.ps1`.
 
 ## Screenshot Checklist
 
-Use `scripts/capture-screenshots.ps1` after Vite is running to generate public screenshots:
+Use `scripts/capture-screenshots.ps1` after Vite, backend, and seeded data are running. The script logs in with `ADMIN_EMAIL` / `ADMIN_PASSWORD`, injects the JWT into a temporary Chrome profile, and captures both public and authenticated pages:
 
 ```powershell
 .\scripts\capture-screenshots.ps1
 ```
 
-For authenticated admin pages, capture manually after login until a browser automation token fixture is added.
-
 Required screenshots for launch:
 
 - Buyer widget landing/session
-- Buyer widget order answer
+- Merchant login
+- Dashboard
 - Merchant inbox
 - Orders list
 - Products list
 - Tickets list
 - Eval run report
+- Trace replay drawer
+- Observability dashboard
+- RAG safety review list
 - Integrations page
 
 ## Launch Positioning
 
 OmniMerchant should be described as:
 
-> An open-source Spring AI cross-border ecommerce customer-service platform with multi-tenant security, commerce tools, Shopify-first integration, billing controls, and eval-ready demo data.
+> An open-source Spring AI cross-border ecommerce customer-service platform with multi-tenant security, commerce tools, Shopify-first integration, billing controls, eval reports, trace replay, observability, and RAG safety review.
 
-Avoid claiming production parity with commercial helpdesks until real channel connectors, production Shopify install flow, monitoring, and resolution analytics are complete.
+Avoid claiming production parity with commercial helpdesks until a hosted demo/GIF, live provider-backed eval report, Shopify App Store embedded/billing flow, and broader channel connectors are complete.
