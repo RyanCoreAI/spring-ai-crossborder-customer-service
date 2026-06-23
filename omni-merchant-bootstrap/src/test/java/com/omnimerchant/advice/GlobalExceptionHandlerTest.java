@@ -2,6 +2,7 @@ package com.omnimerchant.advice;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.mock.http.MockHttpInputMessage;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 
@@ -27,7 +28,7 @@ class GlobalExceptionHandlerTest {
     @Test
     void shouldReturn400WhenJsonBodyIsUnreadable() {
         var request = new MockHttpServletRequest("POST", "/api/admin/login");
-        var exception = new HttpMessageNotReadableException("bad json");
+        var exception = new HttpMessageNotReadableException("bad json", new MockHttpInputMessage(new byte[0]));
 
         var response = handler.handleUnreadableMessage(exception, request);
 

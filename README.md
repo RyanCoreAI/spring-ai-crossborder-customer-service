@@ -3,21 +3,21 @@
 [![CI](https://github.com/RyanCoreAI/spring-ai-crossborder-customer-service/actions/workflows/ci.yml/badge.svg)](https://github.com/RyanCoreAI/spring-ai-crossborder-customer-service/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/RyanCoreAI/spring-ai-crossborder-customer-service/actions/workflows/codeql.yml/badge.svg)](https://github.com/RyanCoreAI/spring-ai-crossborder-customer-service/actions/workflows/codeql.yml)
 
-Open-source Spring AI cross-border ecommerce customer-service platform with multi-tenant security, commerce tools, billing controls, deterministic evals, trace replay, RAG safety, and Shopify connector backbone.
+Spring Boot 4 + Spring AI 2 trustworthy ecommerce customer-service agent platform with multi-tenant security, commerce tools, billing controls, deterministic evals, trace replay, RAG safety, observability, and Shopify connector backbone.
 
-这不是只接一个聊天接口的 RAG demo。OmniMerchant 的公开展示重点是：订单/物流/商品/政策/退货/人工升级的业务闭环，多租户 fail-closed 安全边界，付费 LLM 成本控制，可重复 Agent eval，trajectory replay，RAG ingestion safety，以及 Shopify OAuth/webhook/sync 生产化骨架。
+这不是只接一个聊天接口的 RAG demo。OmniMerchant v3 的公开展示重点是：最新 Spring Boot 4 / Spring AI 2 技术栈，订单/物流/商品/政策/退货/人工升级的业务闭环，多租户 fail-closed 安全边界，付费 LLM 成本控制，可重复 Agent eval，trajectory replay，RAG ingestion safety，以及 Shopify OAuth/webhook/sync 生产化骨架。
 
 ## 公开核验证据
 
 | 证据 | 文件或命令 | 证明内容 |
 |------|------------|----------|
-| 一键本地 demo | `scripts/demo.ps1` / `scripts/demo.sh` | schema、v2 扩展表、seed commerce 数据和 eval cases 可从 fresh clone 初始化 |
+| 一键本地 demo | `scripts/demo.ps1` / `scripts/demo.sh` | schema、v3 扩展表、seed commerce 数据和 eval cases 可从 fresh clone 初始化 |
 | Deterministic Agent eval | `scripts/run-evals.ps1` | 无 LLM key 也能生成 JSON/Markdown/JUnit 报告 |
 | Trace replay | `/admin/traces` + `agent_run` / `agent_step` | 每次回答可回放 intent、tool、latency、failure category |
 | Observability | `/admin/observability` | AI resolution、tool success、cost、P95 latency、RAG citation、eval pass |
 | RAG safety | `/admin/rag-safety` + `RagSafetyScanner` | prompt injection、hidden HTML/Markdown、PII/secret、cross-tenant 诱导进入审核 |
 | Shopify connector | OAuth/HMAC/cursor sync/webhook replay tests | 证明是 connector backbone，不冒充 App Store 生产 app |
-| API contract | [`docs/openapi.yaml`](docs/openapi.yaml) | v2 管理、eval、trace、RAG safety、Shopify 接口静态契约 |
+| API contract | [`docs/openapi.yaml`](docs/openapi.yaml) | v3 管理、eval、trace、RAG safety、Shopify 接口静态契约 |
 
 ## 截图矩阵
 
@@ -62,15 +62,16 @@ Open-source Spring AI cross-border ecommerce customer-service platform with mult
 
 | 层级 | 技术 | 版本 |
 |------|------|------|
-| 框架 | Spring Boot | 3.2.5 |
-| AI | Spring AI (OpenAI / Anthropic / DeepSeek) | 1.0.9 |
-| ORM | MyBatis-Plus | 3.5.5 |
+| 框架 | Spring Boot | 4.1.0 |
+| AI | Spring AI (OpenAI / Anthropic / DeepSeek) | 2.0.0 |
+| Java | Corretto / OpenJDK | 21 LTS |
+| ORM | MyBatis-Plus | 3.5.16 |
 | 数据库 | MySQL 8.0 / PostgreSQL 16 + pgvector | — |
 | 缓存 | Redis 7 | — |
 | 消息 | RocketMQ | 5.1 |
-| 熔断 | Resilience4j | 2.2.0 |
+| 熔断 | Resilience4j core + Reactor | 2.3.0 |
 | 前端 | Vue 3 + Element Plus + TypeScript | 3.5 / 2.9 / 5.7 |
-| 构建 | Vite 6 / Maven 3.9 | — |
+| 构建 | Vite 6 / Maven 3.8+ | — |
 
 ## 项目结构
 
@@ -92,11 +93,11 @@ omnimerchant/
 
 ## 快速启动
 
-> v1 收口标准：fresh clone 后按本节启动，管理员登录、Widget session、Widget SSE、租户 fail-closed smoke 和前端 build 都能复现。完整验收清单见 [`docs/v1-release-checklist.md`](docs/v1-release-checklist.md)。
+> v3 收口标准：fresh clone 后按本节启动，管理员登录、Widget session、Widget SSE、租户 fail-closed smoke、deterministic eval 和前端 build 都能复现。v1/v2 验收清单仍保留为历史基线。
 
 ### 环境要求
 
-- Java 17+
+- Java 21 LTS
 - Maven 3.8+
 - Docker Desktop
 - OpenAI / Anthropic / DeepSeek API Key（可选；不配置时后台、订单、商品、工单和 eval 可运行，AI 聊天返回配置提示）
@@ -380,7 +381,15 @@ mvn -q -Pintegration verify
 
 ### Spring AI 版本策略
 
-当前项目基于 Spring Boot 3.2.5，默认保持 Spring AI `1.0.9` 稳定线。Spring AI 2.0.x 对应 Spring Boot 4.x；后续升级路径应先评估 Boot 3.5，再评估 Boot 4 + Spring AI 2.0，不在当前安全加固中直接跨大版本迁移。
+当前项目已升级到 Spring Boot `4.1.0` + Spring AI `2.0.0` + Java `21`。v3 继续保留 v2 API 兼容面，同时按 Spring AI 2 的 ChatClient、Tool Calling、ChatMemory、Observability 生态进行迁移。
+
+迁移说明：
+
+- MyBatis-Plus 使用 `mybatis-plus-spring-boot4-starter`，租户拦截和分页依赖 `mybatis-plus-jsqlparser`。
+- Druid 使用 `druid-spring-boot-4-starter`。
+- Resilience4j 不再依赖 Boot 3 starter；项目显式使用 `resilience4j-circuitbreaker`、`resilience4j-retry`、`resilience4j-reactor`。
+- Testcontainers 2 使用 `testcontainers-*` artifact 命名。
+- 当前业务 JSON 仍保留 Jackson 2 API，因此引入 Spring Boot `spring-boot-jackson2` 兼容层；后续可单独评估 Jackson 3 全量迁移。
 
 核心配置项（`application-dev.yml`）：
 

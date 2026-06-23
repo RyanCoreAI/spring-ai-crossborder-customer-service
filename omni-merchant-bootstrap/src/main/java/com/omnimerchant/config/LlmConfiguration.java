@@ -5,7 +5,6 @@ import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
-import org.springframework.ai.openai.api.OpenAiApi;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -33,18 +32,23 @@ public class LlmConfiguration {
     @ConditionalOnExpression("'${omnimerchant.llm.deepseek.api-key:}' != ''")
     public OpenAiChatModel deepSeekChatModel(OmniMerchantProperties props) {
         var ds = props.getLlm().getDeepseek();
-        var deepSeekApi = OpenAiApi.builder()
-                .baseUrl(ds.getBaseUrl())
-                .apiKey(ds.getApiKey())
-                .build();
         return OpenAiChatModel.builder()
-                .openAiApi(deepSeekApi)
-                .defaultOptions(OpenAiChatOptions.builder()
+                .options(OpenAiChatOptions.builder()
+                        .baseUrl(ds.getBaseUrl())
+                        .apiKey(ds.getApiKey())
                         .model(ds.getModel())
                         .temperature(TEMPERATURE)
                         .maxTokens(4096)
                         .build())
                 .build();
+    }
+
+    /**
+     * Resilience4j Boot 4 starter 尚未作为强依赖使用，显式注册熔断器仓库。
+     */
+    @Bean
+    public CircuitBreakerRegistry circuitBreakerRegistry() {
+        return CircuitBreakerRegistry.ofDefaults();
     }
 
     /**

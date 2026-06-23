@@ -21,6 +21,7 @@ import reactor.util.retry.Retry;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
 
@@ -117,13 +118,20 @@ public class ReActAgentService {
                     .build();
 
             chatMemory.add(conversationUuid, List.of(new UserMessage(enText)));
+            var messageHistory = chatMemory.getLast(conversationUuid, 12);
 
             var fullResponse = new StringBuilder();
             Supplier<Flux<String>> streamSupplier = () -> {
                 TenantContextHolder.set(tenantId);
                 CallContextHolder.set(intent, conversationUuid);
                 return chatClient.prompt()
-                        .user(enText)
+                        .messages(messageHistory)
+                        .toolContext(Map.of(
+                                "tenantId", tenantId,
+                                "conversationUuid", conversationUuid,
+                                "intent", intent,
+                                "model", routed.modelName()
+                        ))
                         .stream()
                         .content();
             };

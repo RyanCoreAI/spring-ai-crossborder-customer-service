@@ -193,7 +193,7 @@ class ShopifyIntegrationServiceTest {
 
         assertThat(event.getStatus()).isEqualTo(3);
         assertThat(event.getLastError()).contains("missing id");
-        verify(productMapper, never()).insert(any());
+        verify(productMapper, never()).insert(any(Product.class));
     }
 
     private String sign(String secret, String body) throws Exception {

@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
   title: OmniMerchant API
-  version: 0.2.0
-  description: Spring AI cross-border ecommerce customer-service platform API. Static v2 contract for local demo and reviewer verification.
+  version: 0.3.0
+  description: Spring Boot 4 + Spring AI 2 ecommerce customer-service platform API. Static v3 contract for local demo and reviewer verification.
 servers:
   - url: http://localhost:8090
 security:

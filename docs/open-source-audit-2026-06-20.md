@@ -54,7 +54,7 @@ Remaining credibility gaps:
 - Shopify connector is stronger but still not an App Store embedded/billing app and does not execute external write actions.
 - Static OpenAPI spec is present, but it must stay in sync with DTOs because it is not generated from code.
 - Frontend still reports a Vite large chunk warning.
-- Spring Boot remains at 3.2.5 while dependency freshness should be revisited before public launch.
+- v3 baseline upgrades the project to Spring Boot 4.1.0, Spring AI 2.0.0, Java 21, Boot 4 compatible MyBatis-Plus/Druid starters, and Testcontainers 2 artifact naming.
 
 ## External Benchmark
 
@@ -148,7 +148,7 @@ Fix: Add manual chunks for Element Plus and Markdown/DOMPurify after screenshots
 - Keep OpenAPI docs synced with v2 endpoints.
 - Add architecture diagram and data-flow diagram.
 - Split frontend chunks if needed.
-- Re-run dependency freshness review for Spring Boot and core libraries.
+- Keep dependency freshness review as a release gate after the Boot 4 / Spring AI 2 migration.
 
 ## Final Recommendation
 

@@ -16,7 +16,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "21"
           cache: maven
       - name: Run unit tests
         run: mvn -q test
@@ -32,7 +32,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "21"
           cache: maven
       - name: Run Testcontainers integration tests
         run: mvn -q -Pintegration verify
@@ -68,6 +68,7 @@ jobs:
           ADMIN_EMAIL: ci-admin@example.com
           ADMIN_PASSWORD: ci-only-password
           JWT_SECRET: 01234567890123456789012345678901
+          INTEGRATION_ENCRYPTION_KEY: 01234567890123456789012345678901
           MYSQL_ROOT_PASSWORD: ci-mysql-root-password
           MYSQL_PASSWORD: ci-mysql-password
           PG_PASSWORD: ci-postgres-password

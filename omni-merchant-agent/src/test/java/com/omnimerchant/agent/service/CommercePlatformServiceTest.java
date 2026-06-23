@@ -89,7 +89,7 @@ class CommercePlatformServiceTest {
         tenant.setDefaultLang("en");
         tenant.setWelcomeMessage("Welcome");
         when(tenantMapper.selectOne(any())).thenReturn(tenant);
-        when(conversationMapper.insert(any())).thenReturn(1);
+        when(conversationMapper.insert(any(Conversation.class))).thenReturn(1);
 
         var response = service.createWidgetSession(new CommerceDtos.WidgetSessionRequest(
                 "OM-FASHION", "ava@example.com", "Ava", "en"));
