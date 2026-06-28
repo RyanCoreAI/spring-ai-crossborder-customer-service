@@ -1,4 +1,4 @@
--- OmniMerchant v2 RAG ingestion safety review table.
+-- OmniMerchant v3 RAG ingestion safety review table.
 -- Run after sql/db_main.sql.
 
 CREATE TABLE IF NOT EXISTS `rag_safety_review` (

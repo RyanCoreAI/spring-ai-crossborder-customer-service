@@ -1,4 +1,4 @@
--- OmniMerchant v2 golden conversation eval run tables.
+-- OmniMerchant v3 golden conversation eval run tables.
 -- Run after sql/db_main.sql, sql/db_extensions.sql, and sql/demo_seed.sql.
 
 CREATE TABLE IF NOT EXISTS `agent_eval_run` (
@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS `agent_eval_run` (
   `tool_recall` DECIMAL(6,2) NOT NULL DEFAULT 0.00,
   `citation_coverage` DECIMAL(6,2) NOT NULL DEFAULT 0.00,
   `poisoning_block_rate` DECIMAL(6,2) NOT NULL DEFAULT 0.00,
+  `retrieval_precision_at_k` DECIMAL(6,2) NOT NULL DEFAULT 0.00,
+  `unsupported_claim_rate` DECIMAL(6,2) NOT NULL DEFAULT 0.00,
   `failure_summary` TEXT DEFAULT NULL,
   `started_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `finished_at` DATETIME DEFAULT NULL,
@@ -71,3 +73,28 @@ CREATE TABLE IF NOT EXISTS `agent_eval_step_result` (
   PRIMARY KEY (`id`),
   KEY `idx_eval_step_result` (`result_id`, `step_name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Golden conversation eval checker step result';
+
+SET @schema_name = DATABASE();
+SET @add_retrieval_precision = IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+   WHERE TABLE_SCHEMA = @schema_name
+     AND TABLE_NAME = 'agent_eval_run'
+     AND COLUMN_NAME = 'retrieval_precision_at_k') = 0,
+  'ALTER TABLE `agent_eval_run` ADD COLUMN `retrieval_precision_at_k` DECIMAL(6,2) NOT NULL DEFAULT 0.00 AFTER `poisoning_block_rate`',
+  'SELECT 1'
+);
+PREPARE stmt FROM @add_retrieval_precision;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @add_unsupported_claim = IF(
+  (SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+   WHERE TABLE_SCHEMA = @schema_name
+     AND TABLE_NAME = 'agent_eval_run'
+     AND COLUMN_NAME = 'unsupported_claim_rate') = 0,
+  'ALTER TABLE `agent_eval_run` ADD COLUMN `unsupported_claim_rate` DECIMAL(6,2) NOT NULL DEFAULT 0.00 AFTER `retrieval_precision_at_k`',
+  'SELECT 1'
+);
+PREPARE stmt FROM @add_unsupported_claim;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;

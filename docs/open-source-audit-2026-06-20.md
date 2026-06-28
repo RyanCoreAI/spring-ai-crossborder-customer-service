@@ -8,7 +8,7 @@ Audience: GitHub readers evaluating whether this is a credible Spring AI multi-t
 
 **Updated score: 86 / 100**
 
-OmniMerchant has moved from a security-focused Spring AI sample into a credible **open-source cross-border ecommerce AI customer-service platform v2 baseline**. The project now has tenant-scoped commerce APIs, real order/logistics/product/customer/ticket data models, structured tool outputs, tool-call audit logging, buyer widget entrypoint, merchant workbench pages, Shopify OAuth + cursor sync + webhook processors, deterministic demo seed data, persisted Agent eval runs, trajectory replay, observability APIs, and RAG safety review.
+OmniMerchant has moved from a security-focused Spring AI sample into a credible **Spring Boot 4 + Spring AI 2 trustworthy ecommerce customer-service agent platform v3 baseline**. The project now has tenant-scoped commerce APIs, real order/logistics/product/customer/ticket data models, structured tool outputs, tool-call audit logging, buyer widget entrypoint, merchant workbench pages, Shopify OAuth + cursor sync + webhook processors, deterministic demo seed data, persisted Agent eval runs, trajectory replay, Trust Console APIs, and RAG safety review.
 
 It is still not a production replacement for Gorgias, Fin, Zendesk, or Dify. The remaining gap is production operations and market proof: real hosted demo assets, screenshots/GIF, provider-backed live eval evidence, Shopify App Store embedded/billing flow, token rotation automation, and broader channel integrations.
 
@@ -18,7 +18,7 @@ It is still not a production replacement for Gorgias, Fin, Zendesk, or Dify. The
 | Engineering verifiability | 18 / 20 | Maven, npm, audit, package, compose config, deterministic SQL seed, eval reports, and Testcontainers profile are present; Docker-based integration still depends on local environment. |
 | AI architecture quality | 14 / 15 | Tool calling, product/order/logistics/policy/escalation tools, Reactor resilience, model routing, tool audit logging, persisted traces, eval runner, and citation checker are present. |
 | Product and competitor differentiation | 12 / 15 | The app has a real helpdesk console, widget, demo commerce data, and Shopify-first connector; commercial-grade channel breadth and live outcome benchmarks remain incomplete. |
-| Open-source packaging and docs | 12 / 15 | README, setup path, API list, demo scripts/data, v2 docs, eval docs, and launch script are present; screenshots, GIF/video, and public hosted demo are still missing. |
+| Open-source packaging and docs | 13 / 15 | README, setup path, API list, demo scripts/data, v3 docs, eval docs, and launch script are present; screenshots, GIF/video, and public hosted demo are still missing. |
 | Maintainability and ops readiness | 8 / 10 | Modules remain scoped; observability, failure categories, Prometheus, and replay exist. Real migrations, deployment runbooks, token rotation, and external monitoring remain work. |
 
 ## Current Repository Evidence
@@ -32,9 +32,9 @@ Implemented platform evidence:
 - Refund, replacement, return, and address-change tools create internal approval requests only; they do not write external ecommerce systems.
 - Commerce APIs now cover customers, orders, products, escalations, tool calls, dashboard metrics, integrations, evals, widget sessions, and Shopify webhooks.
 - Tool calls are persisted to `tool_call_log` with tenant, conversation, params summary, result summary, latency, status, and error fields.
-- Demo data includes 2 tenants, 10 customers, 20 products, 30 orders, shipping histories, policy docs, widget channel installs, and 30 eval cases.
+- Demo data includes 2 tenants, 10 customers, 20 products, 30 orders, shipping histories, policy docs, widget channel installs, and 80 eval cases.
 - Frontend now includes merchant pages for inbox, customers, orders, products, tickets, integrations, usage, evals, observability, trace replay, RAG safety, and a public widget page.
-- Agent eval runs are persisted to `agent_eval_run` / `agent_eval_result`, scored with tool selection precision/recall, poisoning block rate, and citation coverage.
+- Agent eval runs are persisted to `agent_eval_run` / `agent_eval_result`, scored with tool selection precision/recall, poisoning block rate, citation coverage, retrieval precision@k, and unsupported claim rate.
 - Agent execution traces are persisted to `agent_run` / `agent_step`, with failure attribution and replay APIs.
 - RAG documents are scanned by `RagSafetyScanner`; policy answers are checked by `CitationFaithfulnessChecker`.
 - Shopify sync jobs track resource cursors and GraphQL throttle status; verified webhooks update product, customer, order, fulfillment, and refund cache data.
@@ -109,7 +109,7 @@ Fix: Add fixture-backed webhook/sync tests, token rotation docs, OAuth install U
 
 ### P1 - API documentation is static, not generated
 
-Evidence: `docs/openapi.yaml` documents the v2 public, admin, eval, observability, RAG safety, and Shopify endpoints, but it is maintained manually.
+Evidence: `docs/openapi.yaml` documents the v3 public, admin, eval, observability, RAG safety, and Shopify endpoints, but it is maintained manually.
 
 Impact: Integrators can inspect the contract quickly, but drift is possible unless API changes update the spec in the same commit.
 
@@ -145,7 +145,7 @@ Fix: Add manual chunks for Element Plus and Markdown/DOMPurify after screenshots
 
 ### Week 4 - API and launch polish
 
-- Keep OpenAPI docs synced with v2 endpoints.
+- Keep OpenAPI docs synced with v3 endpoints.
 - Add architecture diagram and data-flow diagram.
 - Split frontend chunks if needed.
 - Keep dependency freshness review as a release gate after the Boot 4 / Spring AI 2 migration.

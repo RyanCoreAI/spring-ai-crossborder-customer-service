@@ -15,10 +15,12 @@
               :title="`评测完成：${runReport.passed}/${runReport.total} 通过，Pass Rate ${runReport.passRate}%`" />
 
     <el-row :gutter="16" class="summary">
-      <el-col :span="6"><el-card shadow="never"><b>{{ summary.totalCases || 0 }}</b><span>总用例</span></el-card></el-col>
-      <el-col :span="6"><el-card shadow="never"><b>{{ summary.enabledCases || 0 }}</b><span>启用用例</span></el-card></el-col>
-      <el-col :span="6"><el-card shadow="never"><b>{{ latestRun?.passRate || 0 }}%</b><span>最新 Pass</span></el-card></el-col>
-      <el-col :span="6"><el-card shadow="never"><b>{{ latestRun?.poisoningBlockRate || 0 }}%</b><span>Poisoning 拦截</span></el-card></el-col>
+      <el-col :span="4"><el-card shadow="never"><b>{{ summary.totalCases || 0 }}</b><span>总用例</span></el-card></el-col>
+      <el-col :span="4"><el-card shadow="never"><b>{{ summary.enabledCases || 0 }}</b><span>启用用例</span></el-card></el-col>
+      <el-col :span="4"><el-card shadow="never"><b>{{ latestRun?.passRate || 0 }}%</b><span>最新 Pass</span></el-card></el-col>
+      <el-col :span="4"><el-card shadow="never"><b>{{ latestRun?.poisoningBlockRate || 0 }}%</b><span>Poisoning 拦截</span></el-card></el-col>
+      <el-col :span="4"><el-card shadow="never"><b>{{ latestRun?.retrievalPrecisionAtK || 0 }}%</b><span>Retrieval P@K</span></el-card></el-col>
+      <el-col :span="4"><el-card shadow="never"><b>{{ latestRun?.unsupportedClaimRate || 0 }}%</b><span>Unsupported claims</span></el-card></el-col>
     </el-row>
 
     <el-card shadow="never" header="最近运行" class="block">
@@ -32,6 +34,9 @@
         <el-table-column prop="toolPrecision" label="Precision" width="110" />
         <el-table-column prop="toolRecall" label="Recall" width="100" />
         <el-table-column prop="citationCoverage" label="Citation" width="100" />
+        <el-table-column prop="retrievalPrecisionAtK" label="Retrieval" width="100" />
+        <el-table-column prop="unsupportedClaimRate" label="Unsupported" width="120" />
+        <el-table-column prop="poisoningBlockRate" label="Poison" width="100" />
         <el-table-column prop="startedAt" label="开始时间" width="180" />
         <el-table-column label="操作" width="100">
           <template #default="{ row }"><el-button size="small" @click="openRun(row)">详情</el-button></template>

@@ -242,6 +242,8 @@ public final class CommerceDtos {
             java.math.BigDecimal toolRecall,
             java.math.BigDecimal citationCoverage,
             java.math.BigDecimal poisoningBlockRate,
+            java.math.BigDecimal retrievalPrecisionAtK,
+            java.math.BigDecimal unsupportedClaimRate,
             String failureSummary,
             java.time.LocalDateTime startedAt,
             java.time.LocalDateTime finishedAt) {
@@ -324,8 +326,14 @@ public final class CommerceDtos {
             double safetyBlockRate,
             double ragCitationCoverage,
             java.math.BigDecimal estimatedCost,
+            java.math.BigDecimal costPerResolvedConversation,
             Integer p95FirstTokenLatencyMs,
             Integer p95FullResponseLatencyMs,
+            Integer p95ToolLatencyMs,
+            String topFailedTool,
+            java.math.BigDecimal retrievalPrecisionAtK,
+            java.math.BigDecimal unsupportedClaimRate,
+            java.math.BigDecimal poisoningBlockRate,
             long shopifyWebhookBacklog) {
     }
 
@@ -333,6 +341,37 @@ public final class CommerceDtos {
             String category,
             long count,
             double rate) {
+    }
+
+    public record ToolMetricVO(
+            String toolName,
+            long calls,
+            long failures,
+            double successRate,
+            Integer p95LatencyMs) {
+    }
+
+    public record EvalTrendVO(
+            Long runId,
+            String runUuid,
+            String status,
+            int totalCases,
+            java.math.BigDecimal passRate,
+            java.math.BigDecimal toolPrecision,
+            java.math.BigDecimal toolRecall,
+            java.math.BigDecimal citationCoverage,
+            java.math.BigDecimal retrievalPrecisionAtK,
+            java.math.BigDecimal unsupportedClaimRate,
+            java.math.BigDecimal poisoningBlockRate,
+            java.time.LocalDateTime startedAt) {
+    }
+
+    public record RagMetricVO(
+            long evalRuns,
+            java.math.BigDecimal citationCoverage,
+            java.math.BigDecimal retrievalPrecisionAtK,
+            java.math.BigDecimal unsupportedClaimRate,
+            java.math.BigDecimal poisoningBlockRate) {
     }
 
     public record RagSafetyReviewVO(

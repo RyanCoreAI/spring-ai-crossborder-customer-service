@@ -29,6 +29,8 @@ public class AgentEvalRun {
     private BigDecimal toolRecall;
     private BigDecimal citationCoverage;
     private BigDecimal poisoningBlockRate;
+    private BigDecimal retrievalPrecisionAtK;
+    private BigDecimal unsupportedClaimRate;
     private String failureSummary;
     private LocalDateTime startedAt;
     private LocalDateTime finishedAt;

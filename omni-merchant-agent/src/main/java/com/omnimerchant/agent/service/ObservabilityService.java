@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
@@ -57,6 +58,11 @@ public class ObservabilityService {
                 .orderByDesc(AgentEvalRun::getStartedAt)
                 .last("LIMIT 1"));
         var recentRuns = agentTraceService.recentRuns(100);
+        var recentTools = toolCallLogMapper.selectList(new LambdaQueryWrapper<ToolCallLog>()
+                .orderByDesc(ToolCallLog::getCreatedAt)
+                .last("LIMIT 500"));
+        var estimatedCost = recentRuns.stream().map(AgentRun::getCostUsd).filter(v -> v != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
         var webhookBacklog = webhookEventMapper.selectCount(new LambdaQueryWrapper<WebhookEvent>()
                 .in(WebhookEvent::getStatus, List.of(0, 2, 3)));
         return new CommerceDtos.ObservabilitySummaryVO(
@@ -77,10 +83,15 @@ public class ObservabilityService {
                 rate(failedTraces, traces),
                 rate(safetyBlocks, traces),
                 rate(citationRuns, traces),
-                recentRuns.stream().map(AgentRun::getCostUsd).filter(v -> v != null)
-                        .reduce(BigDecimal.ZERO, BigDecimal::add),
+                estimatedCost,
+                aiResolved <= 0 ? BigDecimal.ZERO : estimatedCost.divide(BigDecimal.valueOf(aiResolved), 6, RoundingMode.HALF_UP),
                 percentile(recentRuns.stream().map(AgentRun::getFirstTokenLatencyMs).toList(), 95),
                 percentile(recentRuns.stream().map(AgentRun::getTotalLatencyMs).toList(), 95),
+                percentile(recentTools.stream().map(ToolCallLog::getLatencyMs).toList(), 95),
+                topFailedTool(recentTools),
+                latestEval == null ? BigDecimal.ZERO : safeDecimal(latestEval.getRetrievalPrecisionAtK()),
+                latestEval == null ? BigDecimal.ZERO : safeDecimal(latestEval.getUnsupportedClaimRate()),
+                latestEval == null ? BigDecimal.ZERO : safeDecimal(latestEval.getPoisoningBlockRate()),
                 webhookBacklog);
     }
 
@@ -107,6 +118,54 @@ public class ObservabilityService {
         return agentTraceService.getTrace(traceId);
     }
 
+    public List<CommerceDtos.ToolMetricVO> tools() {
+        var logs = toolCallLogMapper.selectList(new LambdaQueryWrapper<ToolCallLog>()
+                .orderByDesc(ToolCallLog::getCreatedAt)
+                .last("LIMIT 1000"));
+        return logs.stream()
+                .collect(Collectors.groupingBy(t -> t.getToolName() == null ? "unknown" : t.getToolName()))
+                .entrySet().stream()
+                .map(entry -> {
+                    var calls = entry.getValue().size();
+                    var failures = entry.getValue().stream().filter(t -> Integer.valueOf(0).equals(t.getSuccess())).count();
+                    return new CommerceDtos.ToolMetricVO(entry.getKey(), calls, failures,
+                            rate(calls - failures, calls),
+                            percentile(entry.getValue().stream().map(ToolCallLog::getLatencyMs).toList(), 95));
+                })
+                .sorted(Comparator.comparingLong(CommerceDtos.ToolMetricVO::failures).reversed()
+                        .thenComparing(CommerceDtos.ToolMetricVO::toolName))
+                .toList();
+    }
+
+    public List<CommerceDtos.EvalTrendVO> evalTrend(int limit) {
+        var capped = Math.max(1, Math.min(limit, 50));
+        return evalRunMapper.selectList(new LambdaQueryWrapper<AgentEvalRun>()
+                        .orderByDesc(AgentEvalRun::getStartedAt)
+                        .last("LIMIT " + capped))
+                .stream()
+                .map(run -> new CommerceDtos.EvalTrendVO(run.getId(), run.getRunUuid(), run.getStatus(),
+                        run.getTotalCases() == null ? 0 : run.getTotalCases(),
+                        safeDecimal(run.getPassRate()), safeDecimal(run.getToolPrecision()),
+                        safeDecimal(run.getToolRecall()), safeDecimal(run.getCitationCoverage()),
+                        safeDecimal(run.getRetrievalPrecisionAtK()), safeDecimal(run.getUnsupportedClaimRate()),
+                        safeDecimal(run.getPoisoningBlockRate()), run.getStartedAt()))
+                .toList();
+    }
+
+    public CommerceDtos.RagMetricVO rag() {
+        var runs = evalRunMapper.selectList(new LambdaQueryWrapper<AgentEvalRun>()
+                .orderByDesc(AgentEvalRun::getStartedAt)
+                .last("LIMIT 20"));
+        if (runs.isEmpty()) {
+            return new CommerceDtos.RagMetricVO(0, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
+        }
+        return new CommerceDtos.RagMetricVO(runs.size(),
+                avg(runs.stream().map(AgentEvalRun::getCitationCoverage).toList()),
+                avg(runs.stream().map(AgentEvalRun::getRetrievalPrecisionAtK).toList()),
+                avg(runs.stream().map(AgentEvalRun::getUnsupportedClaimRate).toList()),
+                avg(runs.stream().map(AgentEvalRun::getPoisoningBlockRate).toList()));
+    }
+
     private double rate(long numerator, long denominator) {
         if (denominator <= 0) {
             return 0.0;
@@ -121,5 +180,29 @@ public class ObservabilityService {
         }
         var index = (int) Math.ceil(percentile / 100.0 * sorted.size()) - 1;
         return sorted.get(Math.max(0, Math.min(index, sorted.size() - 1)));
+    }
+
+    private String topFailedTool(List<ToolCallLog> tools) {
+        return tools.stream()
+                .filter(t -> Integer.valueOf(0).equals(t.getSuccess()))
+                .collect(Collectors.groupingBy(t -> t.getToolName() == null ? "unknown" : t.getToolName(),
+                        Collectors.counting()))
+                .entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey)
+                .orElse(null);
+    }
+
+    private BigDecimal avg(List<BigDecimal> values) {
+        var filtered = values.stream().filter(v -> v != null).toList();
+        if (filtered.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+        return filtered.stream().reduce(BigDecimal.ZERO, BigDecimal::add)
+                .divide(BigDecimal.valueOf(filtered.size()), 2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal safeDecimal(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
     }
 }

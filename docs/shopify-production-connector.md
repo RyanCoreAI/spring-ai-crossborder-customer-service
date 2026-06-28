@@ -1,6 +1,6 @@
 # Shopify Production Connector
 
-OmniMerchant v1 supported a Custom App token path. v2 adds the production connector backbone: OAuth install, HMAC/state validation, sync jobs, webhook status processing, duplicate detection, and replay APIs.
+OmniMerchant v1 supported a Custom App token path. v3 keeps the Shopify connector as a production-oriented backbone: OAuth install, HMAC/state validation, sync jobs, webhook status processing, duplicate detection, and replay APIs.
 
 ## OAuth Install
 

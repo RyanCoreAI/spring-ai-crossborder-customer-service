@@ -241,7 +241,7 @@ paths:
         '200': { description: Eval run detail }
   /api/observability/summary:
     get:
-      summary: Tenant-scoped AI quality, cost, latency, and safety summary
+      summary: Tenant-scoped Trust Console summary with eval, RAG, cost, latency, and safety metrics
       parameters:
         - $ref: '#/components/parameters/TenantId'
         - { name: from, in: query, schema: { type: string, format: date-time } }
@@ -256,6 +256,28 @@ paths:
         - { name: category, in: query, schema: { type: string } }
       responses:
         '200': { description: Failure bucket list }
+  /api/observability/tools:
+    get:
+      summary: Tool health metrics with call count, failures, success rate, and P95 latency
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Tool metric list }
+  /api/observability/eval-trend:
+    get:
+      summary: Recent eval trend for pass rate, tool precision, citation, retrieval, unsupported claims, and poisoning block
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: limit, in: query, schema: { type: integer, default: 20 } }
+      responses:
+        '200': { description: Eval trend list }
+  /api/observability/rag:
+    get:
+      summary: RAG safety metrics from recent deterministic eval runs
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: RAG metric summary }
   /api/observability/traces:
     get:
       summary: List agent traces

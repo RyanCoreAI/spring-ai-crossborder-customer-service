@@ -1,6 +1,7 @@
 package com.omnimerchant.agent.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.omnimerchant.agent.entity.Customer;
 import com.omnimerchant.agent.entity.OrderInfo;
 import com.omnimerchant.agent.entity.Product;
 import com.omnimerchant.agent.entity.WebhookEvent;
@@ -112,6 +113,20 @@ class ShopifyIntegrationServiceTest {
     }
 
     @Test
+    void oauthCallbackRejectsMissingStateNonceBeforeTokenExchange() {
+        ReflectionTestUtils.setField(service, "shopifyClientId", "client-id");
+        ReflectionTestUtils.setField(service, "shopifyClientSecret", "client-secret");
+
+        assertThatThrownBy(() -> service.completeOAuthCallback(Map.of(
+                "shop", "fixture-store.myshopify.com",
+                "state", "missing-state",
+                "code", "code-1",
+                "hmac", "bad-hmac")))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("state");
+    }
+
+    @Test
     void productWebhookFixtureMutatesProductCacheAndMarksSuccess() {
         var event = event(10L, "products/update", """
                 {"id":123,"title":"Trail Backpack","handle":"trail-backpack","body_html":"<p>Waterproof pack</p>",
@@ -140,6 +155,54 @@ class ShopifyIntegrationServiceTest {
         service.processWebhookEvent(11L);
 
         verifyNoInteractions(productMapper, orderMapper, customerMapper);
+    }
+
+    @Test
+    void customerWebhookFixtureMutatesCustomerCacheAndMarksSuccess() {
+        var event = event(15L, "customers/update", """
+                {"id":789,"email":"customer@example.com","phone":"+14155550123",
+                 "first_name":"Morgan","last_name":"Lee","orders_count":6,
+                 "total_spent":"512.40","default_address":{"country_code":"US","city":"Seattle","province":"WA"}}
+                """);
+        when(webhookEventMapper.selectById(15L)).thenReturn(event);
+        when(customerMapper.selectOne(any())).thenReturn(null);
+
+        service.processWebhookEvent(15L);
+
+        var captor = ArgumentCaptor.forClass(Customer.class);
+        verify(customerMapper).insert(captor.capture());
+        assertThat(captor.getValue().getExternalCustomerId()).isEqualTo("gid://shopify/Customer/789");
+        assertThat(captor.getValue().getDisplayName()).isEqualTo("Morgan Lee");
+        assertThat(captor.getValue().getCustomerTier()).isEqualTo("VIP");
+        assertThat(captor.getValue().getCity()).isEqualTo("Seattle");
+        assertThat(event.getStatus()).isEqualTo(2);
+        assertThat(event.getResourceId()).isEqualTo("gid://shopify/Customer/789");
+    }
+
+    @Test
+    void orderWebhookFixtureMutatesOrderCacheAndMarksSuccess() {
+        var event = event(16L, "orders/updated", """
+                {"id":456,"name":"#456","email":"buyer@example.com","financial_status":"paid",
+                 "fulfillment_status":"fulfilled","currency":"USD","total_price":"88.00",
+                 "customer":{"id":789,"first_name":"Morgan","last_name":"Lee","email":"buyer@example.com"},
+                 "shipping_address":{"country_code":"US","province":"WA","zip":"98101"},
+                 "line_items":[{"sku":"SKU-1","quantity":2}],"created_at":"2026-06-20T10:00:00Z"}
+                """);
+        when(webhookEventMapper.selectById(16L)).thenReturn(event);
+        when(orderMapper.selectOne(any())).thenReturn(null);
+
+        service.processWebhookEvent(16L);
+
+        var captor = ArgumentCaptor.forClass(OrderInfo.class);
+        verify(orderMapper).insert(captor.capture());
+        assertThat(captor.getValue().getExternalOrderId()).isEqualTo("gid://shopify/Order/456");
+        assertThat(captor.getValue().getExternalCustomerId()).isEqualTo("gid://shopify/Customer/789");
+        assertThat(captor.getValue().getExternalOrderNumber()).isEqualTo("#456");
+        assertThat(captor.getValue().getCustomerEmail()).isEqualTo("buyer@example.com");
+        assertThat(captor.getValue().getTotalQuantity()).isEqualTo(2);
+        assertThat(captor.getValue().getSyncSource()).isEqualTo("WEBHOOK");
+        assertThat(event.getStatus()).isEqualTo(2);
+        assertThat(event.getResourceId()).isEqualTo("gid://shopify/Order/456");
     }
 
     @Test

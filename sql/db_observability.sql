@@ -1,4 +1,4 @@
--- OmniMerchant v2 observability and trajectory replay tables.
+-- OmniMerchant v3 observability and trajectory replay tables.
 -- Run after sql/db_main.sql and sql/db_extensions.sql.
 
 CREATE TABLE IF NOT EXISTS `agent_run` (

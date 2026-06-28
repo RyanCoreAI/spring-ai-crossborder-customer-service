@@ -46,13 +46,15 @@ Spring Boot 4 + Spring AI 2 trustworthy ecommerce customer-service agent platfor
 
 ## Eval 证据
 
-默认 deterministic eval 覆盖 30 条 seeded golden conversations，按租户持久化 `agent_eval_run` / `agent_eval_result`，并输出：
+默认 deterministic eval 覆盖 80 条 seeded golden conversations，按租户持久化 `agent_eval_run` / `agent_eval_result`，并输出：
 
 | Metric | Source |
 |--------|--------|
 | Pass rate | `reports/agent-eval-report.md` summary table |
 | Tool precision / recall | `agent_eval_run.tool_precision` / `tool_recall` |
 | Citation coverage | `agent_eval_run.citation_coverage` |
+| Retrieval precision@k | `agent_eval_run.retrieval_precision_at_k` |
+| Unsupported claim rate | `agent_eval_run.unsupported_claim_rate` |
 | Poisoning block rate | `agent_eval_run.poisoning_block_rate` |
 | Failed case replay | `agent_eval_result.trace_id` -> `/admin/traces` |
 
@@ -312,7 +314,7 @@ mvn -q -Pintegration verify
 
 **9 大业务工具** — `queryOrder`、`trackLogistics`、`searchProductCatalog`、`refundPolicyRAG`、`createReturnRequest`、`requestRefundOrReplacement`、`requestAddressChange`、`translate`、`escalateToHuman`。查询类可自动执行；退款、补发、改地址只创建内部审批请求，不让 LLM 直接修改外部平台。
 
-**Demo 数据闭环** — `sql/demo_seed.sql` 提供 2 个租户、10 个客户、20 个商品、30 个订单、物流轨迹、政策文档和 30 条 Agent 评测用例。推荐演示问题：
+**Demo 数据闭环** — `sql/demo_seed.sql` 提供 2 个租户、10 个客户、20 个商品、30 个订单、物流轨迹、政策文档和 80 条 Agent 评测用例。推荐演示问题：
 
 - `Where is my order #1001? My email is ava@example.com.`
 - `Can I return my rain jacket from #1002? lucia@example.es`
@@ -329,20 +331,20 @@ mvn -q -Pintegration verify
 
 **多租户隔离** — JWT claims 绑定平台管理员或租户授权，X-Tenant-Id 必须通过 membership 校验后才写入上下文；MyBatis-Plus TenantLineInnerInterceptor 自动注入 WHERE tenant_id = ?，缺租户上下文时拒绝业务表 SQL。PGVector 查询手动带 tenant_id。
 
-**Agent Eval 与 Trace Replay** — `agent_eval_run`、`agent_eval_result`、`agent_run`、`agent_step` 持久化评测和执行轨迹；deterministic eval 默认无 LLM key 可跑，失败 case 可跳转 trace timeline 做工具选择和失败归因。
+**Agent Eval 与 Trace Replay** — `agent_eval_run`、`agent_eval_result`、`agent_run`、`agent_step` 持久化 80 条 deterministic golden cases 和执行轨迹；失败 case 可跳转 trace timeline 做工具选择和失败归因。
 
 **RAG Safety** — 文档入库后先经过 `RagSafetyScanner` 生成 `rag_safety_review`，高风险 prompt injection、隐藏 HTML/Markdown 指令、疑似密钥/PII、跨租户诱导默认隔离，人工 approve 后才允许索引。
 
-**Observability** — `/admin/observability` 和 `/admin/traces` 从本地 MySQL 聚合 AI resolution、升级、工具成功率、失败类别、RAG citation coverage、eval pass rate、成本和 P95 latency；Actuator 暴露 health/prometheus。
+**Trust Console / Observability** — `/admin/observability` 和 `/admin/traces` 从本地 MySQL 聚合 AI resolution、升级、工具成功率、失败类别、RAG citation coverage、retrieval precision@k、unsupported claim rate、eval pass rate、成本、P95 token/tool latency 和 Shopify backlog；Actuator 暴露 health/prometheus。
 
-**Shopify v2 connector backbone** — 保留 Custom App token 开发路径，同时增加 OAuth install/callback、cursor sync job、GraphQL throttle backoff、webhook status/DLQ/replay 和 order/product/customer/fulfillment/refund cache mutation。当前不声称 Shopify App Store 上架、embedded admin billing 或真实退款写操作。
+**Shopify connector backbone** — 保留 Custom App token 开发路径，同时增加 OAuth install/callback、cursor sync job、GraphQL throttle backoff、webhook status/DLQ/replay 和 order/product/customer/fulfillment/refund cache mutation。当前不声称 Shopify App Store 上架、embedded admin billing 或真实退款写操作。
 
-### v2 Scope Notes
+### v3 Scope Notes
 
 - Shopify 已有 OAuth install/callback、HMAC、cursor sync job、GraphQL throttle backoff、webhook 入库、payload-specific cache mutation 和 replay/DLQ 管理面；App Store embedded/billing、token rotation 自动化和真实外部写操作仍是后续生产化工作。
-- Agent eval 已有 30 条 seed golden cases、持久化 run/result、tool-selection scorer、citation faithfulness checker、JSON/Markdown/JUnit 报告和 trace link；`LIVE_AGENT` 真实模型评测是 opt-in，不污染默认 CI。
-- Observability 是本地 DB + Micrometer/Prometheus 的最小可展示方案；没有强依赖 Langfuse、Jaeger 或 Grafana。
-- RAG safety 是 deterministic ingestion scanner + 人工 approve/reject + citation faithfulness checker；更细粒度 sentence-level unsupported-claim 检查仍可继续加强。
+- Agent eval 已有 80 条 seed golden cases、持久化 run/result、tool-selection scorer、citation faithfulness checker、retrieval precision@k、unsupported claim rate、JSON/Markdown/JUnit 报告和 trace link；`LIVE_AGENT` 真实模型评测是 opt-in，不污染默认 CI。
+- Observability 是本地 DB + Micrometer/Prometheus 的 Trust Console；没有强依赖 Langfuse、Jaeger 或 Grafana。
+- RAG safety 是 deterministic ingestion scanner + 人工 approve/reject + citation faithfulness checker + eval 指标；LLM-as-judge 和 sentence-level entailment 是 opt-in 增强，不作为默认 CI gate。
 - Testcontainers profile 已提供 MySQL、Redis、PostgreSQL/pgvector 回归入口；本地 Docker 不可用时默认单测和 package 不依赖真实外部服务。
 
 ## Security model

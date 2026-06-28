@@ -26,6 +26,21 @@ public class ObservabilityController {
         return R.ok(service.failures(category));
     }
 
+    @GetMapping("/tools")
+    public R<?> tools() {
+        return R.ok(service.tools());
+    }
+
+    @GetMapping("/eval-trend")
+    public R<?> evalTrend(@RequestParam(defaultValue = "20") int limit) {
+        return R.ok(service.evalTrend(limit));
+    }
+
+    @GetMapping("/rag")
+    public R<?> rag() {
+        return R.ok(service.rag());
+    }
+
     @GetMapping("/traces")
     public R<?> traces(@RequestParam(required = false) String conversationUuid,
                        @RequestParam(required = false) String status,

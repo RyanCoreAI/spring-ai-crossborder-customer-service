@@ -1,6 +1,6 @@
 # RAG Safety
 
-RAG improves factuality and freshness, but it also introduces poisoning and prompt-injection risks through uploaded documents, product descriptions, and retrieved chunks. OmniMerchant v2 adds a lightweight ingestion review layer before content enters the retrieval path.
+RAG improves factuality and freshness, but it also introduces poisoning and prompt-injection risks through uploaded documents, product descriptions, and retrieved chunks. OmniMerchant v3 keeps a deterministic ingestion review layer before content enters the retrieval path and reports RAG safety metrics through eval and Trust Console.
 
 ## Ingestion Review
 
@@ -38,6 +38,15 @@ Review rows are written to `rag_safety_review` with status and risk metadata.
 
 `CitationFaithfulnessChecker` verifies that policy answers include citations and that the expected policy claim has lexical support in cited snippets. Deterministic eval policy cases now fail when RAG returns no citation or an unsupported citation.
 
+The deterministic eval report tracks:
+
+- citation coverage
+- retrieval precision@k
+- unsupported claim rate
+- poisoning block rate
+
+If PGVector has not been indexed in a fresh demo, eval uses approved tenant policy documents as a lexical fallback so reviewers can still verify citation and unsupported-claim behavior without an embedding provider.
+
 ## Fixture Evidence
 
 Regression tests cover:
@@ -52,4 +61,4 @@ Regression tests cover:
 
 ## Current Limits
 
-The scanner and citation checker are deterministic and rule-based. They catch common injection, data-leak, missing-citation, and weak lexical-support patterns, but they are not a replacement for full content moderation, source-trust workflow, or sentence-level entailment checks for regulated production support.
+The scanner and citation checker are deterministic and rule-based. They catch common injection, data-leak, missing-citation, and weak lexical-support patterns, but they are not a replacement for full content moderation, source-trust workflow, or sentence-level entailment checks for regulated production support. LLM-as-judge and sentence-level entailment remain opt-in enhancements, not default CI gates.

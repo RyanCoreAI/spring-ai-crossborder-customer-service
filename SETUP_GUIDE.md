@@ -93,12 +93,16 @@ docker-compose ps
 # 方式 1：使用容器内 MySQL 客户端
 docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_main.sql
 docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_extensions.sql
+docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_observability.sql
+docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_eval_v2.sql
+docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_shopify_v2.sql
+docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_rag_safety.sql
 docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/demo_seed.sql
 
 # 方式 2：使用 MySQL 工具（如 Navicat/DBeaver）连接 localhost:3306
 # 用户名/密码：使用 .env 中的 MYSQL_USER / MYSQL_PASSWORD
 # 数据库：omni_merchant
-# 依次执行 sql/db_main.sql、sql/db_extensions.sql、sql/demo_seed.sql
+# 依次执行上面的 MySQL SQL 文件
 ```
 
 **初始化 PostgreSQL 向量库**：

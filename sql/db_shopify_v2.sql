@@ -1,4 +1,4 @@
--- OmniMerchant v2 Shopify production connector tables.
+-- OmniMerchant v3 Shopify connector backbone tables.
 -- Run after sql/db_main.sql and sql/db_extensions.sql.
 
 CREATE TABLE IF NOT EXISTS `shopify_sync_job` (

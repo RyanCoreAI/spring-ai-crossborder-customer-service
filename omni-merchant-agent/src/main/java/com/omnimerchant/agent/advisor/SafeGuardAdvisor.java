@@ -16,7 +16,11 @@ public class SafeGuardAdvisor {
     private static final int MAX_INPUT_LENGTH = 4000;
 
     private static final Pattern INJECTION_PATTERN = Pattern.compile(
-            "(?i)(ignore\\s+(all\\s+)?(previous|prior|above)\\s+(instructions?|prompts?|rules?|constraints?)" +
+            "(?i)(ignore\\s+(all\\s+)?(previous|prior|above|safety)\\s+(instructions?|prompts?|rules?|constraints?)" +
+            "|system\\s+prompt" +
+            "|webhook\\s+secrets?" +
+            "|<!--.*?-->" +
+            "|javascript\\s*:" +
             "|system\\s*:\\s*(you\\s+are|now|override|new)" +
             "|\\[INST\\]|\\[SYS\\]|<\\|im_start\\|>|<\\|im_end\\|>" +
             "|DAN\\s+mode|jailbreak|developer\\s+mode)");
