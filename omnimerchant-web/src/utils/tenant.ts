@@ -1,8 +1,5 @@
 export const SELECTED_TENANT_KEY = 'selectedTenantId'
 
-const PREFERRED_DEMO_TENANT_CODES = ['OM-FASHION', 'OM-ELECTRO']
-const LEGACY_EMPTY_TENANT_CODES = ['OM-DEMO001']
-
 export type TenantOption = {
   id: number
   tenantCode?: string
@@ -26,13 +23,8 @@ export function setStoredTenantId(tenantId: number | string | null | undefined) 
 export function selectDefaultTenantId(tenants: TenantOption[]) {
   const saved = getStoredTenantId()
   const savedTenant = saved ? tenants.find((t) => t.id === saved) : null
-  const preferredTenant = tenants.find((t) => PREFERRED_DEMO_TENANT_CODES.includes(t.tenantCode || ''))
-
-  if (savedTenant && !LEGACY_EMPTY_TENANT_CODES.includes(savedTenant.tenantCode || '')) {
+  if (savedTenant) {
     return savedTenant.id
   }
-  if (preferredTenant) {
-    return preferredTenant.id
-  }
-  return savedTenant?.id || tenants[0]?.id || null
+  return tenants[0]?.id || null
 }

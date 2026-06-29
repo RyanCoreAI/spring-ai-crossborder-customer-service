@@ -1,7 +1,7 @@
 import axios from 'axios'
+import { message } from 'ant-design-vue'
 import { useAuthStore } from '@/stores/auth'
 import router from '@/router'
-import { ElMessage } from 'element-plus'
 import { getStoredTenantId } from '@/utils/tenant'
 
 const api = axios.create({
@@ -44,10 +44,10 @@ function resolveTenantId(config: any) {
   return getStoredTenantId()
 }
 
-function redirectToLogin(message: string) {
+function redirectToLogin(text: string) {
   const authStore = useAuthStore()
   authStore.logout()
-  ElMessage.error(message)
+  message.error(text)
   if (router.currentRoute.value.path !== '/login') {
     router.push('/login')
   }
@@ -92,7 +92,7 @@ api.interceptors.response.use(
       } else if (data.code === '403' && isAdminRoute()) {
         redirectToLogin('当前登录权限已失效，请重新登录')
       } else {
-        ElMessage.error(data.message || '请求失败')
+        message.error(data.message || '请求失败')
       }
       return Promise.reject(new Error(data.message))
     }
@@ -100,13 +100,13 @@ api.interceptors.response.use(
   },
   (err) => {
     const status = err.response?.status
-    const message = friendlyHttpMessage(status, err.response?.data?.message || err.message)
+    const text = friendlyHttpMessage(status, err.response?.data?.message || err.message)
     if (status === 401) {
-      redirectToLogin(message || '登录已过期，请重新登录')
+      redirectToLogin(text || '登录已过期，请重新登录')
     } else if (status === 403 && isAdminRoute()) {
       redirectToLogin('当前登录权限已失效，请重新登录')
     } else {
-      ElMessage.error(message)
+      message.error(text)
     }
     return Promise.reject(err)
   }

@@ -1,32 +1,42 @@
 <template>
-  <div class="login-container">
-    <div class="login-card">
-      <div class="logo-section">
-        <h1>OmniMerchant</h1>
-        <p>跨境电商智能客服平台</p>
+  <main class="login-page">
+    <section class="login-panel">
+      <div class="brand-block">
+        <div class="brand-mark">OM</div>
+        <div>
+          <h1>OmniMerchant</h1>
+          <p>跨境电商智能客服平台</p>
+        </div>
       </div>
-      <el-form ref="formRef" :model="form" :rules="rules" label-position="top" @submit.prevent="handleLogin">
-        <el-form-item label="邮箱" prop="email">
-          <el-input v-model="form.email" placeholder="admin@example.com" size="large" :prefix-icon="Message" />
-        </el-form-item>
-        <el-form-item label="密码" prop="password">
-          <el-input v-model="form.password" type="password" placeholder="请输入密码" size="large" show-password :prefix-icon="Lock" />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" size="large" :loading="loading" native-type="submit" style="width:100%">
-            {{ loading ? '登录中...' : '登 录' }}
-          </el-button>
-        </el-form-item>
-      </el-form>
-    </div>
-  </div>
+
+      <a-card class="login-card" :bordered="false">
+        <h2>登录管理后台</h2>
+        <p class="hint">使用管理员分配的账号进入客服、评测与可信控制台。</p>
+        <a-form ref="formRef" :model="form" :rules="rules" layout="vertical" @finish="handleLogin">
+          <a-form-item label="邮箱" name="email">
+            <a-input v-model:value="form.email" size="large" placeholder="admin@example.com">
+              <template #prefix><MailOutlined /></template>
+            </a-input>
+          </a-form-item>
+          <a-form-item label="密码" name="password">
+            <a-input-password v-model:value="form.password" size="large" placeholder="请输入密码">
+              <template #prefix><LockOutlined /></template>
+            </a-input-password>
+          </a-form-item>
+          <a-button type="primary" size="large" block html-type="submit" :loading="loading">
+            {{ loading ? '登录中...' : '登录' }}
+          </a-button>
+        </a-form>
+      </a-card>
+    </section>
+  </main>
 </template>
 
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { Message, Lock } from '@element-plus/icons-vue'
+import { message } from 'ant-design-vue'
+import { LockOutlined, MailOutlined } from '@ant-design/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
@@ -41,15 +51,11 @@ const rules = {
 }
 
 async function handleLogin() {
-  const valid = await formRef.value?.validate().catch(() => false)
-  if (!valid) return
   loading.value = true
   try {
     await authStore.login(form.email, form.password)
-    ElMessage.success('登录成功')
+    message.success('登录成功')
     router.push('/admin')
-  } catch {
-    // error handled by interceptor
   } finally {
     loading.value = false
   }
@@ -57,31 +63,76 @@ async function handleLogin() {
 </script>
 
 <style scoped>
-.login-container {
-  height: 100vh;
+.login-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  background:
+    radial-gradient(circle at top left, rgba(22, 119, 255, 0.12), transparent 34%),
+    linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+}
+
+.login-panel {
+  width: min(960px, 100%);
+  display: grid;
+  grid-template-columns: 1fr 420px;
+  gap: 40px;
+  align-items: center;
+}
+
+.brand-block {
   display: flex;
   align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  gap: 16px;
 }
-.login-card {
-  width: 420px;
-  padding: 40px;
-  background: #fff;
+
+.brand-mark {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  color: #fff;
+  font-weight: 700;
+  background: #1677ff;
   border-radius: 12px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  place-items: center;
 }
-.logo-section {
-  text-align: center;
-  margin-bottom: 32px;
+
+.brand-block h1 {
+  margin: 0;
+  font-size: 34px;
+  color: #111827;
 }
-.logo-section h1 {
-  font-size: 28px;
-  color: #303133;
-  margin-bottom: 8px;
+
+.brand-block p {
+  margin: 8px 0 0;
+  color: #667085;
 }
-.logo-section p {
-  color: #909399;
-  font-size: 14px;
+
+.login-card {
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
+}
+
+.login-card h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.hint {
+  margin: 8px 0 24px;
+  color: #667085;
+  font-size: 13px;
+}
+
+@media (max-width: 820px) {
+  .login-panel {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .brand-block h1 {
+    font-size: 28px;
+  }
 }
 </style>

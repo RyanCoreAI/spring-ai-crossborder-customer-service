@@ -1,15 +1,18 @@
 <template>
   <div class="message-bubble" :class="role">
-    <div class="avatar">
-      <el-avatar :size="36" :icon="role === 'user' ? UserFilled : Service" />
-    </div>
+    <a-avatar class="avatar" :size="36">
+      <template #icon>
+        <UserOutlined v-if="role === 'user'" />
+        <CustomerServiceOutlined v-else />
+      </template>
+    </a-avatar>
     <div class="bubble-content">
-      <div class="role-label">{{ role === 'user' ? '客户' : 'AI 助手' }}</div>
+      <div class="role-label">{{ role === 'user' ? '客户' : '智能客服' }}</div>
       <div class="text" v-html="renderedText"></div>
-      <div v-if="toolCalls" class="tool-calls">
-        <el-tag v-for="(tc, i) in toolCalls" :key="i" size="small" type="info" style="margin:2px">
+      <div v-if="toolCalls?.length" class="tool-calls">
+        <a-tag v-for="(tc, i) in toolCalls" :key="i" color="blue">
           {{ tc.name }}
-        </el-tag>
+        </a-tag>
       </div>
     </div>
   </div>
@@ -17,7 +20,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { UserFilled, Service } from '@element-plus/icons-vue'
+import { CustomerServiceOutlined, UserOutlined } from '@ant-design/icons-vue'
 import { renderSafeMarkdown } from '@/utils/markdown'
 
 const props = defineProps<{
@@ -36,57 +39,87 @@ const renderedText = computed(() => {
 .message-bubble {
   display: flex;
   gap: 12px;
-  padding: 12px 20px;
-  max-width: 85%;
+  max-width: min(760px, 88%);
+  padding: 10px 20px;
 }
+
 .message-bubble.user {
   flex-direction: row-reverse;
   align-self: flex-end;
   margin-left: auto;
 }
+
 .message-bubble.assistant {
   align-self: flex-start;
 }
+
+.avatar {
+  flex: 0 0 auto;
+  background: #1677ff;
+}
+
+.assistant .avatar {
+  background: #0f766e;
+}
+
 .bubble-content {
-  background: #fff;
-  padding: 12px 16px;
-  border-radius: 12px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
   min-width: 0;
+  padding: 12px 16px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
+
 .user .bubble-content {
-  background: #409eff;
   color: #fff;
+  background: #1677ff;
+  border-color: #1677ff;
 }
+
 .role-label {
-  font-size: 12px;
-  color: #909399;
   margin-bottom: 4px;
+  color: #64748b;
+  font-size: 12px;
 }
+
 .user .role-label {
-  color: rgba(255,255,255,0.7);
+  color: rgba(255, 255, 255, 0.75);
 }
+
 .text {
   font-size: 14px;
   line-height: 1.7;
   word-break: break-word;
 }
-.text :deep(p) { margin: 0 0 8px; }
-.text :deep(p:last-child) { margin-bottom: 0; }
+
+.text :deep(p) {
+  margin: 0 0 8px;
+}
+
+.text :deep(p:last-child) {
+  margin-bottom: 0;
+}
+
 .text :deep(code) {
-  background: rgba(0,0,0,0.06);
   padding: 2px 6px;
-  border-radius: 4px;
   font-size: 13px;
+  background: rgba(15, 23, 42, 0.08);
+  border-radius: 4px;
 }
+
 .text :deep(pre) {
-  background: #f5f7fa;
   padding: 12px;
-  border-radius: 8px;
-  overflow-x: auto;
   margin: 8px 0;
+  overflow-x: auto;
+  background: #f8fafc;
+  border-radius: 8px;
 }
+
 .tool-calls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
   margin-top: 8px;
 }
 </style>

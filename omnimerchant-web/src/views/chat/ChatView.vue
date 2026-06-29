@@ -1,83 +1,104 @@
 <template>
   <div class="chat-layout">
-    <!-- Sidebar -->
     <aside class="chat-sidebar">
-      <div class="brand" @click="$router.push('/admin')">
+      <div class="brand" @click="router.push('/admin')">
         <h2>OmniMerchant</h2>
-        <span class="version">v0.0.1</span>
+        <span class="version">智能客服测试台</span>
       </div>
       <div class="new-chat-btn">
-        <el-button type="primary" @click="startNewChat" :icon="Plus">新对话</el-button>
+        <a-button block type="primary" @click="startNewChat">
+          <template #icon><PlusOutlined /></template>
+          新对话
+        </a-button>
       </div>
       <div class="conversation-list">
-        <div v-for="c in conversations" :key="c.uuid" class="conv-item"
-             :class="{ active: c.uuid === currentConvId }"
-             @click="switchConversation(c.uuid)">
-          <span class="conv-title">{{ c.title || '新对话' }}</span>
-          <span class="conv-time">{{ c.time }}</span>
-        </div>
-        <el-empty v-if="!conversations.length" description="暂无对话" :image-size="60" />
+        <button
+          v-for="conversation in conversations"
+          :key="conversation.uuid"
+          class="conv-item"
+          :class="{ active: conversation.uuid === currentConvId }"
+          type="button"
+          @click="switchConversation(conversation.uuid)"
+        >
+          <span class="conv-title">{{ conversation.title || '新对话' }}</span>
+          <span class="conv-time">{{ conversation.time }}</span>
+        </button>
+        <a-empty v-if="!conversations.length" description="暂无对话" />
       </div>
       <div class="sidebar-footer">
-        <el-button text @click="$router.push('/admin')" :icon="Setting">管理后台</el-button>
-        <el-button text type="danger" @click="handleLogout" :icon="SwitchButton">退出</el-button>
+        <a-button type="link" @click="router.push('/admin')">
+          <template #icon><SettingOutlined /></template>
+          管理后台
+        </a-button>
+        <a-button danger type="link" @click="handleLogout">
+          <template #icon><LogoutOutlined /></template>
+          退出
+        </a-button>
       </div>
     </aside>
 
-    <!-- Main chat area -->
     <main class="chat-main">
       <header class="chat-header">
-        <div class="header-left">
-          <el-select v-model="selectedTenantId" placeholder="选择租户" size="default" style="width:260px" filterable
-                     @change="onTenantChange">
-            <el-option v-for="t in tenants" :key="t.id" :label="`${t.storeName} (${t.tenantCode})`" :value="t.id" />
-          </el-select>
-        </div>
-        <div class="header-right">
-          <el-tag v-if="streaming" type="warning">AI 回复中...</el-tag>
-          <el-tag v-else type="success">就绪</el-tag>
-        </div>
+        <a-select
+          v-model:value="selectedTenantId"
+          show-search
+          placeholder="选择租户"
+          style="width: 280px"
+          option-filter-prop="label"
+          @change="onTenantChange"
+        >
+          <a-select-option
+            v-for="tenant in tenants"
+            :key="tenant.id"
+            :value="tenant.id"
+            :label="`${tenant.storeName} (${tenant.tenantCode})`"
+          >
+            {{ tenant.storeName }}（{{ tenant.tenantCode }}）
+          </a-select-option>
+        </a-select>
+        <a-tag :color="streaming ? 'gold' : 'green'">{{ streaming ? '回复中' : '就绪' }}</a-tag>
       </header>
 
-      <!-- Messages -->
-      <div class="messages-container" ref="msgContainer">
+      <div ref="msgContainer" class="messages-container">
         <div v-if="messages.length === 0" class="welcome">
-          <h3>OmniMerchant AI 客服</h3>
-          <p>选择租户后发送消息，测试多语言智能客服</p>
-          <div class="quick-tests">
-            <el-button v-for="qt in quickTests" :key="qt" size="small" @click="sendMessage(qt)">{{ qt }}</el-button>
-          </div>
+          <h3>OmniMerchant 智能客服</h3>
+          <p>选择租户后发送测试消息，验证订单、物流、退货、商品推荐和人工升级链路。</p>
         </div>
-        <MessageBubble v-for="(msg, i) in messages" :key="i" :role="msg.role" :text="msg.text" :tool-calls="msg.toolCalls" />
-        <div v-if="streaming" class="streaming-indicator">
-          <MessageBubble role="assistant" :text="streamText" />
-        </div>
+
+        <MessageBubble
+          v-for="(msg, index) in messages"
+          :key="index"
+          :role="msg.role"
+          :text="msg.text"
+          :tool-calls="msg.toolCalls"
+        />
+        <MessageBubble v-if="streaming" role="assistant" :text="streamText" />
         <div ref="scrollAnchor"></div>
       </div>
 
-      <!-- Input -->
       <footer class="chat-input">
-        <el-input v-model="inputText" placeholder="输入消息测试 AI 客服 (支持多语言)..." size="large"
-                  :disabled="!selectedTenantId || streaming" clearable
-                  @keydown.enter.exact="sendMessage()">
-          <template #append>
-            <el-button :icon="Promotion" :disabled="!selectedTenantId || streaming || !inputText.trim()"
-                       @click="sendMessage()" type="primary">发送</el-button>
-          </template>
-        </el-input>
+        <a-input-search
+          v-model:value="inputText"
+          enter-button="发送"
+          placeholder="输入消息测试智能客服，支持多语言"
+          size="large"
+          :disabled="!selectedTenantId || streaming"
+          :loading="streaming"
+          @search="sendMessage()"
+        />
       </footer>
     </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, onMounted } from 'vue'
+import { nextTick, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { Plus, Setting, SwitchButton, Promotion } from '@element-plus/icons-vue'
+import { message } from 'ant-design-vue'
+import { LogoutOutlined, PlusOutlined, SettingOutlined } from '@ant-design/icons-vue'
 import api from '@/api'
-import { useAuthStore } from '@/stores/auth'
 import MessageBubble from '@/components/MessageBubble.vue'
+import { useAuthStore } from '@/stores/auth'
 import { selectDefaultTenantId, setStoredTenantId } from '@/utils/tenant'
 
 const router = useRouter()
@@ -94,17 +115,10 @@ const streamText = ref('')
 const msgContainer = ref<HTMLElement>()
 const scrollAnchor = ref<HTMLElement>()
 
-const quickTests = [
-  'Where is my order #1001? My email is ava@example.com.',
-  'Recommend a waterproof travel backpack under $80.',
-  'Can I return the rain jacket from order #1002? lucia@example.es',
-  'I am angry because tracking VL2004US is late.',
-]
-
 function generateUUID() {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0
-    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16)
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (char) => {
+    const random = (Math.random() * 16) | 0
+    return (char === 'x' ? random : (random & 0x3) | 0x8).toString(16)
   })
 }
 
@@ -115,7 +129,7 @@ function startNewChat() {
   conversations.value.unshift({
     uuid: currentConvId.value,
     title: '新对话',
-    time: new Date().toLocaleTimeString(),
+    time: new Date().toLocaleTimeString('zh-CN'),
   })
 }
 
@@ -125,7 +139,7 @@ function switchConversation(uuid: string) {
   streamText.value = ''
 }
 
-async function onTenantChange() {
+function onTenantChange() {
   setStoredTenantId(selectedTenantId.value)
   if (!currentConvId.value) startNewChat()
 }
@@ -136,15 +150,17 @@ async function loadTenants() {
     tenants.value = res.data?.records || []
     selectedTenantId.value = selectDefaultTenantId(tenants.value)
     setStoredTenantId(selectedTenantId.value)
-  } catch { /* ignore */ }
+  } catch {
+    tenants.value = []
+  }
 }
 
 async function sendMessage(text?: string) {
-  const msg = (text || inputText.value).trim()
-  if (!msg || streaming.value) return
+  const userText = (text || inputText.value).trim()
+  if (!userText || streaming.value) return
   if (!currentConvId.value) startNewChat()
 
-  messages.value.push({ role: 'user', text: msg })
+  messages.value.push({ role: 'user', text: userText })
   inputText.value = ''
   streaming.value = true
   streamText.value = ''
@@ -153,17 +169,16 @@ async function sendMessage(text?: string) {
   scrollToBottom()
 
   try {
-    const token = authStore.token
     const resp = await fetch('/api/chat/stream', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
+        Authorization: `Bearer ${authStore.token}`,
         'X-Tenant-Id': String(selectedTenantId.value),
       },
       body: JSON.stringify({
         conversationUuid: currentConvId.value,
-        message: msg,
+        message: userText,
         intent: 'UNCLEAR',
       }),
     })
@@ -171,7 +186,7 @@ async function sendMessage(text?: string) {
     if (!resp.ok) {
       if (resp.status === 401 || resp.status === 403) {
         authStore.logout()
-        ElMessage.error('当前登录权限已失效，请重新登录')
+        message.error('当前登录权限已失效，请重新登录')
         router.push('/login')
         return
       }
@@ -179,7 +194,7 @@ async function sendMessage(text?: string) {
     }
 
     const reader = resp.body?.getReader()
-    if (!reader) throw new Error('No response body')
+    if (!reader) throw new Error('响应流为空')
 
     const decoder = new TextDecoder()
     let buffer = ''
@@ -191,33 +206,27 @@ async function sendMessage(text?: string) {
 
       buffer += decoder.decode(value, { stream: true })
       const lines = buffer.split('\n')
-      // Keep the last partial line in buffer
       buffer = lines.pop() || ''
 
       for (const line of lines) {
         if (line.startsWith('event:')) {
           currentEvent = line.slice(6).trim()
         } else if (line.startsWith('data:')) {
-          // SSE data field: remove "data:" prefix, trim leading space if any
           const data = line.slice(5).replace(/^ /, '')
           if (currentEvent === 'done' || data === '[DONE]') {
-            // Stream complete — finalize message on next blank line or here
             if (streamText.value) {
               messages.value.push({ role: 'assistant', text: streamText.value })
               streamText.value = ''
             }
           } else if (currentEvent === 'error') {
-            ElMessage.error('AI 回复出错: ' + data)
+            message.error(`智能客服回复出错：${data}`)
           } else {
-            // message event — append text chunk as-is
             streamText.value += data
           }
         }
-        // Blank lines (event boundary) reset currentEvent
       }
     }
 
-    // Handle any remaining streamed text
     if (streamText.value) {
       messages.value.push({ role: 'assistant', text: streamText.value })
       streamText.value = ''
@@ -225,13 +234,12 @@ async function sendMessage(text?: string) {
     await nextTick()
     scrollToBottom()
 
-    // Update conversation title from first user message
-    const conv = conversations.value.find((c) => c.uuid === currentConvId.value)
-    if (conv && messages.value.length >= 2) {
-      conv.title = msg.slice(0, 30) + (msg.length > 30 ? '...' : '')
+    const conversation = conversations.value.find((item) => item.uuid === currentConvId.value)
+    if (conversation && messages.value.length >= 2) {
+      conversation.title = userText.slice(0, 30) + (userText.length > 30 ? '...' : '')
     }
-  } catch (e: any) {
-    ElMessage.error('AI 请求失败: ' + (e.message || '网络错误'))
+  } catch (error: any) {
+    message.error(`智能客服请求失败：${error.message || '网络错误'}`)
     streamText.value = ''
   } finally {
     streaming.value = false
@@ -259,111 +267,144 @@ onMounted(async () => {
 
 <style scoped>
 .chat-layout {
+  background: #f3f6fb;
   display: flex;
   height: 100vh;
-  background: #f5f7fa;
 }
+
 .chat-sidebar {
-  width: 260px;
   background: #fff;
+  border-right: 1px solid #e5e7eb;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid #e4e7ed;
   flex-shrink: 0;
+  width: 280px;
 }
+
 .brand {
-  padding: 20px;
-  border-bottom: 1px solid #ebeef5;
+  border-bottom: 1px solid #eef0f3;
   cursor: pointer;
+  padding: 20px;
 }
+
 .brand h2 {
+  color: #1677ff;
   font-size: 18px;
-  color: #409eff;
+  margin: 0;
 }
+
 .version {
-  font-size: 11px;
-  color: #c0c4cc;
+  color: #8c8c8c;
+  font-size: 12px;
 }
+
 .new-chat-btn {
   padding: 12px 16px;
 }
+
 .conversation-list {
   flex: 1;
   overflow-y: auto;
-  padding: 0 8px;
+  padding: 0 10px;
 }
+
 .conv-item {
-  padding: 10px 12px;
+  background: transparent;
+  border: 0;
   border-radius: 8px;
   cursor: pointer;
-  margin-bottom: 4px;
   display: flex;
   flex-direction: column;
   gap: 2px;
+  margin-bottom: 4px;
+  padding: 10px 12px;
+  text-align: left;
+  width: 100%;
 }
-.conv-item:hover { background: #f5f7fa; }
-.conv-item.active { background: #ecf5ff; }
+
+.conv-item:hover,
+.conv-item.active {
+  background: #f0f5ff;
+}
+
 .conv-title {
+  color: #1f2937;
   font-size: 13px;
-  color: #303133;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 .conv-time {
+  color: #9ca3af;
   font-size: 11px;
-  color: #c0c4cc;
 }
+
 .sidebar-footer {
-  padding: 12px;
-  border-top: 1px solid #ebeef5;
+  border-top: 1px solid #eef0f3;
   display: flex;
   justify-content: space-between;
+  padding: 12px;
 }
+
 .chat-main {
-  flex: 1;
   display: flex;
+  flex: 1;
   flex-direction: column;
   min-width: 0;
 }
+
 .chat-header {
-  height: 56px;
-  padding: 0 20px;
-  background: #fff;
-  border-bottom: 1px solid #e4e7ed;
-  display: flex;
   align-items: center;
-  justify-content: space-between;
-  flex-shrink: 0;
-}
-.messages-container {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
   display: flex;
+  flex-shrink: 0;
+  height: 60px;
+  justify-content: space-between;
+  padding: 0 20px;
+}
+
+.messages-container {
+  display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 4px;
+  overflow-y: auto;
+  padding: 20px;
 }
+
 .welcome {
-  text-align: center;
+  color: #6b7280;
   margin: auto;
-  color: #909399;
+  max-width: 760px;
+  text-align: center;
 }
-.welcome h3 { font-size: 24px; color: #303133; margin-bottom: 8px; }
-.welcome p { margin-bottom: 20px; }
-.quick-tests {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: center;
+
+.welcome h3 {
+  color: #1f2937;
+  font-size: 24px;
+  margin-bottom: 8px;
 }
+
 .chat-input {
-  padding: 16px 20px;
   background: #fff;
-  border-top: 1px solid #e4e7ed;
+  border-top: 1px solid #e5e7eb;
   flex-shrink: 0;
+  padding: 16px 20px;
 }
-.streaming-indicator {
-  opacity: 0.85;
+
+@media (max-width: 860px) {
+  .chat-sidebar {
+    display: none;
+  }
+
+  .chat-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+    height: auto;
+    padding: 12px;
+  }
 }
 </style>

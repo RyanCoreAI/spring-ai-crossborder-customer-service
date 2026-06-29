@@ -1,82 +1,129 @@
 <template>
   <div>
     <div class="page-head">
-      <h2 class="page-title">渠道集成</h2>
-      <el-tag type="info">Shopify-first</el-tag>
+      <div>
+        <h2 class="page-title">渠道集成</h2>
+        <p class="page-subtitle">管理 Shopify 连接、同步任务和 Webhook 死信重放，真实写操作仍走审批流。</p>
+      </div>
+      <a-tag color="blue">Shopify 优先</a-tag>
     </div>
 
-    <el-card shadow="never" class="block">
-      <el-form label-width="150px" class="form">
-        <el-form-item label="租户">
-          <el-select v-model="tenantId" filterable style="width:320px" @change="saveTenant">
-            <el-option v-for="t in tenants" :key="t.id" :label="`${t.storeName} (${t.tenantCode})`" :value="t.id" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="Shopify Shop Domain">
-          <el-input v-model="form.shopDomain" placeholder="your-store.myshopify.com" />
-        </el-form-item>
-        <el-form-item label="Admin API Token">
-          <el-input v-model="form.adminApiToken" type="password" show-password placeholder="shpat_..." />
-        </el-form-item>
-        <el-form-item label="Webhook Secret">
-          <el-input v-model="form.webhookSecret" type="password" show-password />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" :loading="connecting" @click="connect">保存 Custom App 凭证</el-button>
-          <el-button :loading="installing" @click="installOauth">生成 OAuth 安装链接</el-button>
-          <el-button :loading="syncing" @click="sync">同步商品/客户/订单</el-button>
-        </el-form-item>
-      </el-form>
-      <el-alert type="warning" show-icon :closable="false"
-                title="退款、取消订单和改地址仍必须进入内部审批流；AI 不直接写外部 Shopify。" />
-      <el-descriptions v-if="lastResult" :column="1" border class="result">
-        <el-descriptions-item label="状态">{{ lastResult.status }}</el-descriptions-item>
-        <el-descriptions-item label="消息">{{ lastResult.message }}</el-descriptions-item>
-        <el-descriptions-item v-if="lastResult.installUrl" label="OAuth URL">
-          <el-link :href="lastResult.installUrl" target="_blank">打开安装链接</el-link>
-        </el-descriptions-item>
-        <el-descriptions-item v-if="lastResult.customers !== undefined" label="客户">{{ lastResult.customers }}</el-descriptions-item>
-        <el-descriptions-item v-if="lastResult.orders !== undefined" label="订单">{{ lastResult.orders }}</el-descriptions-item>
-        <el-descriptions-item v-if="lastResult.products !== undefined" label="商品">{{ lastResult.products }}</el-descriptions-item>
-      </el-descriptions>
-    </el-card>
+    <a-card class="block">
+      <a-form layout="vertical" class="form">
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="租户">
+              <a-select
+                v-model:value="tenantId"
+                show-search
+                style="width: 100%"
+                option-filter-prop="label"
+                @change="saveTenant"
+              >
+                <a-select-option
+                  v-for="tenant in tenants"
+                  :key="tenant.id"
+                  :value="tenant.id"
+                  :label="`${tenant.storeName} (${tenant.tenantCode})`"
+                >
+                  {{ tenant.storeName }}（{{ tenant.tenantCode }}）
+                </a-select-option>
+              </a-select>
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="Shopify 店铺域名">
+              <a-input v-model:value="form.shopDomain" placeholder="your-store.myshopify.com" />
+            </a-form-item>
+          </a-col>
+        </a-row>
 
-    <el-row :gutter="16">
-      <el-col :span="12">
-        <el-card shadow="never" header="Sync Jobs">
-          <el-table :data="jobs" size="small" stripe>
-            <el-table-column prop="resource" label="资源" width="120" />
-            <el-table-column prop="status" label="状态" width="110" />
-            <el-table-column prop="attempts" label="次数" width="80" />
-            <el-table-column prop="importedCount" label="导入" width="90" />
-            <el-table-column prop="lastError" label="错误" min-width="160" show-overflow-tooltip />
-            <el-table-column label="操作" width="90">
-              <template #default="{ row }"><el-button size="small" @click="retryJob(row)">重试</el-button></template>
-            </el-table-column>
-          </el-table>
-        </el-card>
-      </el-col>
-      <el-col :span="12">
-        <el-card shadow="never" header="Webhook DLQ / Replay">
-          <el-table :data="webhooks" size="small" stripe>
-            <el-table-column prop="topic" label="Topic" min-width="160" show-overflow-tooltip />
-            <el-table-column prop="status" label="状态" width="80" />
-            <el-table-column prop="signatureValid" label="签名" width="80" />
-            <el-table-column prop="processAttempts" label="次数" width="80" />
-            <el-table-column prop="lastError" label="错误" min-width="150" show-overflow-tooltip />
-            <el-table-column label="操作" width="90">
-              <template #default="{ row }"><el-button size="small" @click="replay(row)">Replay</el-button></template>
-            </el-table-column>
-          </el-table>
-        </el-card>
-      </el-col>
-    </el-row>
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="Admin API Token（开发兜底）">
+              <a-input-password v-model:value="form.adminApiToken" placeholder="shpat_..." />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="Webhook Secret">
+              <a-input-password v-model:value="form.webhookSecret" />
+            </a-form-item>
+          </a-col>
+        </a-row>
+
+        <a-space wrap>
+          <a-button type="primary" :loading="connecting" @click="connect">保存 Custom App 凭证</a-button>
+          <a-button :loading="installing" @click="installOauth">生成 OAuth 安装链接</a-button>
+          <a-button :loading="syncing" @click="sync">同步商品、客户和订单</a-button>
+        </a-space>
+      </a-form>
+
+      <a-alert
+        class="notice"
+        type="warning"
+        show-icon
+        message="退款、取消订单和改地址仍必须进入内部审批流；智能体不会直接写外部 Shopify。"
+      />
+
+      <a-descriptions v-if="lastResult" :column="1" bordered class="result">
+        <a-descriptions-item label="状态">{{ lastResult.status || '-' }}</a-descriptions-item>
+        <a-descriptions-item label="消息">{{ lastResult.message || '-' }}</a-descriptions-item>
+        <a-descriptions-item v-if="lastResult.installUrl" label="OAuth 安装链接">
+          <a :href="lastResult.installUrl" target="_blank" rel="noreferrer">打开安装链接</a>
+        </a-descriptions-item>
+        <a-descriptions-item v-if="lastResult.customers !== undefined" label="客户">
+          {{ lastResult.customers }}
+        </a-descriptions-item>
+        <a-descriptions-item v-if="lastResult.orders !== undefined" label="订单">
+          {{ lastResult.orders }}
+        </a-descriptions-item>
+        <a-descriptions-item v-if="lastResult.products !== undefined" label="商品">
+          {{ lastResult.products }}
+        </a-descriptions-item>
+      </a-descriptions>
+    </a-card>
+
+    <a-row :gutter="[16, 16]">
+      <a-col :xs="24" :xl="12">
+        <a-card title="同步任务">
+          <a-table :columns="jobColumns" :data-source="jobs" :pagination="false" row-key="id" size="small">
+            <template #bodyCell="{ column, record }">
+              <template v-if="column.key === 'status'">
+                <a-tag :color="statusColor(record.status)">{{ statusLabel(record.status) }}</a-tag>
+              </template>
+              <template v-else-if="column.key === 'actions'">
+                <a-button size="small" @click="retryJob(record)">重试</a-button>
+              </template>
+            </template>
+          </a-table>
+        </a-card>
+      </a-col>
+      <a-col :xs="24" :xl="12">
+        <a-card title="Webhook 死信与重放">
+          <a-table :columns="webhookColumns" :data-source="webhooks" :pagination="false" row-key="id" size="small">
+            <template #bodyCell="{ column, record }">
+              <template v-if="column.key === 'signatureValid'">
+                <a-tag :color="record.signatureValid ? 'green' : 'red'">
+                  {{ record.signatureValid ? '有效' : '无效' }}
+                </a-tag>
+              </template>
+              <template v-else-if="column.key === 'status'">
+                <a-tag :color="statusColor(record.status)">{{ statusLabel(record.status) }}</a-tag>
+              </template>
+              <template v-else-if="column.key === 'actions'">
+                <a-button size="small" @click="replay(record)">重放</a-button>
+              </template>
+            </template>
+          </a-table>
+        </a-card>
+      </a-col>
+    </a-row>
   </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { message } from 'ant-design-vue'
 import api from '@/api'
 import { selectDefaultTenantId, setStoredTenantId } from '@/utils/tenant'
 
@@ -89,6 +136,45 @@ const lastResult = ref<any>(null)
 const jobs = ref<any[]>([])
 const webhooks = ref<any[]>([])
 const form = reactive({ shopDomain: '', adminApiToken: '', webhookSecret: '' })
+
+const jobColumns = [
+  { title: '资源', dataIndex: 'resource', width: 120 },
+  { title: '状态', dataIndex: 'status', key: 'status', width: 110 },
+  { title: '尝试次数', dataIndex: 'attempts', width: 90 },
+  { title: '导入数量', dataIndex: 'importedCount', width: 90 },
+  { title: '最近错误', dataIndex: 'lastError', ellipsis: true },
+  { title: '操作', key: 'actions', width: 90 },
+]
+
+const webhookColumns = [
+  { title: '主题', dataIndex: 'topic', ellipsis: true },
+  { title: '状态', dataIndex: 'status', key: 'status', width: 100 },
+  { title: '签名', dataIndex: 'signatureValid', key: 'signatureValid', width: 90 },
+  { title: '处理次数', dataIndex: 'processAttempts', width: 90 },
+  { title: '最近错误', dataIndex: 'lastError', ellipsis: true },
+  { title: '操作', key: 'actions', width: 90 },
+]
+
+function statusColor(status: string) {
+  if (['SUCCESS', 'COMPLETED'].includes(status)) return 'green'
+  if (['FAILED', 'DEAD'].includes(status)) return 'red'
+  if (['PROCESSING', 'RUNNING'].includes(status)) return 'blue'
+  return 'default'
+}
+
+function statusLabel(status: string) {
+  const labels: Record<string, string> = {
+    RECEIVED: '已接收',
+    PROCESSING: '处理中',
+    SUCCESS: '成功',
+    FAILED: '失败',
+    DEAD: '死信',
+    RUNNING: '运行中',
+    COMPLETED: '已完成',
+    PENDING: '待处理',
+  }
+  return labels[status] || status || '-'
+}
 
 function saveTenant() {
   setStoredTenantId(tenantId.value)
@@ -104,13 +190,16 @@ async function loadTenants() {
 
 async function loadOps() {
   try {
-    const [j, w] = await Promise.all([
+    const [jobRes, webhookRes] = await Promise.all([
       api.get('/integrations/shopify/jobs', { params: { page: 1, size: 50 } }),
       api.get('/integrations/shopify/webhooks', { params: { page: 1, size: 50 } }),
     ])
-    jobs.value = j.data?.records || []
-    webhooks.value = w.data?.records || []
-  } catch { /* optional until connector is configured */ }
+    jobs.value = jobRes.data?.records || []
+    webhooks.value = webhookRes.data?.records || []
+  } catch {
+    jobs.value = []
+    webhooks.value = []
+  }
 }
 
 async function connect() {
@@ -118,7 +207,7 @@ async function connect() {
   try {
     const res = await api.post('/integrations/shopify/connect', form)
     lastResult.value = res.data
-    ElMessage.success('Shopify 凭证已保存')
+    message.success('Shopify 凭证已保存')
     loadOps()
   } finally {
     connecting.value = false
@@ -141,7 +230,7 @@ async function sync() {
   try {
     const res = await api.post('/integrations/shopify/sync')
     lastResult.value = res.data
-    ElMessage.success('同步完成')
+    message.success('同步任务已触发')
     loadOps()
   } finally {
     syncing.value = false
@@ -150,13 +239,13 @@ async function sync() {
 
 async function retryJob(row: any) {
   await api.post(`/integrations/shopify/jobs/${row.id}/retry`)
-  ElMessage.success('已排队重试')
+  message.success('已排队重试')
   loadOps()
 }
 
 async function replay(row: any) {
   await api.post(`/integrations/shopify/webhooks/${row.id}/replay`)
-  ElMessage.success('已重放 webhook')
+  message.success('Webhook 已重放')
   loadOps()
 }
 
@@ -164,9 +253,16 @@ onMounted(loadTenants)
 </script>
 
 <style scoped>
-.page-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-.page-title { margin: 0; font-size: 22px; color: #303133; }
-.form { max-width: 820px; }
-.result { margin-top: 18px; }
-.block { margin-bottom: 16px; }
+.form {
+  max-width: 920px;
+}
+
+.notice,
+.result {
+  margin-top: 18px;
+}
+
+.block {
+  margin-bottom: 16px;
+}
 </style>

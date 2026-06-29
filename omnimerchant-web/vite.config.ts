@@ -26,7 +26,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           vue: ['vue', 'vue-router', 'pinia'],
-          element: ['element-plus', '@element-plus/icons-vue'],
+          antd: ['ant-design-vue', '@ant-design/icons-vue'],
           markdown: ['marked', 'dompurify'],
           axios: ['axios'],
         },

@@ -21,7 +21,7 @@ Spring Boot 4 + Spring AI 2 trustworthy ecommerce customer-service agent platfor
 
 ## 截图矩阵
 
-运行 `.\scripts\capture-screenshots.ps1` 后会生成下面这些页面证据。脚本会登录后台、注入短期 JWT 到临时 Chrome profile，并截图至少 8 个真实路由。
+仓库当前提交两张公开页面截图：买家咨询组件和登录页。后台页面截图依赖运行中的后端、seed 数据、管理员账号和租户上下文，可通过 `.\scripts\capture-screenshots.ps1` 在本地 runtime 重新生成。脚本默认会使用 `ADMIN_EMAIL` / `ADMIN_PASSWORD` 登录后台，也可以传 `-PublicOnly` 只生成公开页面截图。
 
 | 页面 | 路由 | 产物 |
 |------|------|------|
@@ -38,7 +38,7 @@ Spring Boot 4 + Spring AI 2 trustworthy ecommerce customer-service agent platfor
 | Trace Replay | `/admin/traces` | `docs/assets/screenshots/traces.png` |
 | RAG Safety | `/admin/rag-safety` | `docs/assets/screenshots/rag-safety.png` |
 
-当前仓库保留两个轻量示例图，完整后台矩阵由 release smoke 在本地 runtime 生成：
+当前仓库保留两个轻量示例图，完整后台矩阵由 release smoke 在本地 runtime 生成；没有运行后端时不提交伪造后台截图：
 
 ![Widget](docs/assets/screenshots/widget.png)
 
@@ -47,6 +47,13 @@ Spring Boot 4 + Spring AI 2 trustworthy ecommerce customer-service agent platfor
 ## Eval 证据
 
 默认 deterministic eval 覆盖 80 条 seeded golden conversations，按租户持久化 `agent_eval_run` / `agent_eval_result`，并输出：
+
+当前已提交报告：`reports/agent-eval-report.md`，生成时间 `2026-06-28T18:25:38+08:00`，模式 `DETERMINISTIC`。
+
+| Tenant | Cases | Passed | Failed | Pass Rate | Tool Precision | Tool Recall | Citation Coverage | Poisoning Block |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1001 | 42 | 42 | 0 | 100.0% | 97.62% | 100.00% | 100.00% | 100.00% |
+| 1002 | 38 | 38 | 0 | 100.0% | 100.00% | 100.00% | 100.00% | 100.00% |
 
 | Metric | Source |
 |--------|--------|
@@ -72,7 +79,7 @@ Spring Boot 4 + Spring AI 2 trustworthy ecommerce customer-service agent platfor
 | 缓存 | Redis 7 | — |
 | 消息 | RocketMQ | 5.1 |
 | 熔断 | Resilience4j core + Reactor | 2.3.0 |
-| 前端 | Vue 3 + Element Plus + TypeScript | 3.5 / 2.9 / 5.7 |
+| 前端 | Vue 3 + Ant Design Vue + TypeScript | 3.5 / 4.2 / 5.7 |
 | 构建 | Vite 6 / Maven 3.8+ | — |
 
 ## 项目结构
@@ -377,6 +384,9 @@ mvn -q -Pintegration verify
 
 ```powershell
 .\scripts\capture-screenshots.ps1
+
+# 只生成公开页面截图，不需要管理员账号：
+.\scripts\capture-screenshots.ps1 -PublicOnly
 ```
 
 ## 配置参考

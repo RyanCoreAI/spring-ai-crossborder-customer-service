@@ -49,7 +49,7 @@ function New-Cdp-WebSocket {
         $target = Invoke-RestMethod -Uri $targetUrl
     }
     $ws = [System.Net.WebSockets.ClientWebSocket]::new()
-    $ws.ConnectAsync([Uri]$target.webSocketDebuggerUrl, [Threading.CancellationToken]::None).GetAwaiter().GetResult()
+    [void]$ws.ConnectAsync([Uri]$target.webSocketDebuggerUrl, [Threading.CancellationToken]::None).GetAwaiter().GetResult()
     return $ws
 }
 
@@ -120,6 +120,30 @@ function Save-Screenshot {
         captureBeyondViewport = $true
     }
     [IO.File]::WriteAllBytes($OutPath, [Convert]::FromBase64String($shot.data))
+}
+
+function Remove-ProfileDir {
+    param([string]$Path)
+    if (-not (Test-Path $Path)) {
+        return
+    }
+    $resolvedTemp = [IO.Path]::GetFullPath([IO.Path]::GetTempPath())
+    $resolvedPath = [IO.Path]::GetFullPath($Path)
+    if (-not $resolvedPath.StartsWith($resolvedTemp, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Refusing to remove profile directory outside temp: $resolvedPath"
+    }
+    for ($i = 0; $i -lt 6; $i++) {
+        try {
+            Remove-Item -LiteralPath $resolvedPath -Recurse -Force -ErrorAction Stop
+            return
+        } catch {
+            if ($i -eq 5) {
+                Write-Warning "Could not remove temporary browser profile: $($_.Exception.Message)"
+                return
+            }
+            Start-Sleep -Milliseconds 500
+        }
+    }
 }
 
 $resolvedOutputDir = (New-Item -ItemType Directory -Force -Path $OutputDir).FullName
@@ -206,8 +230,7 @@ try {
     }
     if ($chrome -and -not $chrome.HasExited) {
         Stop-Process -Id $chrome.Id -Force
+        Wait-Process -Id $chrome.Id -Timeout 5 -ErrorAction SilentlyContinue
     }
-    if (Test-Path $profileDir) {
-        Remove-Item -LiteralPath $profileDir -Recurse -Force
-    }
+    Remove-ProfileDir -Path $profileDir
 }

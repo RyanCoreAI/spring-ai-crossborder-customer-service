@@ -1,111 +1,64 @@
 <template>
-  <div class="admin-layout">
-    <aside class="admin-sidebar">
-      <div class="admin-brand">
-        <h2>OmniMerchant</h2>
-        <p>管理后台</p>
+  <a-layout class="admin-layout">
+    <a-layout-sider class="admin-sider" :width="248">
+      <div class="admin-brand" @click="router.push('/admin')">
+        <div class="brand-mark">OM</div>
+        <div>
+          <h1>OmniMerchant</h1>
+          <p>AI 客服运营台</p>
+        </div>
       </div>
-      <el-menu :default-active="currentRoute" router :default-openeds="['/']" background-color="#304156" text-color="#bfcbd9" active-text-color="#409eff">
-        <el-menu-item index="/admin">
-          <el-icon><DataAnalysis /></el-icon>
-          <span>数据概览</span>
-        </el-menu-item>
-        <el-menu-item index="/admin/inbox">
-          <el-icon><MessageBox /></el-icon>
-          <span>客服工作台</span>
-        </el-menu-item>
-        <el-menu-item index="/admin/tenants">
-          <el-icon><Shop /></el-icon>
-          <span>租户管理</span>
-        </el-menu-item>
-        <el-menu-item index="/admin/customers">
-          <el-icon><User /></el-icon>
-          <span>客户</span>
-        </el-menu-item>
-        <el-menu-item index="/admin/orders">
-          <el-icon><Tickets /></el-icon>
-          <span>订单</span>
-        </el-menu-item>
-        <el-menu-item index="/admin/products">
-          <el-icon><Goods /></el-icon>
-          <span>商品</span>
-        </el-menu-item>
-        <el-menu-item index="/admin/knowledge">
-          <el-icon><Document /></el-icon>
-          <span>知识库</span>
-        </el-menu-item>
-        <el-menu-item index="/admin/conversations">
-          <el-icon><ChatDotRound /></el-icon>
-          <span>对话回放</span>
-        </el-menu-item>
-        <el-menu-item index="/admin/tickets">
-          <el-icon><Warning /></el-icon>
-          <span>人工工单</span>
-        </el-menu-item>
-        <el-menu-item index="/admin/integrations">
-          <el-icon><Connection /></el-icon>
-          <span>渠道集成</span>
-        </el-menu-item>
-        <el-menu-item index="/admin/usage">
-          <el-icon><Coin /></el-icon>
-          <span>用量计费</span>
-        </el-menu-item>
-        <el-menu-item index="/admin/observability">
-          <el-icon><Monitor /></el-icon>
-          <span>观测</span>
-        </el-menu-item>
-        <el-menu-item index="/admin/traces">
-          <el-icon><Share /></el-icon>
-          <span>轨迹</span>
-        </el-menu-item>
-        <el-menu-item index="/admin/rag-safety">
-          <el-icon><Lock /></el-icon>
-          <span>RAG 安全</span>
-        </el-menu-item>
-        <el-menu-item index="/admin/evals">
-          <el-icon><Checked /></el-icon>
-          <span>评测</span>
-        </el-menu-item>
-      </el-menu>
-      <div class="sidebar-bottom">
-        <el-button text style="color:#bfcbd9" @click="$router.push('/chat')" :icon="Promotion">前往对话页</el-button>
-        <el-button text style="color:#bfcbd9" @click="handleLogout" :icon="SwitchButton">退出登录</el-button>
+
+      <a-menu
+        class="admin-menu"
+        :selected-keys="[activeMenuKey]"
+        mode="inline"
+        theme="dark"
+        @click="onMenuClick"
+      >
+        <a-menu-item v-for="item in menuItems" :key="item.path">
+          {{ item.label }}
+        </a-menu-item>
+      </a-menu>
+
+      <div class="sider-actions">
+        <a-button type="text" block @click="router.push('/chat')">后台对话测试</a-button>
+        <a-button type="text" danger block @click="handleLogout">退出登录</a-button>
       </div>
-    </aside>
-    <main class="admin-main">
+    </a-layout-sider>
+
+    <a-layout-content class="admin-main">
       <router-view />
-    </main>
-  </div>
+    </a-layout-content>
+  </a-layout>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import {
-  DataAnalysis,
-  Shop,
-  Document,
-  ChatDotRound,
-  Promotion,
-  SwitchButton,
-  MessageBox,
-  User,
-  Tickets,
-  Goods,
-  Warning,
-  Connection,
-  Coin,
-  Checked,
-  Monitor,
-  Share,
-  Lock,
-} from '@element-plus/icons-vue'
 import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
-const currentRoute = computed(() => route.path)
+
+const menuItems = [
+  { path: '/admin', label: '数据概览', match: ['/admin'] },
+  { path: '/admin/observability', label: '可信控制台', match: ['/admin/observability', '/admin/traces', '/admin/evals'] },
+  { path: '/admin/inbox', label: '对话与工单', match: ['/admin/inbox', '/admin/conversations', '/admin/tickets', '/admin/customers', '/admin/orders', '/admin/products'] },
+  { path: '/admin/rag-safety', label: '知识安全', match: ['/admin/rag-safety', '/admin/knowledge'] },
+  { path: '/admin/integrations', label: '渠道集成', match: ['/admin/integrations'] },
+  { path: '/admin/usage', label: '用量计费', match: ['/admin/usage'] },
+]
+
+const activeMenuKey = computed(() => {
+  const matched = menuItems.find((item) => item.match.some((prefix) => route.path === prefix || route.path.startsWith(`${prefix}/`)))
+  return matched?.path || '/admin'
+})
+
+function onMenuClick({ key }: { key: string }) {
+  router.push(key)
+}
 
 function handleLogout() {
   authStore.logout()
@@ -115,47 +68,102 @@ function handleLogout() {
 
 <style scoped>
 .admin-layout {
-  display: flex;
-  height: 100vh;
+  background: #f4f6fa;
+  min-height: 100vh;
 }
-.admin-sidebar {
-  width: 220px;
-  background: #304156;
+
+.admin-sider {
+  background: #101828;
   display: flex;
   flex-direction: column;
-  flex-shrink: 0;
+  overflow: hidden;
 }
+
 .admin-brand {
-  padding: 20px;
-  text-align: center;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
-}
-.admin-brand h2 {
-  color: #fff;
-  font-size: 18px;
-}
-.admin-brand p {
-  color: #909399;
-  font-size: 12px;
-  margin-top: 4px;
-}
-.admin-sidebar .el-menu {
-  border-right: none;
-  flex: 1;
-  overflow-y: auto;
-}
-.sidebar-bottom {
-  padding: 12px;
+  align-items: center;
+  cursor: pointer;
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  border-top: 1px solid rgba(255,255,255,0.1);
+  gap: 12px;
+  padding: 24px 18px 30px;
 }
-.admin-main {
+
+.brand-mark {
+  background: #1f7aff;
+  border-radius: 8px;
+  color: #fff;
+  display: grid;
+  font-size: 14px;
+  font-weight: 800;
+  height: 36px;
+  place-items: center;
+  width: 36px;
+}
+
+.admin-brand h1 {
+  color: #fff;
+  font-size: 16px;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.admin-brand p {
+  color: #98a2b3;
+  font-size: 12px;
+  margin: 3px 0 0;
+}
+
+.admin-menu {
+  background: #101828;
+  border-inline-end: none;
   flex: 1;
-  overflow-y: auto;
-  padding: 24px;
-  background: #f5f7fa;
+  padding: 0 18px;
+}
+
+.admin-menu :deep(.ant-menu-item) {
+  border-radius: 8px;
+  color: #c7d0df;
+  height: 38px;
+  line-height: 38px;
+  margin: 4px 0;
+  padding-left: 12px !important;
+}
+
+.admin-menu :deep(.ant-menu-item-selected) {
+  background: #17345f !important;
+  color: #fff;
+  font-weight: 650;
+}
+
+.admin-menu :deep(.ant-menu-item:not(.ant-menu-item-selected):hover) {
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: #fff;
+}
+
+.sider-actions {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 12px 18px 18px;
+}
+
+.sider-actions :deep(.ant-btn) {
+  color: #c7d0df;
+  justify-content: flex-start;
+  padding-left: 12px;
+}
+
+.admin-main {
+  background: #f4f6fa;
   min-width: 0;
+  overflow-y: auto;
+  padding: 30px 32px;
+}
+
+@media (max-width: 900px) {
+  .admin-sider {
+    display: none;
+  }
+
+  .admin-main {
+    padding: 20px 16px;
+  }
 }
 </style>

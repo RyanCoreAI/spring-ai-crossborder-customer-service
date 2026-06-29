@@ -1,84 +1,112 @@
 <template>
   <div>
-    <div class="page-header">
-      <h2 class="page-title">对话回放</h2>
+    <div class="page-head">
+      <div>
+        <h2 class="page-title">对话回放</h2>
+        <p class="page-subtitle">查看买家消息、智能体回复、模型消耗和延迟信息。</p>
+      </div>
     </div>
 
     <div class="conversation-layout">
-      <!-- Conversation list -->
-      <div class="conv-list-panel">
-        <el-card header="会话列表">
-          <div class="filter-bar">
-            <el-select v-model="filterTenantId" placeholder="租户" size="small" style="width:140px" @change="onTenantChange">
-              <el-option v-for="t in tenants" :key="t.id" :label="t.storeName" :value="t.id" />
-            </el-select>
-            <el-select v-model="filterStatus" placeholder="状态" clearable size="small" style="width:110px;margin-left:8px" @change="loadData">
-              <el-option label="AI处理中" :value="1" />
-              <el-option label="已完成" :value="2" />
-              <el-option label="已升级" :value="3" />
-              <el-option label="人工处理中" :value="4" />
-              <el-option label="已关闭" :value="5" />
-            </el-select>
-          </div>
-          <div class="conv-items" v-loading="loading">
-            <div v-for="c in conversations" :key="c.conversationUuid" class="conv-card"
-                 :class="{ active: selectedUuid === c.conversationUuid }"
-                 @click="selectConversation(c)">
+      <a-card title="会话列表" class="conv-list-panel">
+        <div class="toolbar compact">
+          <a-select
+            v-model:value="filterTenantId"
+            placeholder="租户"
+            size="small"
+            style="width: 160px"
+            @change="onTenantChange"
+          >
+            <a-select-option v-for="tenant in tenants" :key="tenant.id" :value="tenant.id">
+              {{ tenant.storeName }}
+            </a-select-option>
+          </a-select>
+          <a-select
+            v-model:value="filterStatus"
+            allow-clear
+            placeholder="状态"
+            size="small"
+            style="width: 130px"
+            @change="loadData"
+          >
+            <a-select-option :value="1">AI 处理中</a-select-option>
+            <a-select-option :value="2">已完成</a-select-option>
+            <a-select-option :value="3">已升级</a-select-option>
+            <a-select-option :value="4">人工处理中</a-select-option>
+            <a-select-option :value="5">已关闭</a-select-option>
+          </a-select>
+        </div>
+
+        <a-spin :spinning="loading">
+          <div class="conv-items">
+            <button
+              v-for="conversation in conversations"
+              :key="conversation.conversationUuid"
+              class="conv-card"
+              :class="{ active: selectedUuid === conversation.conversationUuid }"
+              type="button"
+              @click="selectConversation(conversation)"
+            >
               <div class="conv-card-header">
-                <span class="conv-customer">{{ c.customerName || c.customerEmail || '匿名客户' }}</span>
-                <el-tag size="small" :type="c.status === 2 ? 'success' : c.status === 1 ? '' : 'warning'">
-                  {{ c.statusLabel }}
-                </el-tag>
+                <span class="conv-customer">
+                  {{ conversation.customerName || conversation.customerEmail || '匿名客户' }}
+                </span>
+                <a-tag :color="statusColor(conversation.status)">
+                  {{ conversation.statusLabel || statusLabel(conversation.status) }}
+                </a-tag>
               </div>
               <div class="conv-card-meta">
-                <span>{{ c.language || '—' }}</span>
-                <span>{{ c.intentPrimary || '未分类' }}</span>
-                <span>{{ c.messageCount || 0 }} 条消息</span>
+                <span>{{ conversation.language || '未知语言' }}</span>
+                <span>{{ conversation.intentPrimary || '未分类' }}</span>
+                <span>{{ formatCount(conversation.messageCount) }} 条消息</span>
               </div>
-              <div class="conv-card-time">{{ formatTime(c.startedAt) }}</div>
-            </div>
-            <el-empty v-if="!conversations.length && !loading" description="暂无会话" :image-size="60" />
+              <div class="conv-card-time">{{ formatTime(conversation.startedAt) }}</div>
+            </button>
+            <a-empty v-if="!conversations.length && !loading" description="暂无会话" />
           </div>
-          <el-pagination v-model:current-page="page" :page-size="size" :total="total"
-                         layout="prev, pager, next" size="small" @current-change="loadData"
-                         style="margin-top:8px;justify-content:center" />
-        </el-card>
-      </div>
+        </a-spin>
 
-      <!-- Message replay -->
-      <div class="message-panel">
-        <el-card v-if="!selectedUuid" style="height:100%;display:flex;align-items:center;justify-content:center">
-          <el-empty description="选择左侧会话查看消息" :image-size="80" />
-        </el-card>
-        <el-card v-else header="消息详情" class="message-card">
-          <template #header>
-            <div style="display:flex;justify-content:space-between;align-items:center">
-              <span>消息回放</span>
-              <div>
-                <el-tag size="small" style="margin-right:8px">意图: {{ selectedConv?.intentPrimary || '—' }}</el-tag>
-                <el-tag size="small" type="warning">情绪: {{ selectedConv?.sentiment || '—' }}</el-tag>
-              </div>
-            </div>
-          </template>
-          <div class="message-list" v-loading="msgLoading">
+        <div class="pager center">
+          <a-pagination v-model:current="page" :page-size="size" :total="total" size="small" @change="loadData" />
+        </div>
+      </a-card>
+
+      <a-card v-if="!selectedUuid" class="message-panel empty-panel">
+        <a-empty description="选择左侧会话查看消息" />
+      </a-card>
+
+      <a-card v-else class="message-panel">
+        <template #title>
+          <div class="message-title">
+            <span>消息回放</span>
+            <a-space>
+              <a-tag>意图：{{ selectedConv?.intentPrimary || '未分类' }}</a-tag>
+              <a-tag color="gold">情绪：{{ selectedConv?.sentiment || '未知' }}</a-tag>
+            </a-space>
+          </div>
+        </template>
+
+        <a-spin :spinning="msgLoading">
+          <div class="message-list">
             <div v-for="msg in messages" :key="msg.id" class="msg-item" :class="msg.role">
-              <div class="msg-role">{{ msg.role === 'user' ? '客户' : msg.role === 'assistant' ? 'AI' : msg.role }}</div>
+              <div class="msg-role">{{ roleLabel(msg.role) }}</div>
               <div class="msg-text" v-html="renderMarkdown(msg.content || '')"></div>
               <div class="msg-meta">
-                <span v-if="msg.modelName">模型: {{ msg.modelName }}</span>
-                <span v-if="msg.totalTokens">Token: {{ msg.totalTokens }}</span>
-                <span v-if="msg.latencyMs">延迟: {{ msg.latencyMs }}ms</span>
+                <span v-if="msg.modelName">模型：{{ msg.modelName }}</span>
+                <span v-if="msg.totalTokens">Token：{{ msg.totalTokens }}</span>
+                <span v-if="msg.latencyMs">延迟：{{ msg.latencyMs }}ms</span>
               </div>
             </div>
+            <a-empty v-if="!messages.length && !msgLoading" description="暂无消息" />
           </div>
-        </el-card>
-      </div>
+        </a-spin>
+      </a-card>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import api from '@/api'
 import { renderSafeMarkdown } from '@/utils/markdown'
 import { selectDefaultTenantId, setStoredTenantId } from '@/utils/tenant'
@@ -94,15 +122,39 @@ const page = ref(1)
 const size = ref(20)
 const total = ref(0)
 const filterTenantId = ref<number | null>(null)
-const filterStatus = ref<number | null>(null)
+const filterStatus = ref<number | undefined>()
 
 function renderMarkdown(text: string) {
   return renderSafeMarkdown(text)
 }
 
-function formatTime(t: string) {
-  if (!t) return ''
-  return new Date(t).toLocaleString('zh-CN')
+function formatTime(value: string) {
+  if (!value) return ''
+  return new Date(value).toLocaleString('zh-CN')
+}
+
+function statusColor(status: number) {
+  if (status === 2) return 'green'
+  if (status === 1) return 'blue'
+  if (status === 3 || status === 4) return 'gold'
+  if (status === 5) return 'default'
+  return 'default'
+}
+
+function statusLabel(status: number) {
+  const labels: Record<number, string> = { 1: 'AI 处理中', 2: '已完成', 3: '已升级', 4: '人工处理中', 5: '已关闭' }
+  return labels[status] || '未知'
+}
+
+function roleLabel(role: string) {
+  if (role === 'user') return '客户'
+  if (role === 'assistant') return '智能客服'
+  if (role === 'system') return '系统'
+  return role
+}
+
+function formatCount(value: any) {
+  return value === null || value === undefined || value === '' ? '—' : value
 }
 
 async function loadTenants() {
@@ -114,6 +166,9 @@ async function loadTenants() {
 
 function onTenantChange() {
   setStoredTenantId(filterTenantId.value)
+  selectedUuid.value = ''
+  selectedConv.value = null
+  messages.value = []
   loadData()
 }
 
@@ -131,12 +186,12 @@ async function loadData() {
   }
 }
 
-async function selectConversation(c: any) {
-  selectedUuid.value = c.conversationUuid
-  selectedConv.value = c
+async function selectConversation(conversation: any) {
+  selectedUuid.value = conversation.conversationUuid
+  selectedConv.value = conversation
   msgLoading.value = true
   try {
-    const res = await api.get(`/conversations/${c.conversationUuid}/messages`)
+    const res = await api.get(`/conversations/${conversation.conversationUuid}/messages`)
     messages.value = res.data || []
   } finally {
     msgLoading.value = false
@@ -145,70 +200,167 @@ async function selectConversation(c: any) {
 
 onMounted(async () => {
   await loadTenants()
-  loadData()
+  await loadData()
 })
 </script>
 
 <style scoped>
-.page-header { margin-bottom: 20px; }
-.page-title { font-size: 22px; color: #303133; }
 .conversation-layout {
-  display: flex;
-  gap: 20px;
-  height: calc(100vh - 140px);
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 380px minmax(0, 1fr);
+  min-height: calc(100vh - 170px);
 }
-.conv-list-panel {
-  width: 380px;
-  flex-shrink: 0;
+
+.conv-list-panel,
+.message-panel {
+  min-height: 0;
+}
+
+.conv-list-panel :deep(.ant-card-body),
+.message-panel :deep(.ant-card-body) {
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
-.conv-list-panel :deep(.el-card__body) {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  padding: 12px;
+
+.compact {
+  margin-bottom: 12px;
 }
-.filter-bar { margin-bottom: 12px; }
+
 .conv-items {
+  display: flex;
   flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  max-height: calc(100vh - 295px);
   overflow-y: auto;
 }
+
 .conv-card {
-  padding: 12px;
-  border: 1px solid #ebeef5;
+  background: #fff;
+  border: 1px solid #e5e7eb;
   border-radius: 8px;
-  margin-bottom: 8px;
   cursor: pointer;
-  transition: all 0.2s;
+  padding: 12px;
+  text-align: left;
+  transition: border-color 0.2s, background 0.2s;
 }
-.conv-card:hover { border-color: #409eff; }
-.conv-card.active { border-color: #409eff; background: #ecf5ff; }
+
+.conv-card:hover,
+.conv-card.active {
+  background: #f0f5ff;
+  border-color: #1677ff;
+}
+
 .conv-card-header {
+  align-items: center;
   display: flex;
   justify-content: space-between;
-  align-items: center;
   margin-bottom: 6px;
 }
-.conv-customer { font-size: 14px; font-weight: 500; color: #303133; }
-.conv-card-meta {
-  display: flex;
-  gap: 12px;
-  font-size: 12px;
-  color: #909399;
+
+.conv-customer {
+  color: #1f2937;
+  font-size: 14px;
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.conv-card-time { font-size: 11px; color: #c0c4cc; margin-top: 4px; }
-.message-panel { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.message-card { flex: 1; display: flex; flex-direction: column; }
-.message-card :deep(.el-card__body) { flex: 1; overflow-y: auto; }
-.message-list { padding: 8px 0; }
-.msg-item { margin-bottom: 16px; padding: 12px; border-radius: 8px; background: #f5f7fa; }
-.msg-item.user { background: #ecf5ff; }
-.msg-item.assistant { background: #f0f9eb; }
-.msg-role { font-size: 12px; font-weight: 600; color: #909399; margin-bottom: 6px; text-transform: uppercase; }
-.msg-text { font-size: 14px; line-height: 1.7; color: #303133; }
-.msg-text :deep(p) { margin: 0 0 8px; }
-.msg-text :deep(p:last-child) { margin-bottom: 0; }
-.msg-meta { display: flex; gap: 12px; margin-top: 8px; font-size: 11px; color: #c0c4cc; }
+
+.conv-card-meta {
+  color: #6b7280;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 12px;
+  gap: 10px;
+}
+
+.conv-card-time {
+  color: #9ca3af;
+  font-size: 11px;
+  margin-top: 6px;
+}
+
+.center {
+  justify-content: center;
+}
+
+.empty-panel {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+}
+
+.message-title {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.message-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: calc(100vh - 250px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.msg-item {
+  background: #f5f7fb;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.msg-item.user {
+  background: #eef6ff;
+}
+
+.msg-item.assistant {
+  background: #f1f8f4;
+}
+
+.msg-role {
+  color: #667085;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.msg-text {
+  color: #1f2937;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.msg-text :deep(p) {
+  margin: 0 0 8px;
+}
+
+.msg-text :deep(p:last-child) {
+  margin-bottom: 0;
+}
+
+.msg-meta {
+  color: #8c8c8c;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 12px;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+@media (max-width: 900px) {
+  .conversation-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .conv-items,
+  .message-list {
+    max-height: none;
+  }
+}
 </style>

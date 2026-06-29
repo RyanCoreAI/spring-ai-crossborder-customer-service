@@ -1,105 +1,151 @@
 <template>
   <div>
-    <div class="page-header">
-      <h2 class="page-title">租户管理</h2>
-      <el-button type="primary" @click="showDialog(null)" :icon="Plus">新建租户</el-button>
+    <div class="page-head">
+      <div>
+        <h2 class="page-title">租户管理</h2>
+        <p class="page-subtitle">管理店铺、订阅额度和租户状态，所有业务数据都会按租户隔离。</p>
+      </div>
+      <a-button type="primary" @click="showDialog(null)">
+        <template #icon><PlusOutlined /></template>
+        新建租户
+      </a-button>
     </div>
 
-    <el-card>
-      <el-table :data="tableData" v-loading="loading" stripe>
-        <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="tenantCode" label="租户编码" width="140" />
-        <el-table-column prop="storeName" label="店铺名称" min-width="160" />
-        <el-table-column prop="platform" label="平台" width="100" />
-        <el-table-column prop="ownerEmail" label="店主邮箱" min-width="180" />
-        <el-table-column prop="subscriptionPlan" label="订阅计划" width="100" />
-        <el-table-column prop="status" label="状态" width="80">
-          <template #default="{ row }">
-            <el-tag :type="row.status === 1 ? 'success' : row.status === 2 ? 'warning' : 'info'" size="small">
-              {{ statusMap[row.status] || '未知' }}
-            </el-tag>
+    <a-card>
+      <a-table
+        :columns="columns"
+        :data-source="tableData"
+        :loading="loading"
+        :pagination="false"
+        row-key="id"
+        size="middle"
+      >
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'status'">
+            <a-tag :color="statusColor(record.status)">
+              {{ statusMap[record.status] || '未知' }}
+            </a-tag>
           </template>
-        </el-table-column>
-        <el-table-column prop="monthlyTokenBudget" label="月Token预算" width="120" />
-        <el-table-column prop="createdAt" label="创建时间" width="170" />
-        <el-table-column label="操作" width="160" fixed="right">
-          <template #default="{ row }">
-            <el-button size="small" @click="showDialog(row)">编辑</el-button>
-            <el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button>
+          <template v-else-if="column.key === 'actions'">
+            <a-space>
+              <a-button size="small" @click="showDialog(record)">编辑</a-button>
+              <a-button size="small" danger @click="handleDelete(record)">删除</a-button>
+            </a-space>
           </template>
-        </el-table-column>
-      </el-table>
+        </template>
+      </a-table>
 
-      <el-pagination v-model:current-page="page" :page-size="size" :total="total"
-                     layout="prev, pager, next, total" @current-change="loadData" style="margin-top:16px;justify-content:flex-end" />
-    </el-card>
+      <div class="pager">
+        <a-pagination v-model:current="page" :page-size="size" :total="total" @change="loadData" />
+      </div>
+    </a-card>
 
-    <!-- Create/Edit Dialog -->
-    <el-dialog v-model="dialogVisible" :title="editingId ? '编辑租户' : '新建租户'" width="640px">
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
-        <el-form-item label="租户编码" prop="tenantCode">
-          <el-input v-model="form.tenantCode" :disabled="!!editingId" />
-        </el-form-item>
-        <el-form-item label="店铺名称" prop="storeName">
-          <el-input v-model="form.storeName" />
-        </el-form-item>
-        <el-form-item label="平台" prop="platform">
-          <el-select v-model="form.platform" style="width:100%">
-            <el-option label="Shopify" value="shopify" />
-            <el-option label="Amazon" value="amazon" />
-            <el-option label="WooCommerce" value="woocommerce" />
-            <el-option label="TikTok Shop" value="tiktok_shop" />
-            <el-option label="Custom" value="custom" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="平台店铺ID" prop="externalStoreId">
-          <el-input v-model="form.externalStoreId" />
-        </el-form-item>
-        <el-form-item label="店主邮箱" prop="ownerEmail">
-          <el-input v-model="form.ownerEmail" />
-        </el-form-item>
-        <el-form-item label="店主姓名">
-          <el-input v-model="form.ownerName" />
-        </el-form-item>
-        <el-form-item label="默认语言">
-          <el-select v-model="form.defaultLang" style="width:100%">
-            <el-option label="English" value="en" />
-            <el-option label="Español" value="es" />
-            <el-option label="日本語" value="ja" />
-            <el-option label="简体中文" value="zh" />
-            <el-option label="Deutsch" value="de" />
-            <el-option label="Français" value="fr" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="订阅计划">
-          <el-select v-model="form.subscriptionPlan" style="width:100%">
-            <el-option label="Free" value="FREE" />
-            <el-option label="Basic" value="BASIC" />
-            <el-option label="Pro" value="PRO" />
-            <el-option label="Enterprise" value="ENTERPRISE" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="月Token预算">
-          <el-input-number v-model="form.monthlyTokenBudget" :min="10000" :step="100000" style="width:100%" />
-        </el-form-item>
-        <el-form-item label="QPS限制">
-          <el-input-number v-model="form.qpsLimit" :min="1" :max="200" style="width:100%" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="handleSave" :loading="saving">
-          {{ editingId ? '保存' : '创建' }}
-        </el-button>
-      </template>
-    </el-dialog>
+    <a-modal
+      v-model:open="dialogVisible"
+      :title="editingId ? '编辑租户' : '新建租户'"
+      :confirm-loading="saving"
+      width="680px"
+      ok-text="保存"
+      cancel-text="取消"
+      @ok="handleSave"
+    >
+      <a-form ref="formRef" :model="form" :rules="rules" layout="vertical">
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="租户编码" name="tenantCode">
+              <a-input v-model:value="form.tenantCode" :disabled="!!editingId" placeholder="请输入租户编码" />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="店铺名称" name="storeName">
+              <a-input v-model:value="form.storeName" placeholder="请输入店铺名称" />
+            </a-form-item>
+          </a-col>
+        </a-row>
+
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="平台" name="platform">
+              <a-select v-model:value="form.platform">
+                <a-select-option value="shopify">Shopify</a-select-option>
+                <a-select-option value="amazon">Amazon</a-select-option>
+                <a-select-option value="woocommerce">WooCommerce</a-select-option>
+                <a-select-option value="tiktok_shop">TikTok Shop</a-select-option>
+                <a-select-option value="custom">自定义</a-select-option>
+              </a-select>
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="平台店铺 ID" name="externalStoreId">
+              <a-input v-model:value="form.externalStoreId" placeholder="外部平台店铺标识" />
+            </a-form-item>
+          </a-col>
+        </a-row>
+
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="店主邮箱" name="ownerEmail">
+              <a-input v-model:value="form.ownerEmail" placeholder="owner@example.com" />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="店主姓名">
+              <a-input v-model:value="form.ownerName" placeholder="负责人姓名" />
+            </a-form-item>
+          </a-col>
+        </a-row>
+
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="默认语言">
+              <a-select v-model:value="form.defaultLang">
+                <a-select-option value="zh">简体中文</a-select-option>
+                <a-select-option value="en">English</a-select-option>
+                <a-select-option value="es">Español</a-select-option>
+                <a-select-option value="ja">日本語</a-select-option>
+                <a-select-option value="de">Deutsch</a-select-option>
+                <a-select-option value="fr">Français</a-select-option>
+              </a-select>
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="订阅计划">
+              <a-select v-model:value="form.subscriptionPlan">
+                <a-select-option value="FREE">免费版</a-select-option>
+                <a-select-option value="BASIC">基础版</a-select-option>
+                <a-select-option value="PRO">专业版</a-select-option>
+                <a-select-option value="ENTERPRISE">企业版</a-select-option>
+              </a-select>
+            </a-form-item>
+          </a-col>
+        </a-row>
+
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="月 Token 预算">
+              <a-input-number
+                v-model:value="form.monthlyTokenBudget"
+                :min="10000"
+                :step="100000"
+                style="width: 100%"
+              />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="QPS 限制">
+              <a-input-number v-model:value="form.qpsLimit" :min="1" :max="200" style="width: 100%" />
+            </a-form-item>
+          </a-col>
+        </a-row>
+      </a-form>
+    </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import { onMounted, reactive, ref } from 'vue'
+import { Modal, message } from 'ant-design-vue'
+import { PlusOutlined } from '@ant-design/icons-vue'
 import api from '@/api'
 
 const loading = ref(false)
@@ -114,18 +160,48 @@ const formRef = ref()
 
 const statusMap: Record<number, string> = { 0: '停用', 1: '启用', 2: '试用中', 3: '欠费暂停', 4: '封禁' }
 
+const columns = [
+  { title: 'ID', dataIndex: 'id', width: 80 },
+  { title: '租户编码', dataIndex: 'tenantCode', width: 140 },
+  { title: '店铺名称', dataIndex: 'storeName', ellipsis: true },
+  { title: '平台', dataIndex: 'platform', width: 120 },
+  { title: '店主邮箱', dataIndex: 'ownerEmail', ellipsis: true },
+  { title: '订阅计划', dataIndex: 'subscriptionPlan', width: 110 },
+  { title: '状态', dataIndex: 'status', key: 'status', width: 100 },
+  { title: '月 Token 预算', dataIndex: 'monthlyTokenBudget', width: 140 },
+  { title: '创建时间', dataIndex: 'createdAt', width: 170 },
+  { title: '操作', key: 'actions', width: 150, fixed: 'right' },
+]
+
 const form = reactive({
-  tenantCode: '', storeName: '', platform: 'shopify', externalStoreId: '',
-  ownerEmail: '', ownerName: '', ownerPhone: '', ownerCountry: '',
-  defaultLang: 'en', subscriptionPlan: 'FREE', monthlyTokenBudget: 100000, qpsLimit: 5,
+  tenantCode: '',
+  storeName: '',
+  platform: 'shopify',
+  externalStoreId: '',
+  ownerEmail: '',
+  ownerName: '',
+  ownerPhone: '',
+  ownerCountry: '',
+  defaultLang: 'zh',
+  subscriptionPlan: 'FREE',
+  monthlyTokenBudget: 100000,
+  qpsLimit: 5,
 })
 
 const rules = {
   tenantCode: [{ required: true, message: '请输入租户编码', trigger: 'blur' }],
   storeName: [{ required: true, message: '请输入店铺名称', trigger: 'blur' }],
   platform: [{ required: true, message: '请选择平台', trigger: 'change' }],
-  externalStoreId: [{ required: true, message: '请输入平台店铺ID', trigger: 'blur' }],
+  externalStoreId: [{ required: true, message: '请输入平台店铺 ID', trigger: 'blur' }],
   ownerEmail: [{ required: true, message: '请输入店主邮箱', trigger: 'blur' }],
+}
+
+function statusColor(status: number) {
+  if (status === 1) return 'green'
+  if (status === 2) return 'gold'
+  if (status === 3) return 'orange'
+  if (status === 4) return 'red'
+  return 'default'
 }
 
 async function loadData() {
@@ -139,7 +215,25 @@ async function loadData() {
   }
 }
 
+function resetForm() {
+  Object.assign(form, {
+    tenantCode: '',
+    storeName: '',
+    platform: 'shopify',
+    externalStoreId: '',
+    ownerEmail: '',
+    ownerName: '',
+    ownerPhone: '',
+    ownerCountry: '',
+    defaultLang: 'zh',
+    subscriptionPlan: 'FREE',
+    monthlyTokenBudget: 100000,
+    qpsLimit: 5,
+  })
+}
+
 function showDialog(row: any) {
+  formRef.value?.clearValidate?.()
   if (row) {
     editingId.value = row.id
     Object.assign(form, {
@@ -149,57 +243,50 @@ function showDialog(row: any) {
       externalStoreId: row.externalStoreId || '',
       ownerEmail: row.ownerEmail || '',
       ownerName: row.ownerName || '',
-      defaultLang: row.defaultLang || 'en',
+      defaultLang: row.defaultLang || 'zh',
       subscriptionPlan: row.subscriptionPlan || 'FREE',
-      monthlyTokenBudget: row.monthlyTokenBudget || 100000,
-      qpsLimit: row.qpsLimit || 5,
+      monthlyTokenBudget: row.monthlyTokenBudget ?? 100000,
+      qpsLimit: row.qpsLimit ?? 5,
     })
   } else {
     editingId.value = null
-    Object.assign(form, {
-      tenantCode: '', storeName: '', platform: 'shopify', externalStoreId: '',
-      ownerEmail: '', ownerName: '', ownerPhone: '', ownerCountry: '',
-      defaultLang: 'en', subscriptionPlan: 'FREE', monthlyTokenBudget: 100000, qpsLimit: 5,
-    })
+    resetForm()
   }
   dialogVisible.value = true
 }
 
 async function handleSave() {
-  const valid = await formRef.value?.validate().catch(() => false)
-  if (!valid) return
+  await formRef.value?.validate()
   saving.value = true
   try {
     if (editingId.value) {
       await api.put(`/tenants/${editingId.value}`, form)
-      ElMessage.success('更新成功')
+      message.success('租户已更新')
     } else {
       await api.post('/tenants', form)
-      ElMessage.success('创建成功')
+      message.success('租户已创建')
     }
     dialogVisible.value = false
-    loadData()
+    await loadData()
   } finally {
     saving.value = false
   }
 }
 
-async function handleDelete(row: any) {
-  await ElMessageBox.confirm(`确定要删除租户 "${row.storeName}" 吗？`, '确认删除', { type: 'warning' })
-  await api.delete(`/tenants/${row.id}`)
-  ElMessage.success('已删除')
-  loadData()
+function handleDelete(row: any) {
+  Modal.confirm({
+    title: '确认删除租户？',
+    content: `租户“${row.storeName}”删除后将无法在后台继续管理。`,
+    okText: '删除',
+    cancelText: '取消',
+    okButtonProps: { danger: true },
+    async onOk() {
+      await api.delete(`/tenants/${row.id}`)
+      message.success('租户已删除')
+      await loadData()
+    },
+  })
 }
 
 onMounted(loadData)
 </script>
-
-<style scoped>
-.page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 20px;
-}
-.page-title { font-size: 22px; color: #303133; }
-</style>

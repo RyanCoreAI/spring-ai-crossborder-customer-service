@@ -32,10 +32,16 @@ Use `scripts/capture-screenshots.ps1` after Vite, backend, and seeded data are r
 .\scripts\capture-screenshots.ps1
 ```
 
+For repository-safe public evidence without an admin account, capture only the buyer widget and login page:
+
+```powershell
+.\scripts\capture-screenshots.ps1 -PublicOnly
+```
+
 Required screenshots for launch:
 
-- Buyer widget landing/session
-- Merchant login
+- Buyer widget landing/session (`docs/assets/screenshots/widget.png`, committed)
+- Merchant login (`docs/assets/screenshots/login.png`, committed)
 - Dashboard
 - Merchant inbox
 - Orders list

@@ -5,51 +5,93 @@
         <h2 class="page-title">{{ config.title }}</h2>
         <p class="page-subtitle">{{ config.subtitle }}</p>
       </div>
-      <el-button :icon="Refresh" @click="loadData">刷新</el-button>
+      <a-button @click="loadData">
+        <template #icon><ReloadOutlined /></template>
+        刷新
+      </a-button>
     </div>
 
-    <el-card shadow="never" class="toolbar-card">
+    <a-card class="toolbar-card" :bordered="false">
       <div class="toolbar">
-        <el-select v-model="tenantId" placeholder="租户" filterable style="width:260px" @change="onTenantChange">
-          <el-option v-for="t in tenants" :key="t.id" :label="`${t.storeName} (${t.tenantCode})`" :value="t.id" />
-        </el-select>
-        <el-input v-if="config.keyword" v-model="keyword" clearable :prefix-icon="Search"
-                  :placeholder="config.keyword" style="width:280px" @keyup.enter="loadData" />
-        <el-select v-if="config.statusOptions" v-model="status" clearable placeholder="状态" style="width:160px" @change="loadData">
-          <el-option v-for="s in config.statusOptions" :key="String(s.value)" :label="s.label" :value="s.value" />
-        </el-select>
-        <el-button type="primary" :icon="Search" @click="loadData">查询</el-button>
-        <el-button v-if="resource === 'products'" :icon="RefreshRight" @click="reindexProducts">重建商品索引</el-button>
+        <a-select
+          v-model:value="tenantId"
+          show-search
+          placeholder="选择租户"
+          style="width: 260px"
+          @change="onTenantChange"
+        >
+          <a-select-option v-for="t in tenants" :key="t.id" :value="t.id">
+            {{ t.storeName }}（{{ t.tenantCode }}）
+          </a-select-option>
+        </a-select>
+        <a-input
+          v-if="config.keyword"
+          v-model:value="keyword"
+          allow-clear
+          :placeholder="config.keyword"
+          style="width: 280px"
+          @press-enter="loadData"
+        />
+        <a-select
+          v-if="config.statusOptions"
+          v-model:value="status"
+          allow-clear
+          placeholder="筛选状态"
+          style="width: 160px"
+          @change="loadData"
+        >
+          <a-select-option v-for="s in config.statusOptions" :key="String(s.value)" :value="s.value">
+            {{ s.label }}
+          </a-select-option>
+        </a-select>
+        <a-button type="primary" @click="loadData">查询</a-button>
+        <a-button v-if="resource === 'products'" @click="reindexProducts">重建商品索引</a-button>
       </div>
-    </el-card>
+    </a-card>
 
-    <el-card shadow="never">
-      <el-table :data="rows" v-loading="loading" stripe>
-        <el-table-column v-for="col in config.columns" :key="col.prop" :prop="col.prop" :label="col.label"
-                         :min-width="col.width || 120">
-          <template #default="{ row }">
-            <el-tag v-if="col.tag" :type="tagType(row[col.prop], col.prop)" size="small">{{ display(row[col.prop]) }}</el-tag>
-            <span v-else>{{ display(row[col.prop]) }}</span>
+    <a-card :bordered="false">
+      <a-table
+        :columns="columns"
+        :data-source="rows"
+        :loading="loading"
+        :pagination="false"
+        :scroll="{ x: 1000 }"
+        row-key="id"
+        size="middle"
+      >
+        <template #bodyCell="{ column, record }">
+          <template v-if="column.key === 'actions'">
+            <a-space>
+              <a-button size="small" @click="assignTicket(record)">接管</a-button>
+              <a-button size="small" type="primary" @click="resolveTicket(record)">解决</a-button>
+            </a-space>
           </template>
-        </el-table-column>
-        <el-table-column v-if="resource === 'tickets'" label="操作" width="190" fixed="right">
-          <template #default="{ row }">
-            <el-button size="small" @click="assignTicket(row)">接管</el-button>
-            <el-button size="small" type="success" @click="resolveTicket(row)">解决</el-button>
+          <template v-else-if="column.customTag">
+            <a-tag :color="tagColor(cellValue(record, column), column.dataIndex)">
+              {{ display(cellValue(record, column)) }}
+            </a-tag>
           </template>
-        </el-table-column>
-      </el-table>
-      <el-pagination v-model:current-page="page" :page-size="size" :total="total"
-                     layout="total, prev, pager, next" @current-change="loadData"
-                     class="pager" />
-    </el-card>
+          <template v-else>
+            {{ display(cellValue(record, column)) }}
+          </template>
+        </template>
+      </a-table>
+      <a-pagination
+        v-model:current="page"
+        class="pager"
+        :page-size="size"
+        :total="total"
+        :show-size-changer="false"
+        @change="loadData"
+      />
+    </a-card>
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Refresh, RefreshRight, Search } from '@element-plus/icons-vue'
+import { message } from 'ant-design-vue'
+import { ReloadOutlined } from '@ant-design/icons-vue'
 import api from '@/api'
 import { selectDefaultTenantId, setStoredTenantId } from '@/utils/tenant'
 
@@ -71,7 +113,7 @@ const configs: Record<string, Config> = {
     subtitle: '按会话状态、意图和客户信息扫描 AI 与人工接管队列。',
     endpoint: '/conversations',
     statusOptions: [
-      { label: 'AI处理中', value: 1 },
+      { label: 'AI 处理中', value: 1 },
       { label: '已完成', value: 2 },
       { label: '已升级人工', value: 3 },
       { label: '人工处理中', value: 4 },
@@ -79,12 +121,12 @@ const configs: Record<string, Config> = {
     ],
     columns: [
       { prop: 'customerName', label: '客户', width: 150 },
-      { prop: 'customerEmail', label: '邮箱', width: 180 },
+      { prop: 'customerEmail', label: '邮箱', width: 190 },
       { prop: 'intentPrimary', label: '意图', width: 140, tag: true },
       { prop: 'statusLabel', label: '状态', width: 120, tag: true },
       { prop: 'priority', label: '优先级', width: 90 },
       { prop: 'messageCount', label: '消息', width: 90 },
-      { prop: 'totalCostUsd', label: '成本USD', width: 110 },
+      { prop: 'totalCostUsd', label: '成本 USD', width: 110 },
       { prop: 'startedAt', label: '开始时间', width: 190 },
     ],
   },
@@ -110,21 +152,21 @@ const configs: Record<string, Config> = {
     endpoint: '/orders',
     keyword: '搜索订单号、邮箱或物流号',
     statusOptions: [
-      { label: 'paid', value: 'paid' },
-      { label: 'processing', value: 'processing' },
-      { label: 'shipped', value: 'shipped' },
-      { label: 'delivered', value: 'delivered' },
-      { label: 'refunded', value: 'refunded' },
-      { label: 'returned', value: 'returned' },
-      { label: 'cancelled', value: 'cancelled' },
+      { label: '已支付', value: 'paid' },
+      { label: '处理中', value: 'processing' },
+      { label: '已发货', value: 'shipped' },
+      { label: '已送达', value: 'delivered' },
+      { label: '已退款', value: 'refunded' },
+      { label: '已退货', value: 'returned' },
+      { label: '已取消', value: 'cancelled' },
     ],
     columns: [
-      { prop: 'externalOrderNumber', label: '订单号', width: 110 },
+      { prop: 'externalOrderNumber', label: '订单号', width: 120 },
       { prop: 'customerEmail', label: '客户邮箱', width: 190 },
       { prop: 'orderStatus', label: '订单状态', width: 120, tag: true },
-      { prop: 'fulfillmentStatus', label: '履约', width: 120, tag: true },
+      { prop: 'fulfillmentStatus', label: '履约状态', width: 120, tag: true },
       { prop: 'totalAmount', label: '金额', width: 100 },
-      { prop: 'trackingNumber', label: '物流号', width: 140 },
+      { prop: 'trackingNumber', label: '物流号', width: 150 },
       { prop: 'trackingStatus', label: '物流状态', width: 130, tag: true },
       { prop: 'estimatedDeliveryAt', label: '预计送达', width: 190 },
     ],
@@ -135,7 +177,7 @@ const configs: Record<string, Config> = {
     endpoint: '/products',
     keyword: '搜索商品、SKU 或标签',
     columns: [
-      { prop: 'title', label: '商品', width: 240 },
+      { prop: 'title', label: '商品', width: 260 },
       { prop: 'defaultSku', label: 'SKU', width: 150 },
       { prop: 'categoryL1', label: '一级类目', width: 110 },
       { prop: 'productType', label: '类型', width: 120 },
@@ -157,7 +199,7 @@ const configs: Record<string, Config> = {
       { label: '已关闭', value: 5 },
     ],
     columns: [
-      { prop: 'ticketNo', label: '工单号', width: 200 },
+      { prop: 'ticketNo', label: '工单号', width: 210 },
       { prop: 'conversationUuid', label: '会话', width: 220 },
       { prop: 'escalationReason', label: '原因', width: 180, tag: true },
       { prop: 'priority', label: '优先级', width: 90 },
@@ -169,6 +211,21 @@ const configs: Record<string, Config> = {
 }
 
 const config = computed(() => configs[props.resource] || configs.inbox)
+const columns = computed(() => {
+  const base = config.value.columns.map((col) => ({
+    title: col.label,
+    dataIndex: col.prop,
+    key: col.prop,
+    width: col.width,
+    ellipsis: true,
+    customTag: col.tag,
+  }))
+  if (props.resource === 'tickets') {
+    base.push({ title: '操作', dataIndex: 'actions', key: 'actions', width: 150, ellipsis: false, customTag: false })
+  }
+  return base
+})
+
 const tenants = ref<any[]>([])
 const tenantId = ref<number | null>(null)
 const keyword = ref('')
@@ -181,18 +238,25 @@ const loading = ref(false)
 
 function display(value: any) {
   if (value === null || value === undefined || value === '') return '—'
+  if (typeof value === 'boolean') return value ? '是' : '否'
   if (typeof value === 'number') return String(value)
   if (typeof value === 'string' && value.includes('T')) return new Date(value).toLocaleString('zh-CN')
   return value
 }
 
-function tagType(value: any, prop: string) {
-  if (prop === 'isBlacklisted') return value ? 'danger' : 'success'
-  if (prop === 'stockStatus') return value === 'low_stock' ? 'warning' : value === 'out_of_stock' ? 'danger' : 'success'
+function cellValue(record: any, column: any) {
+  return record[column.dataIndex]
+}
+
+function tagColor(value: any, prop: string) {
+  const text = String(value)
+  if (prop === 'isBlacklisted') return value ? 'error' : 'success'
+  if (prop === 'stockStatus') return value === 'low_stock' ? 'warning' : value === 'out_of_stock' ? 'error' : 'success'
   if (prop === 'vectorSynced') return value ? 'success' : 'warning'
-  if (String(value).includes('exception') || String(value).includes('cancelled')) return 'danger'
-  if (String(value).includes('delivered') || String(value).includes('resolved')) return 'success'
-  return 'info'
+  if (text.includes('exception') || text.includes('cancelled')) return 'error'
+  if (text.includes('delivered') || text.includes('resolved') || text.includes('完成')) return 'success'
+  if (text.includes('processing') || text.includes('处理中')) return 'processing'
+  return 'blue'
 }
 
 async function loadTenants() {
@@ -223,24 +287,22 @@ async function loadData() {
 
 async function reindexProducts() {
   const res = await api.post('/products/reindex')
-  ElMessage.success(`已标记 ${res.data?.queued || 0} 个商品待重建索引`)
+  const queued = res.data?.queued
+  message.success(queued === null || queued === undefined ? '重建商品索引请求已提交' : `已标记 ${queued} 个商品待重建索引`)
   loadData()
 }
 
 async function assignTicket(row: any) {
   await api.put(`/escalations/${row.id}/assign`, { agentId: 1 })
-  ElMessage.success('已接管工单')
+  message.success('已接管工单')
   loadData()
 }
 
 async function resolveTicket(row: any) {
-  const { value } = await ElMessageBox.prompt('填写解决备注', '解决工单', {
-    confirmButtonText: '解决',
-    cancelButtonText: '取消',
-    inputType: 'textarea',
-  })
-  await api.put(`/escalations/${row.id}/resolve`, { resolution: 'RESOLVED', note: value })
-  ElMessage.success('工单已解决')
+  const note = window.prompt('填写解决备注')
+  if (note === null) return
+  await api.put(`/escalations/${row.id}/resolve`, { resolution: 'RESOLVED', note })
+  message.success('工单已解决')
   loadData()
 }
 
@@ -251,33 +313,7 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.page-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 16px;
-}
-.page-title {
-  margin: 0;
-  font-size: 22px;
-  color: #303133;
-}
-.page-subtitle {
-  margin: 6px 0 0;
-  color: #606266;
-  font-size: 13px;
-}
 .toolbar-card {
   margin-bottom: 14px;
-}
-.toolbar {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-.pager {
-  margin-top: 14px;
-  justify-content: flex-end;
 }
 </style>

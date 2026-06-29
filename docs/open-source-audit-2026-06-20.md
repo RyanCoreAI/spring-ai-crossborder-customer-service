@@ -85,7 +85,7 @@ Commercial and open-source competitors:
 
 ### P0 - No hosted visual proof yet
 
-Evidence: The backend and frontend now build, seed data exists, and `scripts/capture-screenshots.ps1` captures public and authenticated routes. A hosted demo and GIF/video are still missing.
+Evidence: The backend and frontend now build, seed data exists, and `scripts/capture-screenshots.ps1` can capture public and authenticated routes when the local runtime and admin credentials are available. The repository currently commits public login/widget screenshots; a hosted demo and GIF/video are still missing.
 
 Impact: GitHub visitors cannot judge product completeness in under a minute.
 
@@ -117,11 +117,11 @@ Fix: Keep `docs/openapi.yaml` in the release gate now; consider `springdoc-opena
 
 ### P2 - Frontend bundle warning remains
 
-Evidence: `npm run build` passes but Vite reports a main chunk larger than 500 kB.
+Evidence: `npm run build` passes after the Ant Design Vue migration, but Vite reports the `antd` chunk is larger than the configured warning threshold.
 
 Impact: Not a v1 blocker, but it is polish debt.
 
-Fix: Add manual chunks for Element Plus and Markdown/DOMPurify after screenshots and eval runner are done.
+Fix: Add Ant Design Vue on-demand imports or more granular manual chunks after screenshots and eval runner are done.
 
 ## 30-Day Highest-ROI Roadmap
 
