@@ -31,6 +31,8 @@ public class KnowledgeDoc {
 
     private String sourceType;
 
+    private String sourceTrustLevel;
+
     private String sourceUrl;
 
     private String sourceFileName;
@@ -72,6 +74,10 @@ public class KnowledgeDoc {
     private Integer status;
 
     private LocalDateTime publishedAt;
+
+    private Long approvedBy;
+
+    private LocalDateTime approvedAt;
 
     private Integer retrievalCount;
 

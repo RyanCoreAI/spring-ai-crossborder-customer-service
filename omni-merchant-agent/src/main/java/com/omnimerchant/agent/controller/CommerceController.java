@@ -153,6 +153,22 @@ public class CommerceController {
         return R.ok(evalRunnerService.getRun(runId));
     }
 
+    @PostMapping("/rag/evals/run")
+    public R<?> runRagEvals(@RequestBody(required = false) CommerceDtos.EvalRunRequest request) {
+        return R.ok(evalRunnerService.runRagCases(request));
+    }
+
+    @GetMapping("/rag/evals/runs")
+    public R<?> ragEvalRuns(@RequestParam(defaultValue = "1") int page,
+                            @RequestParam(defaultValue = "20") int size) {
+        return R.ok(evalRunnerService.listRuns(page, size));
+    }
+
+    @GetMapping("/rag/evals/runs/{runId}")
+    public R<?> ragEvalRun(@PathVariable Long runId) {
+        return R.ok(evalRunnerService.getRun(runId));
+    }
+
     @PostMapping("/widget/session")
     public R<?> widgetSession(@RequestBody CommerceDtos.WidgetSessionRequest request) {
         return R.ok(commerceService.createWidgetSession(request));

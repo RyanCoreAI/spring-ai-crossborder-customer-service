@@ -39,11 +39,14 @@ public class RagSafetyReviewService {
         review.setTenantId(doc.getTenantId());
         review.setDocUuid(doc.getDocUuid());
         review.setSourceType("KNOWLEDGE_DOC");
+        review.setSourceTrustLevel(sourceTrustLevel(doc));
         review.setRiskLevel(result.riskLevel());
         review.setStatus(defaultStatus(result.riskLevel()));
         review.setIndexAllowed(defaultIndexAllowed(result.riskLevel()));
         review.setMatchedRules(toJson(result.matchedRules()));
+        review.setRiskRules(toJson(result.matchedRules()));
         review.setRedactedExcerpt(result.redactedExcerpt());
+        review.setIndexVersion("v1");
         if (existing == null) {
             mapper.insert(review);
         } else {
@@ -81,6 +84,7 @@ public class RagSafetyReviewService {
         review.setIndexAllowed(1);
         review.setReviewNote(note);
         review.setReviewedAt(LocalDateTime.now());
+        review.setApprovalHistory(history("APPROVED", note));
         mapper.updateById(review);
         return toVO(review);
     }
@@ -92,8 +96,19 @@ public class RagSafetyReviewService {
         review.setIndexAllowed(0);
         review.setReviewNote(note);
         review.setReviewedAt(LocalDateTime.now());
+        review.setApprovalHistory(history("REJECTED", note));
         mapper.updateById(review);
         return toVO(review);
+    }
+
+    public RagSafetyReview latestReview(Long tenantId, String docUuid) {
+        if (docUuid == null || docUuid.isBlank()) {
+            return null;
+        }
+        return mapper.selectOne(new LambdaQueryWrapper<RagSafetyReview>()
+                .eq(RagSafetyReview::getTenantId, tenantId)
+                .eq(RagSafetyReview::getDocUuid, docUuid)
+                .last("LIMIT 1"));
     }
 
     private RagSafetyReview requireReview(String docUuid) {
@@ -134,9 +149,23 @@ public class RagSafetyReviewService {
         }
     }
 
+    private String sourceTrustLevel(KnowledgeDoc doc) {
+        return doc.getSourceTrustLevel() == null || doc.getSourceTrustLevel().isBlank()
+                ? "MEDIUM"
+                : doc.getSourceTrustLevel();
+    }
+
+    private String history(String action, String note) {
+        return toJson(java.util.List.of(java.util.Map.of(
+                "action", action,
+                "note", note == null ? "" : note,
+                "at", LocalDateTime.now().toString())));
+    }
+
     private RagSafetyReviewVO toVO(RagSafetyReview r) {
-        return new RagSafetyReviewVO(r.getId(), r.getDocUuid(), r.getSourceType(), r.getRiskLevel(),
-                r.getStatus(), r.getIndexAllowed(), r.getMatchedRules(), r.getRedactedExcerpt(),
-                r.getReviewNote(), r.getReviewedAt(), r.getCreatedAt());
+        return new RagSafetyReviewVO(r.getId(), r.getDocUuid(), r.getSourceType(), r.getSourceTrustLevel(),
+                r.getRiskLevel(), r.getStatus(), r.getIndexAllowed(), r.getMatchedRules(), r.getRiskRules(),
+                r.getRedactedExcerpt(), r.getReviewNote(), r.getApprovalHistory(), r.getIndexVersion(),
+                r.getReviewedAt(), r.getCreatedAt());
     }
 }

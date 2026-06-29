@@ -102,19 +102,30 @@ public class PolicyIndexService {
     }
 
     private void insertChunks(KnowledgeDoc doc, List<ChunkInfo> chunks, List<float[]> embeddings) {
+        var chunkUuids = java.util.stream.IntStream.range(0, chunks.size())
+                .mapToObj(i -> UUID.randomUUID().toString())
+                .toList();
+        var review = ragSafetyReviewService.latestReview(doc.getTenantId(), doc.getDocUuid());
+        var riskLevel = review == null || review.getRiskLevel() == null ? "LOW" : review.getRiskLevel();
+        var indexVersion = review == null || review.getIndexVersion() == null ? "v1" : review.getIndexVersion();
+        var sourceTrustLevel = doc.getSourceTrustLevel() == null || doc.getSourceTrustLevel().isBlank()
+                ? "MEDIUM"
+                : doc.getSourceTrustLevel();
         var sql = """
                 INSERT INTO policy_vectors
                   (chunk_uuid, tenant_id, doc_id, doc_uuid, doc_type, doc_version,
-                   chunk_index, chunk_text, chunk_length, section, language,
-                   embedding, embedding_model, metadata)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::vector, ?, ?::jsonb)
+                   chunk_index, chunk_text, chunk_length, section, section_path, language,
+                   neighbor_prev_uuid, neighbor_next_uuid, source_title, source_uri, source_type,
+                   source_trust_level, content_hash, effective_from, effective_to,
+                   risk_level, index_version, embedding, embedding_model, metadata)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::vector, ?, ?::jsonb)
                 """;
 
         pgVectorJdbcTemplate.batchUpdate(sql, new org.springframework.jdbc.core.BatchPreparedStatementSetter() {
             @Override
             public void setValues(PreparedStatement ps, int i) throws SQLException {
                 var chunk = chunks.get(i);
-                ps.setString(1, UUID.randomUUID().toString());
+                ps.setString(1, chunkUuids.get(i));
                 ps.setLong(2, doc.getTenantId());
                 ps.setLong(3, doc.getId());
                 ps.setString(4, doc.getDocUuid());
@@ -124,10 +135,22 @@ public class PolicyIndexService {
                 ps.setString(8, chunk.chunkText());
                 ps.setInt(9, chunk.chunkText().length());
                 ps.setString(10, chunk.section());
-                ps.setString(11, chunk.language());
-                ps.setObject(12, new PGvector(embeddings.get(i)));
-                ps.setString(13, "text-embedding-3-small");
-                ps.setString(14, "{}");
+                ps.setString(11, chunk.section());
+                ps.setString(12, chunk.language());
+                ps.setString(13, i > 0 ? chunkUuids.get(i - 1) : null);
+                ps.setString(14, i < chunkUuids.size() - 1 ? chunkUuids.get(i + 1) : null);
+                ps.setString(15, doc.getTitle());
+                ps.setString(16, doc.getSourceUrl());
+                ps.setString(17, doc.getSourceType());
+                ps.setString(18, sourceTrustLevel);
+                ps.setString(19, doc.getContentHash());
+                ps.setObject(20, doc.getEffectiveFrom());
+                ps.setObject(21, doc.getEffectiveUntil());
+                ps.setString(22, riskLevel);
+                ps.setString(23, indexVersion);
+                ps.setObject(24, new PGvector(embeddings.get(i)));
+                ps.setString(25, "text-embedding-3-small");
+                ps.setString(26, "{}");
             }
 
             @Override

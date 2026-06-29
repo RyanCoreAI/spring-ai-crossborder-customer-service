@@ -537,6 +537,7 @@ CREATE TABLE `knowledge_doc` (
 
   -- ===== 内容来源 =====
   `source_type`       VARCHAR(16)     NOT NULL                     COMMENT '来源:UPLOAD/URL/MANUAL/SYSTEM',
+  `source_trust_level` VARCHAR(32)    NOT NULL DEFAULT 'MEDIUM'    COMMENT '来源可信度:LOW/MEDIUM/HIGH/TRUSTED',
   `source_url`        VARCHAR(1024)   DEFAULT NULL                 COMMENT '原始 URL(若来自爬取)',
   `source_file_name`  VARCHAR(255)    DEFAULT NULL                 COMMENT '原始文件名',
   `source_file_size`  BIGINT          DEFAULT NULL                 COMMENT '文件大小(字节)',
@@ -566,6 +567,8 @@ CREATE TABLE `knowledge_doc` (
   -- ===== 状态 =====
   `status`            TINYINT         NOT NULL DEFAULT 1           COMMENT '0草稿 1已发布 2索引中 3索引失败 4已归档',
   `published_at`      DATETIME        DEFAULT NULL                 COMMENT '发布时间',
+  `approved_by`       BIGINT          DEFAULT NULL                 COMMENT '审核人',
+  `approved_at`       DATETIME        DEFAULT NULL                 COMMENT '审核时间',
 
   -- ===== 使用统计 =====
   `retrieval_count`   INT             NOT NULL DEFAULT 0           COMMENT '被检索次数',

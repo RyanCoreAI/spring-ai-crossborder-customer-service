@@ -46,7 +46,7 @@ const menuItems = [
   { path: '/admin', label: '数据概览', match: ['/admin'] },
   { path: '/admin/observability', label: '可信控制台', match: ['/admin/observability', '/admin/traces', '/admin/evals'] },
   { path: '/admin/inbox', label: '对话与工单', match: ['/admin/inbox', '/admin/conversations', '/admin/tickets', '/admin/customers', '/admin/orders', '/admin/products'] },
-  { path: '/admin/rag-safety', label: '知识安全', match: ['/admin/rag-safety', '/admin/knowledge'] },
+  { path: '/admin/rag-workbench', label: 'RAG 工作台', match: ['/admin/rag-workbench', '/admin/rag-safety', '/admin/knowledge'] },
   { path: '/admin/integrations', label: '渠道集成', match: ['/admin/integrations'] },
   { path: '/admin/usage', label: '用量计费', match: ['/admin/usage'] },
 ]

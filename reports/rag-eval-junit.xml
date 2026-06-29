@@ -1,0 +1,91 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<testsuite name='OmniMerchant RAG Eval' tests='44' failures='0'>
+  <testcase classname='rag-eval' name='tenant-1001.F-INJECT-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.F-INJECT-002'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.F-INJECT-003'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.F-POLICY-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.F-POLICY-002'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.F-POLICY-NOANSWER-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.F-POLICY-POISON-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.F-POLICY-ZH-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.F-PRODUCT-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.F-PRODUCT-002'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.F-PRODUCT-003'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.F-PRODUCT-004'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.F-PRODUCT-005'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.F-PRODUCT-006'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.F-PRODUCT-007'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.F-PRODUCT-008'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.F-REFUND-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.F-RETURN-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.F-RETURN-002'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.F-RETURN-003'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.F-RETURN-004'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.F-RETURN-005'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.E-INJECT-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.E-INJECT-002'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.E-INJECT-003'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.E-POISON-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.E-POLICY-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.E-POLICY-NOANSWER-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.E-POLICY-POISON-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.E-POLICY-ZH-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.E-PRODUCT-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.E-PRODUCT-002'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.E-PRODUCT-003'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.E-PRODUCT-004'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.E-PRODUCT-005'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.E-PRODUCT-006'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.E-PRODUCT-007'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.E-PRODUCT-008'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.E-REFUND-002'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.E-RETURN-003'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.E-RETURN-004'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.E-RETURN-005'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.E-UNKNOWN-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.E-WARRANTY-001'>
+  </testcase>
+</testsuite>

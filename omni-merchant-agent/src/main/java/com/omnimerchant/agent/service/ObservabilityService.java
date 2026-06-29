@@ -156,14 +156,30 @@ public class ObservabilityService {
         var runs = evalRunMapper.selectList(new LambdaQueryWrapper<AgentEvalRun>()
                 .orderByDesc(AgentEvalRun::getStartedAt)
                 .last("LIMIT 20"));
-        if (runs.isEmpty()) {
-            return new CommerceDtos.RagMetricVO(0, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
+        var measuredRuns = runs.stream().filter(this::hasRagMetricEvidence).toList();
+        if (measuredRuns.isEmpty()) {
+            return new CommerceDtos.RagMetricVO(0, BigDecimal.ZERO, BigDecimal.ZERO, null, null, null,
+                    BigDecimal.ZERO, BigDecimal.ZERO, null, null);
         }
-        return new CommerceDtos.RagMetricVO(runs.size(),
-                avg(runs.stream().map(AgentEvalRun::getCitationCoverage).toList()),
-                avg(runs.stream().map(AgentEvalRun::getRetrievalPrecisionAtK).toList()),
-                avg(runs.stream().map(AgentEvalRun::getUnsupportedClaimRate).toList()),
-                avg(runs.stream().map(AgentEvalRun::getPoisoningBlockRate).toList()));
+        return new CommerceDtos.RagMetricVO(measuredRuns.size(),
+                avg(measuredRuns.stream().map(AgentEvalRun::getCitationCoverage).toList()),
+                avg(measuredRuns.stream().map(AgentEvalRun::getRetrievalPrecisionAtK).toList()),
+                avg(measuredRuns.stream().map(AgentEvalRun::getRecallAtK).toList()),
+                avg(measuredRuns.stream().map(AgentEvalRun::getMrr).toList()),
+                avg(measuredRuns.stream().map(AgentEvalRun::getNdcgAtK).toList()),
+                avg(measuredRuns.stream().map(AgentEvalRun::getUnsupportedClaimRate).toList()),
+                avg(measuredRuns.stream().map(AgentEvalRun::getPoisoningBlockRate).toList()),
+                avg(measuredRuns.stream().map(AgentEvalRun::getNoAnswerAccuracy).toList()),
+                percentile(measuredRuns.stream().map(AgentEvalRun::getP95RetrievalLatencyMs).toList(), 95));
+    }
+
+    private boolean hasRagMetricEvidence(AgentEvalRun run) {
+        return run != null && (
+                run.getP95RetrievalLatencyMs() != null
+                        || safeDecimal(run.getMrr()).compareTo(BigDecimal.ZERO) > 0
+                        || safeDecimal(run.getNdcgAtK()).compareTo(BigDecimal.ZERO) > 0
+                        || safeDecimal(run.getRecallAtK()).compareTo(BigDecimal.ZERO) > 0
+                        || safeDecimal(run.getNoAnswerAccuracy()).compareTo(BigDecimal.ZERO) > 0);
     }
 
     private double rate(long numerator, long denominator) {

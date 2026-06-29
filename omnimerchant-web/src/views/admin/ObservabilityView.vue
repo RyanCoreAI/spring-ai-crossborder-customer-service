@@ -106,6 +106,7 @@ const runningEval = ref(false)
 const selectedTenantId = ref<number | null>(null)
 const tenants = ref<any[]>([])
 const summary = ref<any | null>(null)
+const ragMetrics = ref<any | null>(null)
 const traces = ref<any[]>([])
 const failures = ref<any[]>([])
 
@@ -122,10 +123,17 @@ const topMetrics = computed(() => [
   },
   {
     label: 'RAG 引用覆盖率',
-    value: hasPositiveNumber(summary.value?.traces) ? formatPercent(summary.value?.ragCitationCoverage) : '—',
-    note: hasPositiveNumber(summary.value?.evalRuns)
-      ? `无依据结论率 ${formatPercent(summary.value?.unsupportedClaimRate)}`
+    value: hasPositiveNumber(ragMetrics.value?.evalRuns) ? formatPercent(ragMetrics.value?.citationCoverage) : '—',
+    note: hasPositiveNumber(ragMetrics.value?.evalRuns)
+      ? `无依据结论率 ${formatPercent(ragMetrics.value?.unsupportedClaimRate)}`
       : '暂无评测样本',
+  },
+  {
+    label: 'RAG 检索质量',
+    value: hasPositiveNumber(ragMetrics.value?.evalRuns) ? formatPercent(ragMetrics.value?.recallAtK) : '—',
+    note: hasPositiveNumber(ragMetrics.value?.evalRuns)
+      ? `MRR ${formatDecimal(ragMetrics.value?.mrr)} · nDCG ${formatDecimal(ragMetrics.value?.ndcgAtK)} · P95 ${formatLatency(ragMetrics.value?.p95RetrievalLatencyMs)}`
+      : '暂无 RAG 评测',
   },
   {
     label: '单解决会话成本',
@@ -144,8 +152,14 @@ const healthSignals = computed(() => [
   {
     name: 'RAG 投毒拦截',
     description: '来自后端 eval 的 poisoning block rate',
-    value: hasPositiveNumber(summary.value?.evalRuns) ? percentNumber(summary.value?.poisoningBlockRate) : null,
+    value: hasPositiveNumber(ragMetrics.value?.evalRuns) ? percentNumber(ragMetrics.value?.poisoningBlockRate) : null,
     path: '/admin/rag-safety',
+  },
+  {
+    name: 'RAG 无答案准确率',
+    description: '未知政策、过期政策和无证据问题应拒答或升级',
+    value: hasPositiveNumber(ragMetrics.value?.evalRuns) ? percentNumber(ragMetrics.value?.noAnswerAccuracy) : null,
+    path: '/admin/rag-workbench',
   },
   {
     name: '轨迹执行稳定性',
@@ -253,6 +267,20 @@ function formatUsd(value: any) {
   return `$${Math.round(parsed * 100) / 100}`
 }
 
+function formatDecimal(value: any) {
+  if (!hasValue(value)) return '—'
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return '—'
+  return `${Math.round(parsed * 1000) / 1000}`
+}
+
+function formatLatency(value: any) {
+  if (!hasValue(value)) return '—'
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return '—'
+  return `${Math.round(parsed)}ms`
+}
+
 function formatCount(value: any, suffix: string) {
   if (!hasValue(value)) return '暂无数据'
   return `${value} ${suffix}`
@@ -327,14 +355,16 @@ async function loadTenants() {
 async function load() {
   loading.value = true
   try {
-    const [summaryRes, failureRes, traceRes] = await Promise.all([
+    const [summaryRes, failureRes, traceRes, ragRes] = await Promise.all([
       api.get('/observability/summary'),
       api.get('/observability/failures'),
       api.get('/observability/traces', { params: { page: 1, size: 2 } }),
+      api.get('/observability/rag'),
     ])
     summary.value = summaryRes.data || null
     failures.value = failureRes.data || []
     traces.value = traceRes.data?.records || []
+    ragMetrics.value = ragRes.data || null
   } finally {
     loading.value = false
   }

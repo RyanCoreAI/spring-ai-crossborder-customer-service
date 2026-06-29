@@ -211,7 +211,23 @@ public final class CommerceDtos {
             String status,
             String expectedOutcome,
             String actualObservation,
-            boolean passed) {
+            boolean passed,
+            String expectedTools,
+            String actualTools,
+            String forbiddenTools,
+            java.math.BigDecimal toolPrecision,
+            java.math.BigDecimal toolRecall,
+            boolean argumentMatch,
+            boolean forbiddenToolViolation,
+            String traceId,
+            String failureCategory,
+            String rerankerMode,
+            Integer retrievalRank,
+            Integer retrievalLatencyMs,
+            java.math.BigDecimal reciprocalRank,
+            java.math.BigDecimal ndcgScore,
+            boolean noAnswerExpected,
+            boolean noAnswerPassed) {
     }
 
     public record EvalRunReport(
@@ -243,7 +259,12 @@ public final class CommerceDtos {
             java.math.BigDecimal citationCoverage,
             java.math.BigDecimal poisoningBlockRate,
             java.math.BigDecimal retrievalPrecisionAtK,
+            java.math.BigDecimal recallAtK,
+            java.math.BigDecimal mrr,
+            java.math.BigDecimal ndcgAtK,
             java.math.BigDecimal unsupportedClaimRate,
+            java.math.BigDecimal noAnswerAccuracy,
+            Integer p95RetrievalLatencyMs,
             String failureSummary,
             java.time.LocalDateTime startedAt,
             java.time.LocalDateTime finishedAt) {
@@ -267,6 +288,15 @@ public final class CommerceDtos {
             boolean poisoningCase,
             boolean safetyPassed,
             String traceId,
+            String rerankerMode,
+            Integer retrievalRank,
+            Integer retrievalLatencyMs,
+            java.math.BigDecimal reciprocalRank,
+            java.math.BigDecimal ndcgScore,
+            boolean noAnswerExpected,
+            boolean noAnswerPassed,
+            String expectedEvidence,
+            String actualEvidence,
             String failureCategory) {
     }
 
@@ -370,8 +400,13 @@ public final class CommerceDtos {
             long evalRuns,
             java.math.BigDecimal citationCoverage,
             java.math.BigDecimal retrievalPrecisionAtK,
+            java.math.BigDecimal recallAtK,
+            java.math.BigDecimal mrr,
+            java.math.BigDecimal ndcgAtK,
             java.math.BigDecimal unsupportedClaimRate,
-            java.math.BigDecimal poisoningBlockRate) {
+            java.math.BigDecimal poisoningBlockRate,
+            java.math.BigDecimal noAnswerAccuracy,
+            Integer p95RetrievalLatencyMs) {
     }
 
     public record RagSafetyReviewVO(

@@ -259,6 +259,28 @@ class ShopifyIntegrationServiceTest {
         verify(productMapper, never()).insert(any(Product.class));
     }
 
+    @Test
+    void replayWebhookResetsFailedEventAndProcessesFixture() {
+        var event = event(17L, "products/update", """
+                {"id":321,"title":"Replay Backpack","handle":"replay-backpack",
+                 "variants":[{"sku":"BAG-2","price":"69.00","inventory_quantity":5}]}
+                """);
+        event.setStatus(3);
+        event.setLastError("previous failure");
+        event.setNextRetryAt(LocalDateTime.now().plusHours(1));
+        when(webhookEventMapper.selectById(17L)).thenReturn(event);
+        when(productMapper.selectOne(any())).thenReturn(null);
+
+        var replay = service.replayWebhook(17L);
+
+        var captor = ArgumentCaptor.forClass(Product.class);
+        verify(productMapper).insert(captor.capture());
+        assertThat(captor.getValue().getExternalProductId()).isEqualTo("gid://shopify/Product/321");
+        assertThat(replay.status()).isEqualTo(2);
+        assertThat(event.getStatus()).isEqualTo(2);
+        assertThat(event.getLastError()).isNull();
+    }
+
     private String sign(String secret, String body) throws Exception {
         var mac = Mac.getInstance("HmacSHA256");
         mac.init(new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));

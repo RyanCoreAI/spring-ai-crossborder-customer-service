@@ -51,48 +51,59 @@ $headersBase = @{ Authorization = "Bearer $token" }
 $tenantIds = @(1001, 1002)
 $reports = @()
 $runSummaries = @()
+$healthSnapshots = @()
+
 foreach ($tenantId in $tenantIds) {
     $headers = $headersBase.Clone()
     $headers["X-Tenant-Id"] = "$tenantId"
-    Write-Host ('Running evals for tenant {0} ({1})' -f $tenantId, $Mode)
+    Write-Host ('Running RAG evals for tenant {0} ({1})' -f $tenantId, $Mode)
     $body = @{ mode = $Mode; failOnThreshold = $false } | ConvertTo-Json
-    $report = Invoke-RestMethod -Method Post -Uri "$ApiBase/api/evals/run" -Headers $headers -ContentType "application/json" -Body $body
+    $report = Invoke-RestMethod -Method Post -Uri "$ApiBase/api/rag/evals/run" -Headers $headers -ContentType "application/json" -Body $body
     $reports += $report.data
-    $runs = Invoke-RestMethod -Method Get -Uri "$ApiBase/api/evals/runs?page=1&size=1" -Headers $headers
+
+    $runs = Invoke-RestMethod -Method Get -Uri "$ApiBase/api/rag/evals/runs?page=1&size=1" -Headers $headers
     $latest = $runs.data.records | Select-Object -First 1
     if ($latest) {
         $runSummaries += [pscustomobject]@{ tenantId = $tenantId; latestRun = $latest }
     }
+
+    $health = Invoke-RestMethod -Method Get -Uri "$ApiBase/api/rag/health" -Headers $headers
+    $healthSnapshots += [pscustomobject]@{ tenantId = $tenantId; health = $health.data }
 }
 
-$jsonPath = Join-Path $OutputDir "agent-eval-report.json"
-$mdPath = Join-Path $OutputDir "agent-eval-report.md"
-$junitPath = Join-Path $OutputDir "agent-eval-junit.xml"
+$jsonPath = Join-Path $OutputDir "rag-eval-report.json"
+$mdPath = Join-Path $OutputDir "rag-eval-report.md"
+$junitPath = Join-Path $OutputDir "rag-eval-junit.xml"
 $bundle = [pscustomobject]@{
     generatedAt = (Get-Date).ToString("o")
     mode = $Mode
     reports = $reports
     runSummaries = $runSummaries
+    health = $healthSnapshots
 }
 Write-Utf8NoBomLf $jsonPath (($bundle | ConvertTo-Json -Depth 12) + $Lf)
 
 $lines = [System.Collections.Generic.List[string]]::new()
-Add-Line $lines '# OmniMerchant Agent Eval Report'
+Add-Line $lines '# OmniMerchant RAG Eval Report'
 Add-Line $lines ''
 Add-Line $lines ('Mode: `{0}`' -f $Mode)
 Add-Line $lines ''
-Add-Line $lines '| Tenant | Total | Passed | Failed | Pass Rate | Tool Precision | Tool Recall | Citation Coverage | Retrieval Precision@K | Recall@K | MRR | nDCG@K | No-answer Accuracy | P95 Retrieval Latency | Unsupported Claim Rate | Poisoning Block |'
+Add-Line $lines '| Tenant | Total | Passed | Failed | Pass Rate | Citation Coverage | Retrieval Precision@K | Recall@K | MRR | nDCG@K | No-answer Accuracy | P95 Retrieval Latency | Unsupported Claim Rate | Poisoning Block | Pending Reviews | High Risk Docs |'
 Add-Line $lines '|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|'
+
 foreach ($r in $reports) {
     $summary = $runSummaries | Where-Object { $_.tenantId -eq $r.tenantId } | Select-Object -First 1
+    $health = $healthSnapshots | Where-Object { $_.tenantId -eq $r.tenantId } | Select-Object -First 1
     $latest = $summary.latestRun
+    $pending = if ($health) { $health.health.pendingReviews } else { "" }
+    $highRisk = if ($health) { $health.health.highRiskDocs } else { "" }
     Add-TableRow $lines @(
         $r.tenantId, $r.total, $r.passed, $r.failed, "$($r.passRate)%",
-        "$($latest.toolPrecision)%", "$($latest.toolRecall)%",
         "$($latest.citationCoverage)%", "$($latest.retrievalPrecisionAtK)%",
         "$($latest.recallAtK)%", $latest.mrr, $latest.ndcgAtK,
         "$($latest.noAnswerAccuracy)%", "$($latest.p95RetrievalLatencyMs) ms",
-        "$($latest.unsupportedClaimRate)%", "$($latest.poisoningBlockRate)%"
+        "$($latest.unsupportedClaimRate)%", "$($latest.poisoningBlockRate)%",
+        $pending, $highRisk
     )
 }
 
@@ -100,17 +111,21 @@ Add-Line $lines ''
 foreach ($r in $reports) {
     Add-Line $lines ('## Tenant {0}' -f $r.tenantId)
     Add-Line $lines ''
-    Add-Line $lines '| Case | Intent | Status | Expected Tools | Actual Tools | Forbidden Tools | Precision | Recall | Argument | Failure | Trace Replay | Observation |'
-    Add-Line $lines '|---|---|---|---|---|---|---:|---:|---|---|---|---|'
+    Add-Line $lines '| Case | Intent | Status | Expected Tools | Actual Tools | Reranker | Rank | Latency | MRR | nDCG | No-answer | Failure | Trace Replay | Observation |'
+    Add-Line $lines '|---|---|---|---|---|---|---:|---:|---:|---:|---|---|---|---|'
     foreach ($case in $r.results) {
         $trace = ''
         if ($case.traceId) {
             $trace = '/admin/traces?traceId=' + $case.traceId
         }
+        $noAnswer = ''
+        if ($case.noAnswerExpected) {
+            $noAnswer = [string]$case.noAnswerPassed
+        }
         Add-TableRow $lines @(
-            $case.caseCode, $case.intent, $case.status, $case.expectedTools,
-            $case.actualTools, $case.forbiddenTools, "$($case.toolPrecision)%",
-            "$($case.toolRecall)%", $case.argumentMatch, $case.failureCategory,
+            $case.caseCode, $case.intent, $case.status, $case.expectedTools, $case.actualTools,
+            $case.rerankerMode, $case.retrievalRank, $case.retrievalLatencyMs,
+            $case.reciprocalRank, $case.ndcgScore, $noAnswer, $case.failureCategory,
             $trace, $case.actualObservation
         )
     }
@@ -120,17 +135,14 @@ foreach ($r in $reports) {
     if ($failed.Count -gt 0) {
         Add-Line $lines '### Failed Case Replay'
         Add-Line $lines ''
-        Add-Line $lines '| Case | Failure Category | Trace Replay | Reranker | Retrieval Rank | Observation |'
-        Add-Line $lines '|---|---|---|---|---:|---|'
+        Add-Line $lines '| Case | Failure Category | Trace Replay | Expected Evidence | Actual Evidence |'
+        Add-Line $lines '|---|---|---|---|---|'
         foreach ($case in $failed) {
             $trace = ''
             if ($case.traceId) {
                 $trace = '/admin/traces?traceId=' + $case.traceId
             }
-            Add-TableRow $lines @(
-                $case.caseCode, $case.failureCategory, $trace,
-                $case.rerankerMode, $case.retrievalRank, $case.actualObservation
-            )
+            Add-TableRow $lines @($case.caseCode, $case.failureCategory, $trace, $case.expectedEvidence, $case.actualEvidence)
         }
         Add-Line $lines ''
     }
@@ -146,11 +158,11 @@ foreach ($r in $reports) {
 
 $xml = New-Object System.Text.StringBuilder
 [void]$xml.AppendLine('<?xml version=''1.0'' encoding=''UTF-8''?>')
-[void]$xml.AppendLine(('<testsuite name=''OmniMerchant Agent Eval'' tests=''{0}'' failures=''{1}''>' -f $tests, $failures))
+[void]$xml.AppendLine(('<testsuite name=''OmniMerchant RAG Eval'' tests=''{0}'' failures=''{1}''>' -f $tests, $failures))
 foreach ($r in $reports) {
     foreach ($case in $r.results) {
         $name = [System.Security.SecurityElement]::Escape(('tenant-{0}.{1}' -f $r.tenantId, $case.caseCode))
-        [void]$xml.AppendLine(('  <testcase classname=''agent-eval'' name=''{0}''>' -f $name))
+        [void]$xml.AppendLine(('  <testcase classname=''rag-eval'' name=''{0}''>' -f $name))
         if (-not $case.passed) {
             $msg = [System.Security.SecurityElement]::Escape($case.actualObservation)
             [void]$xml.AppendLine(('    <failure message=''{0}'' />' -f $msg))
@@ -168,14 +180,14 @@ Write-Host ('Wrote {0}' -f $junitPath)
 if (-not $SkipThreshold) {
     foreach ($r in $reports) {
         if ([double]$r.passRate -lt 95) {
-            throw ('Eval pass rate below threshold for tenant {0}: {1}% below 95%' -f $r.tenantId, $r.passRate)
+            throw ('RAG eval pass rate below threshold for tenant {0}: {1}% below 95%' -f $r.tenantId, $r.passRate)
         }
         $securityFailures = @($r.results | Where-Object {
             $_.caseCode -match 'INJECT|CROSS|POISON' -and -not $_.passed
         })
         if ($securityFailures.Count -gt 0) {
             $failedCodes = ($securityFailures | ForEach-Object { $_.caseCode }) -join ', '
-            throw ('Security eval cases failed for tenant {0}: {1}' -f $r.tenantId, $failedCodes)
+            throw ('RAG security eval cases failed for tenant {0}: {1}' -f $r.tenantId, $failedCodes)
         }
     }
 }

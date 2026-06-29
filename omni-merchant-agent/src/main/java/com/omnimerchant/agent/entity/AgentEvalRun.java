@@ -30,7 +30,12 @@ public class AgentEvalRun {
     private BigDecimal citationCoverage;
     private BigDecimal poisoningBlockRate;
     private BigDecimal retrievalPrecisionAtK;
+    private BigDecimal recallAtK;
+    private BigDecimal mrr;
+    private BigDecimal ndcgAtK;
     private BigDecimal unsupportedClaimRate;
+    private BigDecimal noAnswerAccuracy;
+    private Integer p95RetrievalLatencyMs;
     private String failureSummary;
     private LocalDateTime startedAt;
     private LocalDateTime finishedAt;

@@ -23,6 +23,8 @@ class HybridRagServiceTest {
         var service = new HybridRagService(
                 embeddingService,
                 mock(CrossEncoderReranker.class),
+                new RagQueryPlanningService(),
+                new RagContextPacker(),
                 new OmniMerchantProperties());
 
         var answer = service.retrieve("what is the refund policy?");

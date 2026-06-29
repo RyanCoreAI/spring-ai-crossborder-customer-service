@@ -15,13 +15,15 @@ Spring Boot 4 + Spring AI 2 trustworthy ecommerce customer-service agent platfor
 | Deterministic Agent eval | `scripts/run-evals.ps1` | 无 LLM key 也能生成 JSON/Markdown/JUnit 报告 |
 | Trace replay | `/admin/traces` + `agent_run` / `agent_step` | 每次回答可回放 intent、tool、latency、failure category |
 | Observability | `/admin/observability` | AI resolution、tool success、cost、P95 latency、RAG citation、eval pass |
+| RAG workbench | `/admin/rag-workbench` + `/api/rag/query/debug` | query rewrite、向量/BM25 候选、RRF/rerank、邻居 chunk、context pack 和 evidence level 可调试 |
 | RAG safety | `/admin/rag-safety` + `RagSafetyScanner` | prompt injection、hidden HTML/Markdown、PII/secret、cross-tenant 诱导进入审核 |
+| RAG eval | `scripts/run-rag-evals.ps1` | RAG 子集输出 JSON/Markdown/JUnit，并复用 persisted eval run 作为证据 |
 | Shopify connector | OAuth/HMAC/cursor sync/webhook replay tests | 证明是 connector backbone，不冒充 App Store 生产 app |
 | API contract | [`docs/openapi.yaml`](docs/openapi.yaml) | v3 管理、eval、trace、RAG safety、Shopify 接口静态契约 |
 
 ## 截图矩阵
 
-仓库当前提交两张公开页面截图：买家咨询组件和登录页。后台页面截图依赖运行中的后端、seed 数据、管理员账号和租户上下文，可通过 `.\scripts\capture-screenshots.ps1` 在本地 runtime 重新生成。脚本默认会使用 `ADMIN_EMAIL` / `ADMIN_PASSWORD` 登录后台，也可以传 `-PublicOnly` 只生成公开页面截图。
+仓库当前提交公开页和后台页截图矩阵，后台截图来自本地 runtime、seed 数据、管理员账号和租户上下文。可通过 `.\scripts\capture-screenshots.ps1` 重新生成；脚本默认使用 `ADMIN_EMAIL` / `ADMIN_PASSWORD` 登录后台，也可以传 `-PublicOnly` 只生成公开页面截图。
 
 | 页面 | 路由 | 产物 |
 |------|------|------|
@@ -36,9 +38,10 @@ Spring Boot 4 + Spring AI 2 trustworthy ecommerce customer-service agent platfor
 | Evals | `/admin/evals` | `docs/assets/screenshots/evals.png` |
 | Observability | `/admin/observability` | `docs/assets/screenshots/observability.png` |
 | Trace Replay | `/admin/traces` | `docs/assets/screenshots/traces.png` |
+| RAG Workbench | `/admin/rag-workbench` | `docs/assets/screenshots/rag-workbench.png` |
 | RAG Safety | `/admin/rag-safety` | `docs/assets/screenshots/rag-safety.png` |
 
-当前仓库保留两个轻量示例图，完整后台矩阵由 release smoke 在本地 runtime 生成；没有运行后端时不提交伪造后台截图：
+当前仓库保留买家咨询、登录、可信控制台、智能体评测、轨迹回放、RAG Workbench、RAG 安全等真实截图；没有运行后端时不提交伪造后台截图：
 
 ![Widget](docs/assets/screenshots/widget.png)
 
@@ -48,12 +51,12 @@ Spring Boot 4 + Spring AI 2 trustworthy ecommerce customer-service agent platfor
 
 默认 deterministic eval 覆盖 80 条 seeded golden conversations，按租户持久化 `agent_eval_run` / `agent_eval_result`，并输出：
 
-当前已提交报告：`reports/agent-eval-report.md`，生成时间 `2026-06-28T18:25:38+08:00`，模式 `DETERMINISTIC`。
+当前已提交报告：`reports/agent-eval-report.md`，模式 `DETERMINISTIC`。
 
 | Tenant | Cases | Passed | Failed | Pass Rate | Tool Precision | Tool Recall | Citation Coverage | Poisoning Block |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| 1001 | 42 | 42 | 0 | 100.0% | 97.62% | 100.00% | 100.00% | 100.00% |
-| 1002 | 38 | 38 | 0 | 100.0% | 100.00% | 100.00% | 100.00% | 100.00% |
+| 1001 | 45 | 45 | 0 | 100.0% | 97.78% | 100.00% | 100.00% | 100.00% |
+| 1002 | 41 | 41 | 0 | 100.0% | 100.00% | 100.00% | 100.00% | 100.00% |
 
 | Metric | Source |
 |--------|--------|
@@ -66,6 +69,22 @@ Spring Boot 4 + Spring AI 2 trustworthy ecommerce customer-service agent platfor
 | Failed case replay | `agent_eval_result.trace_id` -> `/admin/traces` |
 
 `LIVE_AGENT` 使用真实 LLM，只在显式配置 secret 后运行；默认 CI 和本地验收不依赖外部模型。
+
+## RAG 深度证据
+
+OmniMerchant 的 RAG 子系统不是只返回一段拼接文本。v3 增加了可解释检索和证据质量路径：
+
+| 能力 | 入口 | 当前实现 |
+|------|------|----------|
+| 查询规划 | `RagQueryPlanningService` | 确定性 query rewrite / expansion，按语言、意图和电商关键词扩展；live LLM rewrite 仍为 opt-in |
+| 混合检索 | `HybridRagService` | Vector + BM25 candidate generation，RRF fusion，cross-encoder rerank 不可用时 fallback |
+| 邻居窗口 | `/api/rag/chunks/{chunkUuid}/neighbors` | policy vector chunk 写入 `neighbor_prev_uuid` / `neighbor_next_uuid`，支持上下文窗口检查 |
+| Context pack | `RagContextPacker` | 按字符预算组装引用，计算 `NONE / WEAK / PARTIAL / SUFFICIENT` evidence level |
+| Citation 约束 | `PolicyAnswer.citations[]` | 增加 source title、section path、quote、support score、chunk version |
+| 知识健康 | `/api/rag/health` | 高风险文档、待审核、过期政策、索引失败、低证据 eval 汇总 |
+| RAG 专项评测 | `scripts/run-rag-evals.ps1` | 输出 `reports/rag-eval-report.json`、`.md`、`.xml`；默认不依赖 LLM key |
+
+深度指标中，citation coverage、retrieval precision@k、recall@k、MRR、nDCG@k、no-answer accuracy、P95 retrieval latency、unsupported claim rate、poisoning block rate 都由 deterministic RAG eval 明细聚合并持久化，`/api/observability/rag` 直接读取最近 eval run 的真实结果，不填假数。
 
 ## 技术栈
 
@@ -132,6 +151,7 @@ docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYS
 docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_eval_v2.sql
 docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_shopify_v2.sql
 docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_rag_safety.sql
+docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_rag_deepening.sql
 docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/demo_seed.sql
 
 # PGVector 建表
@@ -313,7 +333,7 @@ mvn -q -Pintegration verify
 
 ## 核心能力
 
-**客服工作台** — `/admin/inbox`、`/admin/orders`、`/admin/products`、`/admin/customers`、`/admin/tickets`、`/admin/integrations`、`/admin/usage`、`/admin/evals`、`/admin/observability`、`/admin/traces`、`/admin/rag-safety` 覆盖客服操作、回归评测、失败归因和 RAG 审核。
+**客服工作台** — `/admin/inbox`、`/admin/orders`、`/admin/products`、`/admin/customers`、`/admin/tickets`、`/admin/integrations`、`/admin/usage`、`/admin/evals`、`/admin/observability`、`/admin/traces`、`/admin/rag-workbench`、`/admin/rag-safety` 覆盖客服操作、回归评测、失败归因、RAG 调试和知识审核。
 
 **买家 Widget** — `/widget` 公开聊天入口，不依赖管理员 JWT；创建 session 后使用短期 `WIDGET_CUSTOMER` token 绑定 tenant 与 conversation，订单敏感信息必须通过订单邮箱或手机号校验。
 

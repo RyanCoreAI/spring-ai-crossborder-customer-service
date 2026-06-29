@@ -265,7 +265,7 @@ paths:
         '200': { description: Tool metric list }
   /api/observability/eval-trend:
     get:
-      summary: Recent eval trend for pass rate, tool precision, citation, retrieval, unsupported claims, and poisoning block
+      summary: Recent eval trend for pass rate, tool precision, citation, retrieval precision, unsupported claims, and poisoning block
       parameters:
         - $ref: '#/components/parameters/TenantId'
         - { name: limit, in: query, schema: { type: integer, default: 20 } }
@@ -273,11 +273,71 @@ paths:
         '200': { description: Eval trend list }
   /api/observability/rag:
     get:
-      summary: RAG safety metrics from recent deterministic eval runs
+      summary: RAG safety and evidence metrics from recent deterministic eval runs, including recall@k, MRR, nDCG@k, no-answer accuracy, and P95 retrieval latency
       parameters:
         - $ref: '#/components/parameters/TenantId'
       responses:
         '200': { description: RAG metric summary }
+  /api/rag/query/debug:
+    post:
+      summary: Debug one tenant-scoped RAG query with rewrite, candidates, fusion, context pack, and evidence level
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [question]
+              properties:
+                question: { type: string }
+                intent: { type: string }
+                docType: { type: string }
+                language: { type: string }
+                topK: { type: integer, default: 8 }
+      responses:
+        '200': { description: RAG debug response }
+        '400': { description: Bad request }
+  /api/rag/health:
+    get:
+      summary: Knowledge health summary for RAG safety, stale docs, indexing failures, and low-evidence evals
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: RAG health summary }
+  /api/rag/chunks/{chunkUuid}/neighbors:
+    get:
+      summary: Get neighboring chunks for context-window inspection
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: chunkUuid, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Neighbor chunk list }
+  /api/rag/evals/run:
+    post:
+      summary: Run the RAG-focused deterministic eval subset
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: RAG eval run report }
+  /api/rag/evals/runs:
+    get:
+      summary: List persisted eval runs for RAG report navigation
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: size, in: query, schema: { type: integer, default: 20 } }
+      responses:
+        '200': { description: Eval run page }
+  /api/rag/evals/runs/{runId}:
+    get:
+      summary: Get RAG eval run detail and case results with tool-selection replay fields, reranker mode, retrieval rank, and trace id
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: runId, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200': { description: Eval run detail }
   /api/observability/traces:
     get:
       summary: List agent traces

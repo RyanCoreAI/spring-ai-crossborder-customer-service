@@ -19,6 +19,8 @@ if [[ "$SKIP_DB" != "true" ]]; then
   docker exec -i "$MYSQL_CONTAINER" sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_shopify_v2.sql
   echo "Applying sql/db_rag_safety.sql"
   docker exec -i "$MYSQL_CONTAINER" sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_rag_safety.sql
+  echo "Applying sql/db_rag_deepening.sql"
+  docker exec -i "$MYSQL_CONTAINER" sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_rag_deepening.sql
   echo "Applying sql/demo_seed.sql"
   docker exec -i "$MYSQL_CONTAINER" sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/demo_seed.sql
   echo "Applying sql/db_vector.sql"

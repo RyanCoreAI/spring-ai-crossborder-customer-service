@@ -196,8 +196,7 @@ try {
         $escapedEmail = ($emailForStorage | ConvertTo-Json -Compress)
         $script = "localStorage.setItem('token',$escapedToken); localStorage.setItem('email',$escapedEmail); localStorage.setItem('selectedTenantId','$TenantId');"
         $commandId++
-        Invoke-Cdp -Socket $socket -Id $commandId -Method "Page.navigate" -Params @{ url = $BaseUrl } | Out-Null
-        Start-Sleep -Milliseconds 500
+        Invoke-Cdp -Socket $socket -Id $commandId -Method "Page.addScriptToEvaluateOnNewDocument" -Params @{ source = $script } | Out-Null
         $commandId++
         Invoke-Cdp -Socket $socket -Id $commandId -Method "Runtime.evaluate" -Params @{ expression = $script } | Out-Null
 
@@ -211,6 +210,7 @@ try {
             @{ Name = "evals"; Path = "/admin/evals" },
             @{ Name = "observability"; Path = "/admin/observability" },
             @{ Name = "traces"; Path = "/admin/traces" },
+            @{ Name = "rag-workbench"; Path = "/admin/rag-workbench" },
             @{ Name = "rag-safety"; Path = "/admin/rag-safety" }
         )
         foreach ($page in $adminPages) {

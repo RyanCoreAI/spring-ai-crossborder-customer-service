@@ -34,6 +34,16 @@ public class AgentEvalResult {
     private Integer citationPassed;
     private Integer poisoningCase;
     private Integer safetyPassed;
+    private Integer retrievalHit;
+    private Integer retrievalRank;
+    private BigDecimal reciprocalRank;
+    private BigDecimal ndcgScore;
+    private Integer noAnswerExpected;
+    private Integer noAnswerPassed;
+    private Integer retrievalLatencyMs;
+    private String rerankerMode;
+    private String expectedEvidence;
+    private String actualEvidence;
     private String traceId;
     private String failureCategory;
     @TableField(fill = FieldFill.INSERT)

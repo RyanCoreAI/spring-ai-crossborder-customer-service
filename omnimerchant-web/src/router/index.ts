@@ -39,6 +39,7 @@ const router = createRouter({
         { path: 'evals', name: 'Evals', component: () => import('@/views/admin/EvalsView.vue') },
         { path: 'observability', name: 'Observability', component: () => import('@/views/admin/ObservabilityView.vue') },
         { path: 'traces', name: 'Traces', component: () => import('@/views/admin/TracesView.vue') },
+        { path: 'rag-workbench', name: 'RagWorkbench', component: () => import('@/views/admin/RagWorkbenchView.vue') },
         { path: 'rag-safety', name: 'RagSafety', component: () => import('@/views/admin/RagSafetyView.vue') },
       ],
     },

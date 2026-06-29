@@ -36,6 +36,9 @@
           <template v-else-if="column.key === 'indexAllowed'">
             <a-tag :color="record.indexAllowed ? 'green' : 'red'">{{ record.indexAllowed ? '允许' : '禁止' }}</a-tag>
           </template>
+          <template v-else-if="column.key === 'sourceTrustLevel'">
+            <a-tag :color="trustColor(record.sourceTrustLevel)">{{ trustLabel(record.sourceTrustLevel) }}</a-tag>
+          </template>
           <template v-else-if="column.key === 'actions'">
             <a-space>
               <a-button size="small" @click="approve(record)">通过</a-button>
@@ -61,10 +64,12 @@ const riskLevel = ref<string | undefined>()
 
 const columns = [
   { title: '文档 UUID', dataIndex: 'docUuid', ellipsis: true },
+  { title: '来源可信度', dataIndex: 'sourceTrustLevel', key: 'sourceTrustLevel', width: 120 },
   { title: '风险', dataIndex: 'riskLevel', key: 'riskLevel', width: 100 },
   { title: '状态', dataIndex: 'status', key: 'status', width: 120 },
   { title: '索引权限', dataIndex: 'indexAllowed', key: 'indexAllowed', width: 100 },
-  { title: '命中规则', dataIndex: 'matchedRules', ellipsis: true },
+  { title: '索引版本', dataIndex: 'indexVersion', width: 100 },
+  { title: '风险规则', dataIndex: 'riskRules', ellipsis: true },
   { title: '脱敏片段', dataIndex: 'redactedExcerpt', ellipsis: true },
   { title: '操作', key: 'actions', width: 150, fixed: 'right' },
 ]
@@ -96,6 +101,24 @@ function statusLabel(value: string) {
     REJECTED: '已拒绝',
   }
   return labels[value] || value || '-'
+}
+
+function trustColor(value: string) {
+  if (value === 'HIGH' || value === 'TRUSTED') return 'green'
+  if (value === 'LOW') return 'orange'
+  if (value === 'UNTRUSTED') return 'red'
+  return 'blue'
+}
+
+function trustLabel(value: string) {
+  const labels: Record<string, string> = {
+    LOW: '低',
+    MEDIUM: '中',
+    HIGH: '高',
+    TRUSTED: '可信',
+    UNTRUSTED: '不可信',
+  }
+  return labels[value] || value || '—'
 }
 
 async function load() {

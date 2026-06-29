@@ -43,9 +43,22 @@ CREATE TABLE policy_vectors (
     section         VARCHAR(255),                      -- 章节(如 "Returns","Shipping")
     section_path    VARCHAR(512),                      -- 完整路径(如 "Returns > International")
     page_number     INT,                               -- 页码(PDF 来源时)
+    neighbor_prev_uuid VARCHAR(64),                    -- 前一个 chunk,用于邻居窗口
+    neighbor_next_uuid VARCHAR(64),                    -- 后一个 chunk,用于邻居窗口
 
     -- 多语言
     language        VARCHAR(8)                NOT NULL DEFAULT 'en',
+
+    -- 证据治理
+    source_title    VARCHAR(255),
+    source_uri      VARCHAR(1024),
+    source_type     VARCHAR(64),
+    source_trust_level VARCHAR(32)            NOT NULL DEFAULT 'MEDIUM',
+    content_hash    VARCHAR(64),
+    effective_from  TIMESTAMP,
+    effective_to    TIMESTAMP,
+    risk_level      VARCHAR(16)               NOT NULL DEFAULT 'LOW',
+    index_version   VARCHAR(32)               NOT NULL DEFAULT 'v1',
 
     -- 向量(OpenAI text-embedding-3-small = 1536 维)
     embedding       vector(1536)              NOT NULL,
@@ -77,6 +90,8 @@ COMMENT ON COLUMN policy_vectors.metadata IS '元数据 JSONB,可存任意属性
 CREATE INDEX idx_policy_vec_tenant      ON policy_vectors (tenant_id);
 CREATE INDEX idx_policy_vec_tenant_doc  ON policy_vectors (tenant_id, doc_id);
 CREATE INDEX idx_policy_vec_tenant_type ON policy_vectors (tenant_id, doc_type, language);
+CREATE INDEX idx_policy_vec_neighbors   ON policy_vectors (tenant_id, doc_uuid, chunk_index);
+CREATE INDEX idx_policy_vec_risk        ON policy_vectors (tenant_id, risk_level, source_trust_level);
 
 -- HNSW 向量索引(余弦相似度)
 -- m=16: 每个节点最多 16 个邻居(默认值,平衡召回/构建速度)

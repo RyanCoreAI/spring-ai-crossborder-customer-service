@@ -40,7 +40,9 @@ public class AgentTraceService {
 
     public String startChatRun(Long tenantId, String conversationUuid, String intent,
                                String modelProvider, String modelName, String userMessage) {
-        var traceId = resolveTraceId();
+        var traceId = conversationUuid != null && conversationUuid.startsWith("eval-")
+                ? UUID.randomUUID().toString().replace("-", "")
+                : resolveTraceId();
         bestEffort(() -> {
             var run = new AgentRun();
             run.setTenantId(tenantId);

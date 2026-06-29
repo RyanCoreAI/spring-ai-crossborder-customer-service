@@ -17,12 +17,16 @@ public class RagSafetyReview {
     private Long tenantId;
     private String docUuid;
     private String sourceType;
+    private String sourceTrustLevel;
     private String riskLevel;
     private String status;
     private Integer indexAllowed;
     private String matchedRules;
+    private String riskRules;
     private String redactedExcerpt;
     private String reviewNote;
+    private String approvalHistory;
+    private String indexVersion;
     private Long reviewedBy;
     private LocalDateTime reviewedAt;
     @TableField(fill = FieldFill.INSERT)

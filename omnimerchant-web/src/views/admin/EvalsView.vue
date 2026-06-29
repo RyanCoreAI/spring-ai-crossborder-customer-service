@@ -31,7 +31,7 @@
     </a-row>
 
     <a-card title="最近运行" class="block">
-      <a-table :columns="runColumns" :data-source="runs" row-key="id" size="small">
+      <a-table :columns="runColumns" :data-source="runs" row-key="id" size="small" :scroll="{ x: 1500 }">
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'status'">
             <a-tag :color="record.status === 'PASS' || record.status === 'SUCCESS' ? 'green' : 'red'">
@@ -40,6 +40,9 @@
           </template>
           <template v-else-if="metricColumnKeys.includes(String(column.key))">
             {{ metricPercent(record, column) }}
+          </template>
+          <template v-else-if="decimalColumnKeys.includes(String(column.key))">
+            {{ metricValue(record, column) }}
           </template>
           <template v-else-if="column.key === 'actions'">
             <a-button size="small" @click="openRun(record)">详情</a-button>
@@ -59,10 +62,21 @@
     </a-card>
 
     <a-drawer v-model:open="drawer" title="评测运行详情" width="72%">
-      <a-table :columns="resultColumns" :data-source="runDetail.results || []" row-key="id" size="small">
+      <a-row :gutter="[12, 12]" class="drawer-summary">
+        <a-col v-for="item in toolSummary" :key="item.label" :xs="12" :md="6">
+          <a-statistic :title="item.label" :value="item.value" />
+        </a-col>
+      </a-row>
+      <a-table :columns="resultColumns" :data-source="runDetail.results || []" row-key="caseCode" size="small" :scroll="{ x: 1500 }">
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'status'">
             <a-tag :color="record.status === 'PASS' ? 'green' : 'red'">{{ record.status }}</a-tag>
+          </template>
+          <template v-else-if="column.key === 'argumentMatch'">
+            <a-tag :color="record.argumentMatch ? 'green' : 'orange'">{{ record.argumentMatch ? '匹配' : '不匹配' }}</a-tag>
+          </template>
+          <template v-else-if="column.key === 'forbiddenToolViolation'">
+            <a-tag :color="record.forbiddenToolViolation ? 'red' : 'green'">{{ record.forbiddenToolViolation ? '违规' : '正常' }}</a-tag>
           </template>
           <template v-else-if="column.key === 'trace'">
             <a-button v-if="record.traceId" size="small" @click="goTrace(record.traceId)">打开</a-button>
@@ -90,6 +104,16 @@ const runReport = ref<any>(null)
 const drawer = ref(false)
 const runDetail = ref<any>({})
 const latestRun = computed(() => runs.value[0] || {})
+const detailResults = computed(() => runDetail.value?.results || [])
+const toolSummary = computed(() => {
+  const rows = detailResults.value
+  return [
+    { label: '失败用例', value: rows.filter((r: any) => r.status !== 'PASS').length },
+    { label: '禁止工具违规', value: rows.filter((r: any) => r.forbiddenToolViolation).length },
+    { label: '参数不匹配', value: rows.filter((r: any) => r.argumentMatch === false).length },
+    { label: '可回放轨迹', value: rows.filter((r: any) => r.traceId).length },
+  ]
+})
 
 const summaryCards = computed(() => [
   { label: '总用例', value: displayValue(summary.value.totalCases) },
@@ -97,10 +121,12 @@ const summaryCards = computed(() => [
   { label: '最新通过率', value: displayValue(latestRun.value.passRate), suffix: hasValue(latestRun.value.passRate) ? '%' : undefined },
   { label: '投毒拦截率', value: displayValue(latestRun.value.poisoningBlockRate), suffix: hasValue(latestRun.value.poisoningBlockRate) ? '%' : undefined },
   { label: '检索准确率@K', value: displayValue(latestRun.value.retrievalPrecisionAtK), suffix: hasValue(latestRun.value.retrievalPrecisionAtK) ? '%' : undefined },
+  { label: '无答案准确率', value: displayValue(latestRun.value.noAnswerAccuracy), suffix: hasValue(latestRun.value.noAnswerAccuracy) ? '%' : undefined },
   { label: '无依据结论率', value: displayValue(latestRun.value.unsupportedClaimRate), suffix: hasValue(latestRun.value.unsupportedClaimRate) ? '%' : undefined },
 ])
 
-const metricColumnKeys = ['passRate', 'toolPrecision', 'toolRecall', 'citationCoverage', 'retrievalPrecisionAtK', 'unsupportedClaimRate', 'poisoningBlockRate']
+const metricColumnKeys = ['passRate', 'toolPrecision', 'toolRecall', 'citationCoverage', 'retrievalPrecisionAtK', 'recallAtK', 'unsupportedClaimRate', 'poisoningBlockRate', 'noAnswerAccuracy']
+const decimalColumnKeys = ['mrr', 'ndcgAtK']
 
 const runColumns = [
   { title: '运行编号', dataIndex: 'runUuid', ellipsis: true },
@@ -111,6 +137,11 @@ const runColumns = [
   { title: '工具召回率', dataIndex: 'toolRecall', key: 'toolRecall', width: 110 },
   { title: '引用覆盖率', dataIndex: 'citationCoverage', key: 'citationCoverage', width: 110 },
   { title: '检索@K', dataIndex: 'retrievalPrecisionAtK', key: 'retrievalPrecisionAtK', width: 100 },
+  { title: '召回@K', dataIndex: 'recallAtK', key: 'recallAtK', width: 100 },
+  { title: 'MRR', dataIndex: 'mrr', key: 'mrr', width: 90 },
+  { title: 'nDCG@K', dataIndex: 'ndcgAtK', key: 'ndcgAtK', width: 100 },
+  { title: '无答案准确', dataIndex: 'noAnswerAccuracy', key: 'noAnswerAccuracy', width: 120 },
+  { title: 'P95检索', dataIndex: 'p95RetrievalLatencyMs', width: 100 },
   { title: '无依据率', dataIndex: 'unsupportedClaimRate', key: 'unsupportedClaimRate', width: 100 },
   { title: '投毒拦截', dataIndex: 'poisoningBlockRate', key: 'poisoningBlockRate', width: 110 },
   { title: '开始时间', dataIndex: 'startedAt', width: 180 },
@@ -132,6 +163,14 @@ const resultColumns = [
   { title: '状态', dataIndex: 'status', key: 'status', width: 90 },
   { title: '工具精确率', dataIndex: 'toolPrecision', width: 100 },
   { title: '工具召回率', dataIndex: 'toolRecall', width: 100 },
+  { title: '参数', dataIndex: 'argumentMatch', key: 'argumentMatch', width: 90 },
+  { title: '禁止工具', dataIndex: 'forbiddenToolViolation', key: 'forbiddenToolViolation', width: 100 },
+  { title: '期望工具', dataIndex: 'expectedTools', width: 180, ellipsis: true },
+  { title: '实际工具', dataIndex: 'actualTools', width: 180, ellipsis: true },
+  { title: '失败归因', dataIndex: 'failureCategory', width: 130 },
+  { title: '重排模式', dataIndex: 'rerankerMode', width: 120 },
+  { title: '检索排名', dataIndex: 'retrievalRank', width: 90 },
+  { title: '检索耗时', dataIndex: 'retrievalLatencyMs', width: 90 },
   { title: '观测摘要', dataIndex: 'actualObservation', ellipsis: true },
   { title: '轨迹', key: 'trace', width: 90 },
 ]
@@ -201,6 +240,10 @@ onMounted(load)
 .run-alert,
 .summary,
 .block {
+  margin-bottom: 16px;
+}
+
+.drawer-summary {
   margin-bottom: 16px;
 }
 </style>
