@@ -21,7 +21,7 @@
           @change="onTenantChange"
         >
           <a-select-option v-for="t in tenants" :key="t.id" :value="t.id">
-            {{ t.storeName }}（{{ t.tenantCode }}）
+            {{ tenantOptionLabel(t) }}
           </a-select-option>
         </a-select>
         <a-input
@@ -52,6 +52,7 @@
     <a-card :bordered="false">
       <a-table
         :columns="columns"
+        :custom-row="resourceRow"
         :data-source="rows"
         :loading="loading"
         :pagination="false"
@@ -68,11 +69,11 @@
           </template>
           <template v-else-if="column.customTag">
             <a-tag :color="tagColor(cellValue(record, column), column.dataIndex)">
-              {{ display(cellValue(record, column)) }}
+              {{ cellDisplay(record, column) }}
             </a-tag>
           </template>
           <template v-else>
-            {{ display(cellValue(record, column)) }}
+            {{ cellDisplay(record, column) }}
           </template>
         </template>
       </a-table>
@@ -85,6 +86,57 @@
         @change="loadData"
       />
     </a-card>
+
+    <a-drawer v-model:open="detailOpen" :title="detailTitle" width="720px">
+      <a-spin :spinning="detailLoading">
+        <template v-if="detail">
+          <a-descriptions :column="1" bordered size="small">
+            <a-descriptions-item
+              v-for="item in detailFields"
+              :key="item.prop"
+              :label="item.label"
+            >
+              <a-tag v-if="item.tag" :color="tagColor(detail[item.prop], item.prop)">
+                {{ displayDetailValue(item.prop) }}
+              </a-tag>
+              <span v-else>{{ displayDetailValue(item.prop) }}</span>
+            </a-descriptions-item>
+          </a-descriptions>
+
+          <template v-if="props.resource === 'orders'">
+            <a-divider orientation="left">订单商品</a-divider>
+            <a-table
+              :columns="orderItemColumns"
+              :data-source="orderItems"
+              :pagination="false"
+              row-key="sku"
+              size="small"
+            />
+            <a-divider orientation="left">物流轨迹</a-divider>
+            <a-timeline v-if="trackingItems.length">
+              <a-timeline-item v-for="(item, index) in trackingItems" :key="index">
+                <strong>{{ displayBusinessValue(item.status, 'trackingStatus') }}</strong>
+                <div class="detail-muted">{{ item.time || '—' }} · {{ item.location || '—' }}</div>
+                <div>{{ item.desc || item.description || '—' }}</div>
+              </a-timeline-item>
+            </a-timeline>
+            <a-empty v-else description="暂无物流轨迹" />
+          </template>
+
+          <template v-if="props.resource === 'products'">
+            <a-divider orientation="left">商品图片与索引</a-divider>
+            <a-image v-if="detail.featuredImageUrl" :src="detail.featuredImageUrl" :width="220" />
+            <a-alert
+              class="detail-alert"
+              :type="detail.vectorSynced ? 'success' : 'warning'"
+              show-icon
+              :message="detail.vectorSynced ? '商品已完成向量索引' : '商品尚未完成向量索引'"
+            />
+          </template>
+        </template>
+        <a-empty v-else description="暂无详情" />
+      </a-spin>
+    </a-drawer>
   </div>
 </template>
 
@@ -94,6 +146,7 @@ import { message } from 'ant-design-vue'
 import { ReloadOutlined } from '@ant-design/icons-vue'
 import api from '@/api'
 import { selectDefaultTenantId, setStoredTenantId } from '@/utils/tenant'
+import { displayBusinessValue, tenantOptionLabel } from '@/utils/display'
 
 const props = defineProps<{ resource: string }>()
 
@@ -235,14 +288,81 @@ const total = ref(0)
 const page = ref(1)
 const size = ref(20)
 const loading = ref(false)
+const detailOpen = ref(false)
+const detailLoading = ref(false)
+const detail = ref<any | null>(null)
 
-function display(value: any) {
-  if (value === null || value === undefined || value === '') return '—'
-  if (typeof value === 'boolean') return value ? '是' : '否'
-  if (typeof value === 'number') return String(value)
-  if (typeof value === 'string' && value.includes('T')) return new Date(value).toLocaleString('zh-CN')
-  return value
+const detailEndpoints: Record<string, string> = {
+  customers: '/customers',
+  orders: '/orders',
+  products: '/products',
 }
+
+const detailTitle = computed(() => {
+  if (!detail.value) return '详情'
+  if (props.resource === 'orders') return `订单 ${detail.value.externalOrderNumber || detail.value.id}`
+  if (props.resource === 'products') return detail.value.title || '商品详情'
+  if (props.resource === 'customers') return detail.value.displayName || detail.value.email || '客户详情'
+  return '详情'
+})
+
+const detailFields = computed(() => {
+  const map: Record<string, Column[]> = {
+    customers: [
+      { prop: 'displayName', label: '客户' },
+      { prop: 'email', label: '邮箱' },
+      { prop: 'phone', label: '手机号' },
+      { prop: 'countryCode', label: '国家' },
+      { prop: 'languagePref', label: '语言' },
+      { prop: 'customerTier', label: '等级', tag: true },
+      { prop: 'totalOrders', label: '订单数' },
+      { prop: 'totalSpent', label: '累计消费' },
+      { prop: 'lastOrderAt', label: '最近下单' },
+      { prop: 'isBlacklisted', label: '黑名单', tag: true },
+    ],
+    orders: [
+      { prop: 'externalOrderNumber', label: '订单号' },
+      { prop: 'customerEmail', label: '客户邮箱' },
+      { prop: 'customerName', label: '客户姓名' },
+      { prop: 'orderStatus', label: '订单状态', tag: true },
+      { prop: 'paymentStatus', label: '支付状态', tag: true },
+      { prop: 'fulfillmentStatus', label: '履约状态', tag: true },
+      { prop: 'totalAmount', label: '订单金额' },
+      { prop: 'refundedAmount', label: '已退款金额' },
+      { prop: 'trackingNumber', label: '物流号' },
+      { prop: 'trackingCarrier', label: '承运商' },
+      { prop: 'trackingStatus', label: '物流状态', tag: true },
+      { prop: 'estimatedDeliveryAt', label: '预计送达' },
+      { prop: 'placedAt', label: '下单时间' },
+    ],
+    products: [
+      { prop: 'title', label: '商品' },
+      { prop: 'defaultSku', label: 'SKU' },
+      { prop: 'brand', label: '品牌' },
+      { prop: 'categoryL1', label: '一级类目' },
+      { prop: 'categoryL2', label: '二级类目' },
+      { prop: 'productType', label: '类型' },
+      { prop: 'price', label: '价格' },
+      { prop: 'totalStock', label: '库存' },
+      { prop: 'stockStatus', label: '库存状态', tag: true },
+      { prop: 'ratingAvg', label: '评分' },
+      { prop: 'ratingCount', label: '评价数' },
+      { prop: 'vectorSynced', label: '向量索引', tag: true },
+      { prop: 'updatedAt', label: '更新时间' },
+    ],
+  }
+  return map[props.resource] || []
+})
+
+const orderItemColumns = [
+  { title: 'SKU', dataIndex: 'sku', width: 160 },
+  { title: '商品', dataIndex: 'title', ellipsis: true },
+  { title: '数量', dataIndex: 'quantity', width: 90 },
+  { title: '价格', dataIndex: 'price', width: 90 },
+]
+
+const orderItems = computed(() => parseJsonList(detail.value?.orderItems))
+const trackingItems = computed(() => parseJsonList(detail.value?.trackingHistory))
 
 function cellValue(record: any, column: any) {
   return record[column.dataIndex]
@@ -257,6 +377,48 @@ function tagColor(value: any, prop: string) {
   if (text.includes('delivered') || text.includes('resolved') || text.includes('完成')) return 'success'
   if (text.includes('processing') || text.includes('处理中')) return 'processing'
   return 'blue'
+}
+
+function cellDisplay(record: any, column: any) {
+  return displayBusinessValue(cellValue(record, column), column.dataIndex)
+}
+
+function displayDetailValue(prop: string) {
+  if (!detail.value) return '—'
+  return displayBusinessValue(detail.value[prop], prop)
+}
+
+function parseJsonList(value: any) {
+  if (!value) return []
+  if (Array.isArray(value)) return value
+  try {
+    const parsed = JSON.parse(String(value))
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+function resourceRow(record: any) {
+  if (!detailEndpoints[props.resource]) return {}
+  return {
+    style: { cursor: 'pointer' },
+    onClick: () => openDetail(record),
+  }
+}
+
+async function openDetail(record: any) {
+  const endpoint = detailEndpoints[props.resource]
+  if (!endpoint || !record?.id) return
+  detailOpen.value = true
+  detailLoading.value = true
+  detail.value = null
+  try {
+    const res = await api.get(`${endpoint}/${record.id}`)
+    detail.value = res.data || null
+  } finally {
+    detailLoading.value = false
+  }
 }
 
 async function loadTenants() {
@@ -315,5 +477,15 @@ onMounted(async () => {
 <style scoped>
 .toolbar-card {
   margin-bottom: 14px;
+}
+
+.detail-muted {
+  color: #667085;
+  font-size: 12px;
+  margin: 3px 0;
+}
+
+.detail-alert {
+  margin-top: 12px;
 }
 </style>

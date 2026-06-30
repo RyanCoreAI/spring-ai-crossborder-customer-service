@@ -42,6 +42,12 @@
           <template v-else-if="column.key === 'totalLatencyMs'">
             {{ formatLatency(record.totalLatencyMs) }}
           </template>
+          <template v-else-if="column.key === 'intent'">
+            {{ intentLabel(record.intent) }}
+          </template>
+          <template v-else-if="column.key === 'failureCategory'">
+            {{ failureCategoryLabel(record.failureCategory) }}
+          </template>
         </template>
       </a-table>
     </a-card>
@@ -50,9 +56,9 @@
       <a-descriptions v-if="detail.run" :column="2" bordered class="detail">
         <a-descriptions-item label="Trace">{{ detail.run.traceId }}</a-descriptions-item>
         <a-descriptions-item label="状态">{{ statusLabel(detail.run.status) }}</a-descriptions-item>
-        <a-descriptions-item label="意图">{{ detail.run.intent || '-' }}</a-descriptions-item>
+        <a-descriptions-item label="意图">{{ intentLabel(detail.run.intent) }}</a-descriptions-item>
         <a-descriptions-item label="模型">{{ detail.run.modelName || '-' }}</a-descriptions-item>
-        <a-descriptions-item label="失败分类">{{ detail.run.failureCategory || '无' }}</a-descriptions-item>
+        <a-descriptions-item label="失败分类">{{ failureCategoryLabel(detail.run.failureCategory) }}</a-descriptions-item>
         <a-descriptions-item label="总延迟">{{ formatLatency(detail.run.totalLatencyMs) }}</a-descriptions-item>
       </a-descriptions>
 
@@ -60,12 +66,12 @@
       <a-timeline v-else class="timeline">
         <a-timeline-item v-for="step in detail.steps" :key="step.stepIndex">
           <div class="step-title">
-            {{ step.stepIndex }}. {{ step.name || step.stepType }}
+            {{ step.stepIndex }}. {{ step.name || stepTypeLabel(step.stepType) }}
             <a-tag :color="statusColor(step.status)">{{ statusLabel(step.status) }}</a-tag>
           </div>
           <div v-if="step.inputSummary" class="step-text">输入摘要：{{ step.inputSummary }}</div>
           <div v-if="step.outputSummary" class="step-text">输出摘要：{{ step.outputSummary }}</div>
-          <div class="step-meta">{{ formatLatency(step.latencyMs) }} {{ step.failureCategory || '' }}</div>
+          <div class="step-meta">{{ formatLatency(step.latencyMs) }} {{ failureCategoryLabel(step.failureCategory) }}</div>
         </a-timeline-item>
       </a-timeline>
     </a-drawer>
@@ -77,6 +83,7 @@ import { onMounted, reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { ReloadOutlined } from '@ant-design/icons-vue'
 import api from '@/api'
+import { failureCategoryLabel, intentLabel, statusLabel as cnStatusLabel, stepTypeLabel } from '@/utils/display'
 
 const route = useRoute()
 const loading = ref(false)
@@ -88,10 +95,10 @@ const filters = reactive({ conversationUuid: '', status: undefined as string | u
 const columns = [
   { title: 'Trace', dataIndex: 'traceId', ellipsis: true },
   { title: '会话', dataIndex: 'conversationUuid', ellipsis: true },
-  { title: '意图', dataIndex: 'intent', width: 150 },
+  { title: '意图', dataIndex: 'intent', key: 'intent', width: 150 },
   { title: '模型', dataIndex: 'modelName', width: 160 },
   { title: '状态', dataIndex: 'status', key: 'status', width: 100 },
-  { title: '失败分类', dataIndex: 'failureCategory', width: 150 },
+  { title: '失败分类', dataIndex: 'failureCategory', key: 'failureCategory', width: 150 },
   { title: '工具次数', dataIndex: 'toolCallCount', width: 90 },
   { title: '总延迟', dataIndex: 'totalLatencyMs', key: 'totalLatencyMs', width: 110 },
 ]
@@ -104,14 +111,7 @@ function statusColor(status: string) {
 }
 
 function statusLabel(status: string) {
-  const labels: Record<string, string> = {
-    SUCCESS: '成功',
-    FAILED: '失败',
-    RUNNING: '运行中',
-    PASS: '通过',
-    FAIL: '失败',
-  }
-  return labels[status] || status || '-'
+  return cnStatusLabel(status)
 }
 
 function formatLatency(value: any) {

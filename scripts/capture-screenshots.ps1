@@ -202,11 +202,14 @@ try {
 
         $adminPages = @(
             @{ Name = "dashboard"; Path = "/admin" },
+            @{ Name = "knowledge-chat"; Path = "/chat" },
+            @{ Name = "knowledge"; Path = "/admin/knowledge" },
             @{ Name = "inbox"; Path = "/admin/inbox" },
             @{ Name = "orders"; Path = "/admin/orders" },
             @{ Name = "products"; Path = "/admin/products" },
             @{ Name = "tickets"; Path = "/admin/tickets" },
             @{ Name = "integrations"; Path = "/admin/integrations" },
+            @{ Name = "tool-calls"; Path = "/admin/tool-calls" },
             @{ Name = "evals"; Path = "/admin/evals" },
             @{ Name = "observability"; Path = "/admin/observability" },
             @{ Name = "traces"; Path = "/admin/traces" },

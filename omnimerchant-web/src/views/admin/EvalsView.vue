@@ -38,6 +38,9 @@
               {{ statusLabel(record.status) }}
             </a-tag>
           </template>
+          <template v-else-if="column.key === 'runMode'">
+            {{ runModeLabel(record.runMode) }}
+          </template>
           <template v-else-if="metricColumnKeys.includes(String(column.key))">
             {{ metricPercent(record, column) }}
           </template>
@@ -57,6 +60,15 @@
           <template v-if="column.key === 'enabled'">
             <a-tag :color="record.enabled ? 'green' : 'default'">{{ record.enabled ? '启用' : '停用' }}</a-tag>
           </template>
+          <template v-else-if="column.key === 'intent'">
+            {{ intentLabel(record.intent) }}
+          </template>
+          <template v-else-if="column.key === 'expectedTools'">
+            {{ toolsLabel(record.expectedTools) }}
+          </template>
+          <template v-else-if="column.key === 'attackType'">
+            {{ attackTypeLabel(record.attackType) }}
+          </template>
         </template>
       </a-table>
     </a-card>
@@ -70,7 +82,10 @@
       <a-table :columns="resultColumns" :data-source="runDetail.results || []" row-key="caseCode" size="small" :scroll="{ x: 1500 }">
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'status'">
-            <a-tag :color="record.status === 'PASS' ? 'green' : 'red'">{{ record.status }}</a-tag>
+            <a-tag :color="record.status === 'PASS' ? 'green' : 'red'">{{ statusLabel(record.status) }}</a-tag>
+          </template>
+          <template v-else-if="column.key === 'intent'">
+            {{ intentLabel(record.intent) }}
           </template>
           <template v-else-if="column.key === 'argumentMatch'">
             <a-tag :color="record.argumentMatch ? 'green' : 'orange'">{{ record.argumentMatch ? '匹配' : '不匹配' }}</a-tag>
@@ -81,6 +96,15 @@
           <template v-else-if="column.key === 'trace'">
             <a-button v-if="record.traceId" size="small" @click="goTrace(record.traceId)">打开</a-button>
             <span v-else>-</span>
+          </template>
+          <template v-else-if="column.key === 'expectedTools' || column.key === 'actualTools'">
+            {{ toolsLabel(record[column.dataIndex]) }}
+          </template>
+          <template v-else-if="column.key === 'failureCategory'">
+            {{ failureCategoryLabel(record.failureCategory) }}
+          </template>
+          <template v-else-if="column.key === 'rerankerMode'">
+            {{ rerankerModeLabel(record.rerankerMode) }}
           </template>
         </template>
       </a-table>
@@ -93,6 +117,15 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ReloadOutlined } from '@ant-design/icons-vue'
 import api from '@/api'
+import {
+  attackTypeLabel,
+  failureCategoryLabel,
+  intentLabel,
+  rerankerModeLabel,
+  runModeLabel,
+  statusLabel as cnStatusLabel,
+  toolsLabel,
+} from '@/utils/display'
 
 const router = useRouter()
 const loading = ref(false)
@@ -130,7 +163,7 @@ const decimalColumnKeys = ['mrr', 'ndcgAtK']
 
 const runColumns = [
   { title: '运行编号', dataIndex: 'runUuid', ellipsis: true },
-  { title: '模式', dataIndex: 'runMode', width: 130 },
+  { title: '模式', dataIndex: 'runMode', key: 'runMode', width: 130 },
   { title: '状态', dataIndex: 'status', key: 'status', width: 110 },
   { title: '通过率', dataIndex: 'passRate', key: 'passRate', width: 90 },
   { title: '工具精确率', dataIndex: 'toolPrecision', key: 'toolPrecision', width: 110 },
@@ -150,25 +183,25 @@ const runColumns = [
 
 const caseColumns = [
   { title: '用例编号', dataIndex: 'caseCode', width: 150 },
-  { title: '意图', dataIndex: 'intent', width: 160 },
+  { title: '意图', dataIndex: 'intent', key: 'intent', width: 160 },
   { title: '用户消息', dataIndex: 'userMessage', ellipsis: true },
-  { title: '期望工具', dataIndex: 'expectedTools', ellipsis: true },
-  { title: '攻击类型', dataIndex: 'attackType', width: 150 },
+  { title: '期望工具', dataIndex: 'expectedTools', key: 'expectedTools', ellipsis: true },
+  { title: '攻击类型', dataIndex: 'attackType', key: 'attackType', width: 150 },
   { title: '启用', dataIndex: 'enabled', key: 'enabled', width: 90 },
 ]
 
 const resultColumns = [
   { title: '用例编号', dataIndex: 'caseCode', width: 150 },
-  { title: '意图', dataIndex: 'intent', width: 140 },
+  { title: '意图', dataIndex: 'intent', key: 'intent', width: 140 },
   { title: '状态', dataIndex: 'status', key: 'status', width: 90 },
   { title: '工具精确率', dataIndex: 'toolPrecision', width: 100 },
   { title: '工具召回率', dataIndex: 'toolRecall', width: 100 },
   { title: '参数', dataIndex: 'argumentMatch', key: 'argumentMatch', width: 90 },
   { title: '禁止工具', dataIndex: 'forbiddenToolViolation', key: 'forbiddenToolViolation', width: 100 },
-  { title: '期望工具', dataIndex: 'expectedTools', width: 180, ellipsis: true },
-  { title: '实际工具', dataIndex: 'actualTools', width: 180, ellipsis: true },
-  { title: '失败归因', dataIndex: 'failureCategory', width: 130 },
-  { title: '重排模式', dataIndex: 'rerankerMode', width: 120 },
+  { title: '期望工具', dataIndex: 'expectedTools', key: 'expectedTools', width: 180, ellipsis: true },
+  { title: '实际工具', dataIndex: 'actualTools', key: 'actualTools', width: 180, ellipsis: true },
+  { title: '失败归因', dataIndex: 'failureCategory', key: 'failureCategory', width: 130 },
+  { title: '重排模式', dataIndex: 'rerankerMode', key: 'rerankerMode', width: 120 },
   { title: '检索排名', dataIndex: 'retrievalRank', width: 90 },
   { title: '检索耗时', dataIndex: 'retrievalLatencyMs', width: 90 },
   { title: '观测摘要', dataIndex: 'actualObservation', ellipsis: true },
@@ -176,8 +209,7 @@ const resultColumns = [
 ]
 
 function statusLabel(status: string) {
-  const labels: Record<string, string> = { PASS: '通过', SUCCESS: '成功', FAIL: '失败', FAILED: '失败', RUNNING: '运行中' }
-  return labels[status] || status || '-'
+  return cnStatusLabel(status)
 }
 
 function metricValue(record: any, column: any) {

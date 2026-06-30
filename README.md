@@ -27,19 +27,22 @@ Spring Boot 4 + Spring AI 2 trustworthy ecommerce customer-service agent platfor
 
 | 页面 | 路由 | 产物 |
 |------|------|------|
-| Buyer Widget | `/widget` | `docs/assets/screenshots/widget.png` |
-| Merchant Login | `/login` | `docs/assets/screenshots/login.png` |
-| Dashboard | `/admin` | `docs/assets/screenshots/dashboard.png` |
-| Inbox | `/admin/inbox` | `docs/assets/screenshots/inbox.png` |
-| Orders | `/admin/orders` | `docs/assets/screenshots/orders.png` |
-| Products | `/admin/products` | `docs/assets/screenshots/products.png` |
-| Tickets | `/admin/tickets` | `docs/assets/screenshots/tickets.png` |
-| Integrations | `/admin/integrations` | `docs/assets/screenshots/integrations.png` |
-| Evals | `/admin/evals` | `docs/assets/screenshots/evals.png` |
-| Observability | `/admin/observability` | `docs/assets/screenshots/observability.png` |
-| Trace Replay | `/admin/traces` | `docs/assets/screenshots/traces.png` |
-| RAG Workbench | `/admin/rag-workbench` | `docs/assets/screenshots/rag-workbench.png` |
-| RAG Safety | `/admin/rag-safety` | `docs/assets/screenshots/rag-safety.png` |
+| 买家咨询组件 | `/widget` | `docs/assets/screenshots/widget.png` |
+| 商家登录 | `/login` | `docs/assets/screenshots/login.png` |
+| 数据概览 | `/admin` | `docs/assets/screenshots/dashboard.png` |
+| 知识库对话测试 | `/chat` | `docs/assets/screenshots/knowledge-chat.png` |
+| 知识库管理 | `/admin/knowledge` | `docs/assets/screenshots/knowledge.png` |
+| 对话与工单 | `/admin/inbox` | `docs/assets/screenshots/inbox.png` |
+| 订单 | `/admin/orders` | `docs/assets/screenshots/orders.png` |
+| 商品 | `/admin/products` | `docs/assets/screenshots/products.png` |
+| 工单 | `/admin/tickets` | `docs/assets/screenshots/tickets.png` |
+| 渠道集成 | `/admin/integrations` | `docs/assets/screenshots/integrations.png` |
+| 工具调用审计 | `/admin/tool-calls` | `docs/assets/screenshots/tool-calls.png` |
+| 智能体评测 | `/admin/evals` | `docs/assets/screenshots/evals.png` |
+| 可信控制台 | `/admin/observability` | `docs/assets/screenshots/observability.png` |
+| 轨迹回放 | `/admin/traces` | `docs/assets/screenshots/traces.png` |
+| RAG 证据工作台 | `/admin/rag-workbench` | `docs/assets/screenshots/rag-workbench.png` |
+| RAG 安全审核 | `/admin/rag-safety` | `docs/assets/screenshots/rag-safety.png` |
 
 当前仓库保留买家咨询、登录、可信控制台、智能体评测、轨迹回放、RAG Workbench、RAG 安全等真实截图；没有运行后端时不提交伪造后台截图：
 

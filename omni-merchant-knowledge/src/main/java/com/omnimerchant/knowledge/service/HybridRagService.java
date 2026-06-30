@@ -1,7 +1,10 @@
 package com.omnimerchant.knowledge.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.omnimerchant.common.config.OmniMerchantProperties;
 import com.omnimerchant.knowledge.dto.*;
+import com.omnimerchant.knowledge.entity.KnowledgeDoc;
+import com.omnimerchant.knowledge.mapper.KnowledgeDocMapper;
 import com.omnimerchant.knowledge.util.RrfFusion;
 import com.omnimerchant.tenant.context.TenantContextHolder;
 import com.pgvector.PGvector;
@@ -15,9 +18,12 @@ import org.springframework.stereotype.Service;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 /**
  * Hybrid RAG retrieval: vector similarity + BM25 full-text search → RRF fusion → rerank.
@@ -31,6 +37,7 @@ public class HybridRagService {
     private final CrossEncoderReranker reranker;
     private final RagQueryPlanningService queryPlanningService;
     private final RagContextPacker contextPacker;
+    private final KnowledgeDocMapper knowledgeDocMapper;
     private final OmniMerchantProperties props;
 
     @Autowired
@@ -57,17 +64,16 @@ public class HybridRagService {
             var plan = queryPlanningService.plan(request);
             var topKOverride = request == null ? null : request.topK();
 
-            // 1. Query planning + embedding.
-            var queryEmbedding = embeddingService.embed(plan.rewrittenQuery());
-
-            // 2. Candidate generation: vector + BM25 with tenant and metadata filters.
+            // 1. Candidate generation: vector + BM25 with tenant and metadata filters.
+            // Vector retrieval may be unavailable in a fresh local demo without embedding keys.
+            // Keep the RAG workbench useful by falling back to lexical BM25 instead of failing the whole path.
             var vectorTopK = positiveOr(topKOverride, props.getKnowledge().getRetrieval().getVectorTopK());
-            var vectorResults = vectorSearch(queryEmbedding, tenantId, vectorTopK,
+            var vectorResults = safeVectorSearch(plan.rewrittenQuery(), tenantId, vectorTopK,
                     request == null ? null : request.docType(),
                     request == null ? null : request.language());
 
             var bm25TopK = positiveOr(topKOverride, props.getKnowledge().getRetrieval().getBm25TopK());
-            var bm25Results = bm25Search(plan.rewrittenQuery(), tenantId, bm25TopK,
+            var bm25Results = safeBm25Search(plan.rewrittenQuery(), tenantId, bm25TopK,
                     request == null ? null : request.docType(),
                     request == null ? null : request.language());
 
@@ -198,6 +204,15 @@ public class HybridRagService {
                 this::mapVectorRow);
     }
 
+    private List<ChunkVectorRecord> safeVectorSearch(String query, Long tenantId, int topK, String docType, String language) {
+        try {
+            return vectorSearch(embeddingService.embed(query), tenantId, topK, docType, language);
+        } catch (Exception e) {
+            log.warn("RAG vector retrieval skipped, falling back to BM25: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
     private List<ChunkVectorRecord> bm25Search(String query, Long tenantId, int topK, String docType, String language) {
         var sql = """
                 SELECT id, chunk_uuid, doc_id, doc_uuid, doc_type, doc_version,
@@ -229,6 +244,82 @@ public class HybridRagService {
                     ps.setInt(9, topK);
                 },
                 this::mapVectorRow);
+    }
+
+    private List<ChunkVectorRecord> safeBm25Search(String query, Long tenantId, int topK, String docType, String language) {
+        try {
+            var results = bm25Search(query, tenantId, topK, docType, language);
+            if (!results.isEmpty()) {
+                return results;
+            }
+            log.info("RAG BM25 returned no rows, falling back to tenant knowledge_doc lexical search");
+            return knowledgeDocLexicalSearch(query, tenantId, topK, docType, language);
+        } catch (Exception e) {
+            log.warn("RAG BM25 retrieval skipped, falling back to tenant knowledge_doc lexical search: {}", e.getMessage());
+            return knowledgeDocLexicalSearch(query, tenantId, topK, docType, language);
+        }
+    }
+
+    private List<ChunkVectorRecord> knowledgeDocLexicalSearch(String query, Long tenantId, int topK,
+                                                              String docType, String language) {
+        var docs = findKnowledgeDocs(tenantId, docType, language);
+        if (docs.isEmpty() && blankToNull(language) != null) {
+            docs = findKnowledgeDocs(tenantId, docType, null);
+        }
+        if (docs.isEmpty()) {
+            return List.of();
+        }
+        var tokens = queryTokens(query);
+        return docs.stream()
+                .map(doc -> new ScoredDoc(doc, lexicalScore(tokens, doc)))
+                .filter(item -> item.score() > 0)
+                .sorted(Comparator.comparingInt(ScoredDoc::score).reversed()
+                        .thenComparing(item -> item.doc().getPriority() == null ? 0 : item.doc().getPriority(), Comparator.reverseOrder()))
+                .limit(Math.max(1, topK))
+                .map(item -> toKnowledgeDocRecord(item.doc(), item.score()))
+                .toList();
+    }
+
+    private List<KnowledgeDoc> findKnowledgeDocs(Long tenantId, String docType, String language) {
+        return knowledgeDocMapper.selectList(new LambdaQueryWrapper<KnowledgeDoc>()
+                .eq(KnowledgeDoc::getTenantId, tenantId)
+                .eq(KnowledgeDoc::getStatus, 1)
+                .eq(blankToNull(docType) != null, KnowledgeDoc::getDocType, docType)
+                .eq(blankToNull(language) != null, KnowledgeDoc::getLanguage, language)
+                .orderByDesc(KnowledgeDoc::getPriority)
+                .orderByDesc(KnowledgeDoc::getPublishedAt)
+                .last("LIMIT 50"));
+    }
+
+    private ChunkVectorRecord toKnowledgeDocRecord(KnowledgeDoc doc, int score) {
+        var version = doc.getDocVersion() == null ? 1 : doc.getDocVersion();
+        var chunkText = doc.getRawContent() == null ? valueOr(doc.getSummary(), "") : doc.getRawContent();
+        return new ChunkVectorRecord(
+                doc.getId(),
+                doc.getDocUuid() + "-doc-0",
+                doc.getId(),
+                doc.getDocUuid(),
+                doc.getDocType(),
+                version,
+                0,
+                chunkText,
+                chunkText,
+                valueOr(doc.getTitle(), "知识库文档"),
+                valueOr(doc.getTitle(), "知识库文档"),
+                valueOr(doc.getLanguage(), "en"),
+                null,
+                doc.getTitle(),
+                doc.getSourceUrl(),
+                doc.getSourceType(),
+                valueOr(doc.getSourceTrustLevel(), "MEDIUM"),
+                doc.getContentHash(),
+                doc.getEffectiveFrom() == null ? null : doc.getEffectiveFrom().toString(),
+                doc.getEffectiveUntil() == null ? null : doc.getEffectiveUntil().toString(),
+                "LOW",
+                "knowledge-doc-fallback-v1",
+                null,
+                null,
+                score);
     }
 
     private ChunkVectorRecord mapVectorRow(ResultSet rs, int rowNum) throws SQLException {
@@ -359,8 +450,44 @@ public class HybridRagService {
         return value != null && value > 0 ? Math.min(value, 50) : fallback;
     }
 
+    private List<String> queryTokens(String query) {
+        if (query == null || query.isBlank()) {
+            return List.of();
+        }
+        var matcher = Pattern.compile("[\\p{IsHan}]{2,}|[a-z0-9$]{3,}").matcher(query.toLowerCase(Locale.ROOT));
+        var tokens = new ArrayList<String>();
+        while (matcher.find()) {
+            var token = matcher.group();
+            tokens.add(token);
+            if (Pattern.matches("[\\p{IsHan}]{3,}", token)) {
+                for (int i = 0; i < token.length() - 1; i++) {
+                    tokens.add(token.substring(i, i + 2));
+                }
+            }
+        }
+        return tokens;
+    }
+
+    private int lexicalScore(List<String> tokens, KnowledgeDoc doc) {
+        var body = (valueOr(doc.getTitle(), "") + " "
+                + valueOr(doc.getSummary(), "") + " "
+                + valueOr(doc.getDocCategory(), "") + " "
+                + valueOr(doc.getRawContent(), "")).toLowerCase(Locale.ROOT);
+        var score = 0;
+        for (var token : tokens) {
+            if (body.contains(token)) {
+                score++;
+            }
+        }
+        return score;
+    }
+
     private String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value;
+    }
+
+    private String valueOr(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value;
     }
 
     private String snippet(String value) {
@@ -369,5 +496,8 @@ public class HybridRagService {
         }
         var cleaned = value.replaceAll("\\s+", " ").trim();
         return cleaned.length() <= 220 ? cleaned : cleaned.substring(0, 220).trim() + "...";
+    }
+
+    private record ScoredDoc(KnowledgeDoc doc, int score) {
     }
 }

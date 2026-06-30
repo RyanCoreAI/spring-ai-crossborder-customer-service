@@ -14,7 +14,7 @@
           @change="onTenantChange"
         >
           <a-select-option v-for="tenant in tenants" :key="tenant.id" :value="tenant.id">
-            {{ tenant.storeName || tenant.tenantCode || tenant.id }}
+            {{ tenantOptionLabel(tenant) }}
           </a-select-option>
         </a-select>
         <a-button :loading="loading" @click="load">刷新</a-button>
@@ -89,6 +89,57 @@
         </a-card>
       </div>
     </div>
+
+    <a-row :gutter="[18, 18]" class="evidence-row">
+      <a-col :xs="24" :xl="12">
+        <a-card title="工具调用质量">
+          <a-empty v-if="!toolMetrics.length" description="暂无工具调用指标" />
+          <a-table
+            v-else
+            :columns="toolColumns"
+            :data-source="toolMetrics"
+            :pagination="false"
+            row-key="toolName"
+            size="small"
+          >
+            <template #bodyCell="{ column, record }">
+              <template v-if="column.key === 'toolName'">
+                {{ toolLabel(record.toolName) }}
+              </template>
+              <template v-else-if="column.key === 'successRate'">
+                {{ formatPercent(record.successRate) }}
+              </template>
+              <template v-else-if="column.key === 'p95LatencyMs'">
+                {{ formatLatency(record.p95LatencyMs) }}
+              </template>
+            </template>
+          </a-table>
+        </a-card>
+      </a-col>
+
+      <a-col :xs="24" :xl="12">
+        <a-card title="评测趋势">
+          <a-empty v-if="!evalTrend.length" description="暂无评测趋势" />
+          <a-table
+            v-else
+            :columns="trendColumns"
+            :data-source="evalTrend"
+            :pagination="false"
+            row-key="runId"
+            size="small"
+          >
+            <template #bodyCell="{ column, record }">
+              <template v-if="column.key === 'status'">
+                <a-tag :color="record.status === 'PASS' ? 'green' : 'red'">{{ statusLabel(record.status) }}</a-tag>
+              </template>
+              <template v-else-if="column.key === 'passRate' || column.key === 'toolPrecision' || column.key === 'citationCoverage'">
+                {{ formatPercent(record[column.dataIndex]) }}
+              </template>
+            </template>
+          </a-table>
+        </a-card>
+      </a-col>
+    </a-row>
   </div>
 </template>
 
@@ -98,6 +149,7 @@ import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import api from '@/api'
 import { selectDefaultTenantId, setStoredTenantId } from '@/utils/tenant'
+import { tenantOptionLabel, toolLabel } from '@/utils/display'
 
 const router = useRouter()
 const loading = ref(false)
@@ -109,6 +161,24 @@ const summary = ref<any | null>(null)
 const ragMetrics = ref<any | null>(null)
 const traces = ref<any[]>([])
 const failures = ref<any[]>([])
+const toolMetrics = ref<any[]>([])
+const evalTrend = ref<any[]>([])
+
+const toolColumns = [
+  { title: '工具', dataIndex: 'toolName', key: 'toolName' },
+  { title: '调用次数', dataIndex: 'calls', width: 90 },
+  { title: '失败次数', dataIndex: 'failures', width: 90 },
+  { title: '成功率', dataIndex: 'successRate', key: 'successRate', width: 90 },
+  { title: 'P95 耗时', dataIndex: 'p95LatencyMs', key: 'p95LatencyMs', width: 100 },
+]
+
+const trendColumns = [
+  { title: '运行', dataIndex: 'runUuid', ellipsis: true },
+  { title: '状态', dataIndex: 'status', key: 'status', width: 90 },
+  { title: '通过率', dataIndex: 'passRate', key: 'passRate', width: 90 },
+  { title: '工具精确率', dataIndex: 'toolPrecision', key: 'toolPrecision', width: 110 },
+  { title: '引用覆盖率', dataIndex: 'citationCoverage', key: 'citationCoverage', width: 110 },
+]
 
 const topMetrics = computed(() => [
   {
@@ -300,7 +370,7 @@ function intentLabel(intent: string) {
 }
 
 function statusLabel(status: string) {
-  const labels: Record<string, string> = { SUCCESS: '成功', FAILED: '失败', RUNNING: '运行中' }
+  const labels: Record<string, string> = { PASS: '通过', FAIL: '失败', SUCCESS: '成功', FAILED: '失败', RUNNING: '运行中' }
   return labels[status] || status || '-'
 }
 
@@ -355,16 +425,20 @@ async function loadTenants() {
 async function load() {
   loading.value = true
   try {
-    const [summaryRes, failureRes, traceRes, ragRes] = await Promise.all([
+    const [summaryRes, failureRes, traceRes, ragRes, toolRes, trendRes] = await Promise.all([
       api.get('/observability/summary'),
       api.get('/observability/failures'),
       api.get('/observability/traces', { params: { page: 1, size: 2 } }),
       api.get('/observability/rag'),
+      api.get('/observability/tools'),
+      api.get('/observability/eval-trend', { params: { limit: 8 } }),
     ])
     summary.value = summaryRes.data || null
     failures.value = failureRes.data || []
     traces.value = traceRes.data?.records || []
     ragMetrics.value = ragRes.data || null
+    toolMetrics.value = toolRes.data || []
+    evalTrend.value = trendRes.data || []
   } finally {
     loading.value = false
   }
@@ -426,6 +500,11 @@ onMounted(async () => {
   display: grid;
   gap: 18px;
   grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.9fr);
+  margin-bottom: 18px;
+}
+
+.evidence-row {
+  margin-bottom: 18px;
 }
 
 .section-title {

@@ -51,9 +51,9 @@
             v-for="tenant in tenants"
             :key="tenant.id"
             :value="tenant.id"
-            :label="`${tenant.storeName} (${tenant.tenantCode})`"
+            :label="tenantOptionLabel(tenant)"
           >
-            {{ tenant.storeName }}（{{ tenant.tenantCode }}）
+            {{ tenantOptionLabel(tenant) }}
           </a-select-option>
         </a-select>
         <a-tag :color="streaming ? 'gold' : 'green'">{{ streaming ? '回复中' : '就绪' }}</a-tag>
@@ -61,8 +61,13 @@
 
       <div ref="msgContainer" class="messages-container">
         <div v-if="messages.length === 0" class="welcome">
-          <h3>OmniMerchant 智能客服</h3>
-          <p>选择租户后发送测试消息，验证订单、物流、退货、商品推荐和人工升级链路。</p>
+          <h3>知识库对话测试</h3>
+          <p>这里会调用后台智能客服链路，可验证 RAG 政策问答、订单、物流、商品推荐和人工升级。</p>
+          <div class="examples">
+            <button type="button" @click="sendMessage('这件外套可以退货吗？')">这件外套可以退货吗？</button>
+            <button type="button" @click="sendMessage('订单 #1001 现在到哪里了？')">订单 #1001 现在到哪里了？</button>
+            <button type="button" @click="sendMessage('推荐一款 80 美元以内的防水旅行背包')">推荐防水旅行背包</button>
+          </div>
         </div>
 
         <MessageBubble
@@ -100,6 +105,7 @@ import api from '@/api'
 import MessageBubble from '@/components/MessageBubble.vue'
 import { useAuthStore } from '@/stores/auth'
 import { selectDefaultTenantId, setStoredTenantId } from '@/utils/tenant'
+import { tenantOptionLabel } from '@/utils/display'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -385,6 +391,29 @@ onMounted(async () => {
   color: #1f2937;
   font-size: 24px;
   margin-bottom: 8px;
+}
+
+.examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 18px;
+}
+
+.examples button {
+  background: #fff;
+  border: 1px solid #d9e4f5;
+  border-radius: 18px;
+  color: #1f4d8f;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 8px 14px;
+}
+
+.examples button:hover {
+  background: #f0f6ff;
+  border-color: #9ec3ff;
 }
 
 .chat-input {

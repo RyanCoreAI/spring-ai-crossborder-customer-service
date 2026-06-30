@@ -14,7 +14,7 @@
           @change="onTenantChange"
         >
           <a-select-option v-for="tenant in tenants" :key="tenant.id" :value="tenant.id">
-            {{ tenant.storeName || tenant.tenantCode || tenant.id }}
+            {{ tenantOptionLabel(tenant) }}
           </a-select-option>
         </a-select>
         <a-button :loading="loadingHealth" @click="loadHealth">刷新健康</a-button>
@@ -31,6 +31,24 @@
 
     <a-card class="query-card">
       <div class="query-form">
+        <a-select
+          v-model:value="selectedCaseCode"
+          allow-clear
+          :loading="loadingCases"
+          show-search
+          option-filter-prop="label"
+          placeholder="从后端基准用例选择一个 RAG/政策/商品问题"
+          @change="applyEvalCase"
+        >
+          <a-select-option
+            v-for="item in evalCases"
+            :key="item.caseCode"
+            :value="item.caseCode"
+            :label="`${item.caseCode} ${item.userMessage}`"
+          >
+            {{ item.caseCode }} · {{ intentLabel(item.intent) }} · {{ item.userMessage }}
+          </a-select-option>
+        </a-select>
         <a-textarea
           v-model:value="question"
           :rows="3"
@@ -78,10 +96,10 @@
             <a-result
               :status="evidenceStatus"
               :title="evidenceLabel(debugResult.contextPack?.evidenceLevel)"
-              :sub-title="debugResult.contextPack?.refusalReason || '证据达到明确回答标准'"
+              :sub-title="refusalReasonLabel(debugResult.contextPack?.refusalReason)"
             />
             <a-descriptions size="small" :column="1" bordered>
-              <a-descriptions-item label="使用 chunk">{{ debugResult.contextPack?.usedChunks ?? 0 }}</a-descriptions-item>
+              <a-descriptions-item label="使用片段">{{ debugResult.contextPack?.usedChunks ?? 0 }}</a-descriptions-item>
               <a-descriptions-item label="预算字符">{{ debugResult.contextPack?.budgetChars ?? 0 }}</a-descriptions-item>
               <a-descriptions-item label="耗时">{{ debugResult.latencyMs ?? 0 }} ms</a-descriptions-item>
             </a-descriptions>
@@ -107,7 +125,7 @@
           </a-tabs>
         </a-card>
 
-        <a-card class="context-card" title="Context Pack">
+        <a-card class="context-card" title="上下文打包">
           <a-empty v-if="!debugResult?.contextPack?.context" description="暂无上下文片段" />
           <pre v-else>{{ debugResult.contextPack.context }}</pre>
         </a-card>
@@ -121,6 +139,7 @@ import { computed, defineComponent, h, onMounted, ref } from 'vue'
 import { message } from 'ant-design-vue'
 import api from '@/api'
 import { selectDefaultTenantId, setStoredTenantId } from '@/utils/tenant'
+import { displayBusinessValue, tenantOptionLabel } from '@/utils/display'
 
 const CandidateTable = defineComponent({
   props: {
@@ -129,7 +148,7 @@ const CandidateTable = defineComponent({
   },
   setup(props) {
     const columns = [
-      { title: 'chunk', dataIndex: 'chunkUuid', key: 'chunkUuid', ellipsis: true, width: 170 },
+      { title: '片段 ID', dataIndex: 'chunkUuid', key: 'chunkUuid', ellipsis: true, width: 170 },
       { title: '文档', dataIndex: 'docUuid', key: 'docUuid', ellipsis: true, width: 150 },
       { title: '来源', dataIndex: 'sourceTitle', key: 'sourceTitle', ellipsis: true, width: 160 },
       { title: '章节', dataIndex: 'sectionPath', key: 'sectionPath', ellipsis: true, width: 160 },
@@ -154,7 +173,7 @@ const CandidateTable = defineComponent({
           if (['rrfScore', 'rerankScore', 'supportScore'].includes(column.key)) {
             return formatScore(record[column.key])
           }
-          return record[column.dataIndex] || '—'
+          return displayBusinessValue(record[column.dataIndex], column.dataIndex)
         },
         emptyText: () => h('a-empty', { description: '暂无候选' }),
       })
@@ -165,8 +184,11 @@ const tenantLoading = ref(false)
 const loadingHealth = ref(false)
 const debugLoading = ref(false)
 const evalLoading = ref(false)
+const loadingCases = ref(false)
 const selectedTenantId = ref<number | null>(null)
+const selectedCaseCode = ref<string | undefined>()
 const tenants = ref<any[]>([])
+const evalCases = ref<any[]>([])
 const health = ref<any | null>(null)
 const debugResult = ref<any | null>(null)
 const question = ref('')
@@ -223,10 +245,13 @@ function languageLabel(value?: string) {
   return labels[value || ''] || value || '—'
 }
 
-function onTenantChange() {
+async function onTenantChange() {
   setStoredTenantId(selectedTenantId.value)
   debugResult.value = null
-  loadHealth()
+  selectedCaseCode.value = undefined
+  question.value = ''
+  await loadHealth()
+  await loadEvalCases(true)
 }
 
 async function loadTenants() {
@@ -249,6 +274,66 @@ async function loadHealth() {
   } finally {
     loadingHealth.value = false
   }
+}
+
+async function loadEvalCases(autoDebug = false) {
+  loadingCases.value = true
+  try {
+    const res = await api.get('/evals', { params: { page: 1, size: 100 } })
+    const records = res.data?.cases?.records || []
+    evalCases.value = records.filter((item: any) => isRagCase(item))
+    if (autoDebug && evalCases.value.length > 0 && !selectedCaseCode.value && !question.value) {
+      selectedCaseCode.value = preferredDemoCase(evalCases.value).caseCode
+      applyEvalCase(selectedCaseCode.value)
+      await runDebug()
+    }
+  } finally {
+    loadingCases.value = false
+  }
+}
+
+function isRagCase(item: any) {
+  const text = `${item.intent || ''} ${item.expectedTools || ''} ${item.attackType || ''} ${item.caseCode || ''}`
+  return /POLICY_QA|RETURN_REFUND|PRODUCT_ADVICE|refundPolicyRAG|RAG_POISONING|POLICY|RETURN|PRODUCT/.test(text)
+}
+
+function preferredDemoCase(items: any[]) {
+  return items.find((item) => isBusinessDemoCase(item) && hasChinese(item.userMessage) && (item.intent === 'RETURN_REFUND' || item.intent === 'POLICY_QA'))
+    || items.find((item) => isBusinessDemoCase(item) && hasChinese(item.userMessage))
+    || items.find((item) => isBusinessDemoCase(item) && (item.intent === 'RETURN_REFUND' || item.intent === 'POLICY_QA'))
+    || items.find((item) => isBusinessDemoCase(item) && item.intent === 'PRODUCT_ADVICE')
+    || items[0]
+}
+
+function isBusinessDemoCase(item: any) {
+  const marker = `${item.attackType || ''} ${item.caseCode || ''}`.toUpperCase()
+  return !/(INJECT|POISON|CROSS|NOANSWER|PROMPT|TENANT|IDENTITY)/.test(marker)
+}
+
+function hasChinese(value?: string) {
+  return /[\u4e00-\u9fa5]/.test(value || '')
+}
+
+function refusalReasonLabel(reason?: string) {
+  if (!reason) return '证据达到明确回答标准'
+  if (reason.includes('RAG_PARTIAL_EVIDENCE')) return '依据有限，回答必须说明不确定性。'
+  if (reason.includes('RAG_NO_CITATION')) return '缺少可引用证据，不能给出确定结论。'
+  if (reason.includes('UNSUPPORTED_CLAIM')) return '回答中的关键结论缺少证据支持。'
+  return reason
+}
+
+function applyEvalCase(caseCode?: string) {
+  const selected = evalCases.value.find((item) => item.caseCode === caseCode)
+  if (!selected) return
+  question.value = selected.userMessage || ''
+  if (selected.intent === 'POLICY_QA' || selected.intent === 'RETURN_REFUND') {
+    docType.value = selected.userMessage?.toLowerCase().includes('shipping') || selected.userMessage?.includes('配送')
+      ? 'SHIPPING_POLICY'
+      : 'REFUND_POLICY'
+  } else if (selected.intent === 'PRODUCT_ADVICE') {
+    docType.value = 'PRODUCT_GUIDE'
+  }
+  language.value = /[\u4e00-\u9fa5]/.test(question.value) ? 'zh' : undefined
 }
 
 async function runDebug() {
@@ -285,6 +370,7 @@ async function runRagEval() {
 onMounted(async () => {
   await loadTenants()
   await loadHealth()
+  await loadEvalCases(true)
 })
 </script>
 

@@ -36,6 +36,7 @@ const router = createRouter({
         { path: 'tickets', name: 'Tickets', component: () => import('@/views/admin/ResourceView.vue'), props: { resource: 'tickets' } },
         { path: 'integrations', name: 'Integrations', component: () => import('@/views/admin/IntegrationsView.vue') },
         { path: 'usage', name: 'Usage', component: () => import('@/views/admin/UsageView.vue') },
+        { path: 'tool-calls', name: 'ToolCalls', component: () => import('@/views/admin/ToolCallsView.vue') },
         { path: 'evals', name: 'Evals', component: () => import('@/views/admin/EvalsView.vue') },
         { path: 'observability', name: 'Observability', component: () => import('@/views/admin/ObservabilityView.vue') },
         { path: 'traces', name: 'Traces', component: () => import('@/views/admin/TracesView.vue') },

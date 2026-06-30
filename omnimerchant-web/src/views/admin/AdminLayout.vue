@@ -22,7 +22,7 @@
       </a-menu>
 
       <div class="sider-actions">
-        <a-button type="text" block @click="router.push('/chat')">后台对话测试</a-button>
+        <a-button type="text" block @click="router.push('/chat')">知识库对话测试</a-button>
         <a-button type="text" danger block @click="handleLogout">退出登录</a-button>
       </div>
     </a-layout-sider>
@@ -44,9 +44,11 @@ const authStore = useAuthStore()
 
 const menuItems = [
   { path: '/admin', label: '数据概览', match: ['/admin'] },
-  { path: '/admin/observability', label: '可信控制台', match: ['/admin/observability', '/admin/traces', '/admin/evals'] },
+  { path: '/admin/observability', label: '可信控制台', match: ['/admin/observability', '/admin/traces', '/admin/evals', '/admin/tool-calls'] },
   { path: '/admin/inbox', label: '对话与工单', match: ['/admin/inbox', '/admin/conversations', '/admin/tickets', '/admin/customers', '/admin/orders', '/admin/products'] },
-  { path: '/admin/rag-workbench', label: 'RAG 工作台', match: ['/admin/rag-workbench', '/admin/rag-safety', '/admin/knowledge'] },
+  { path: '/admin/knowledge', label: '知识库管理', match: ['/admin/knowledge'] },
+  { path: '/admin/rag-workbench', label: 'RAG 证据工作台', match: ['/admin/rag-workbench'] },
+  { path: '/admin/rag-safety', label: 'RAG 安全审核', match: ['/admin/rag-safety'] },
   { path: '/admin/integrations', label: '渠道集成', match: ['/admin/integrations'] },
   { path: '/admin/usage', label: '用量计费', match: ['/admin/usage'] },
 ]

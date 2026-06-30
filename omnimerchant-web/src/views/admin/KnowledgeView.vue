@@ -5,10 +5,13 @@
         <h2 class="page-title">知识库管理</h2>
         <p class="page-subtitle">维护政策、FAQ 和产品指南，向量索引只处理已审核内容。</p>
       </div>
-      <a-button type="primary" @click="showDialog(null)">
-        <template #icon><PlusOutlined /></template>
-        添加文档
-      </a-button>
+      <a-space>
+        <a-button @click="router.push('/chat')">打开知识库对话</a-button>
+        <a-button type="primary" @click="showDialog(null)">
+          <template #icon><PlusOutlined /></template>
+          添加文档
+        </a-button>
+      </a-space>
     </div>
 
     <a-card>
@@ -21,8 +24,8 @@
           option-filter-prop="label"
           @change="onTenantChange"
         >
-          <a-select-option v-for="tenant in tenants" :key="tenant.id" :value="tenant.id" :label="tenant.storeName">
-            {{ tenant.storeName }}
+          <a-select-option v-for="tenant in tenants" :key="tenant.id" :value="tenant.id" :label="tenantOptionLabel(tenant)">
+            {{ tenantOptionLabel(tenant) }}
           </a-select-option>
         </a-select>
         <a-select
@@ -94,9 +97,9 @@
                   v-for="tenant in tenants"
                   :key="tenant.id"
                   :value="tenant.id"
-                  :label="`${tenant.storeName} (${tenant.tenantCode})`"
+                  :label="tenantOptionLabel(tenant)"
                 >
-                  {{ tenant.storeName }}（{{ tenant.tenantCode }}）
+                  {{ tenantOptionLabel(tenant) }}
                 </a-select-option>
               </a-select>
             </a-form-item>
@@ -158,11 +161,14 @@
 
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { Modal, message } from 'ant-design-vue'
 import { PlusOutlined } from '@ant-design/icons-vue'
 import api from '@/api'
 import { selectDefaultTenantId, setStoredTenantId } from '@/utils/tenant'
+import { tenantOptionLabel } from '@/utils/display'
 
+const router = useRouter()
 const loading = ref(false)
 const saving = ref(false)
 const tableData = ref<any[]>([])

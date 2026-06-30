@@ -1,6 +1,7 @@
 package com.omnimerchant.knowledge.service;
 
 import com.omnimerchant.common.config.OmniMerchantProperties;
+import com.omnimerchant.knowledge.mapper.KnowledgeDocMapper;
 import com.omnimerchant.tenant.context.TenantContextHolder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -25,6 +26,7 @@ class HybridRagServiceTest {
                 mock(CrossEncoderReranker.class),
                 new RagQueryPlanningService(),
                 new RagContextPacker(),
+                mock(KnowledgeDocMapper.class),
                 new OmniMerchantProperties());
 
         var answer = service.retrieve("what is the refund policy?");

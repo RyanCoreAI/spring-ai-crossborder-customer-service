@@ -18,7 +18,7 @@
             @change="onTenantChange"
           >
             <a-select-option v-for="tenant in tenants" :key="tenant.id" :value="tenant.id">
-              {{ tenant.storeName }}
+              {{ tenantOptionLabel(tenant) }}
             </a-select-option>
           </a-select>
           <a-select
@@ -56,8 +56,8 @@
                 </a-tag>
               </div>
               <div class="conv-card-meta">
-                <span>{{ conversation.language || '未知语言' }}</span>
-                <span>{{ conversation.intentPrimary || '未分类' }}</span>
+                <span>{{ languageLabel(conversation.language) }}</span>
+                <span>{{ intentLabel(conversation.intentPrimary) }}</span>
                 <span>{{ formatCount(conversation.messageCount) }} 条消息</span>
               </div>
               <div class="conv-card-time">{{ formatTime(conversation.startedAt) }}</div>
@@ -80,7 +80,7 @@
           <div class="message-title">
             <span>消息回放</span>
             <a-space>
-              <a-tag>意图：{{ selectedConv?.intentPrimary || '未分类' }}</a-tag>
+              <a-tag>意图：{{ intentLabel(selectedConv?.intentPrimary) }}</a-tag>
               <a-tag color="gold">情绪：{{ selectedConv?.sentiment || '未知' }}</a-tag>
             </a-space>
           </div>
@@ -110,6 +110,7 @@ import { onMounted, ref } from 'vue'
 import api from '@/api'
 import { renderSafeMarkdown } from '@/utils/markdown'
 import { selectDefaultTenantId, setStoredTenantId } from '@/utils/tenant'
+import { intentLabel, tenantOptionLabel } from '@/utils/display'
 
 const loading = ref(false)
 const msgLoading = ref(false)
@@ -151,6 +152,12 @@ function roleLabel(role: string) {
   if (role === 'assistant') return '智能客服'
   if (role === 'system') return '系统'
   return role
+}
+
+function languageLabel(value?: string) {
+  if (value === 'zh') return '中文'
+  if (value === 'en') return '英文'
+  return value || '未知语言'
 }
 
 function formatCount(value: any) {
