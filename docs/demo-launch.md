@@ -53,10 +53,27 @@ Required screenshots for launch:
 - RAG safety review list
 - Integrations page
 
+## Demo GIF
+
+The repository includes a short preview GIF generated from committed runtime screenshots:
+
+```text
+docs/assets/demo/omnimerchant-demo-preview.gif
+```
+
+Rebuild it after refreshing screenshots:
+
+```powershell
+.\scripts\capture-screenshots.ps1
+.\scripts\create-demo-gif.ps1
+```
+
+This GIF is a compact GitHub README preview. The full 90-second recording flow remains in `scripts/demo-recording.md`.
+
 ## Launch Positioning
 
 OmniMerchant should be described as:
 
 > An open-source Spring AI cross-border ecommerce customer-service platform with multi-tenant security, commerce tools, Shopify-first integration, billing controls, eval reports, trace replay, observability, and RAG safety review.
 
-Avoid claiming production parity with commercial helpdesks until a hosted demo/GIF, live provider-backed eval report, Shopify App Store embedded/billing flow, and broader channel connectors are complete.
+Avoid claiming production parity with commercial helpdesks until a hosted demo, live provider-backed eval report, Shopify App Store embedded/billing flow, and broader channel connectors are complete.

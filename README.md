@@ -7,10 +7,24 @@ Spring Boot 4 + Spring AI 2 trustworthy ecommerce customer-service agent platfor
 
 这不是只接一个聊天接口的 RAG demo。OmniMerchant v3 的公开展示重点是：最新 Spring Boot 4 / Spring AI 2 技术栈，订单/物流/商品/政策/退货/人工升级的业务闭环，多租户 fail-closed 安全边界，付费 LLM 成本控制，可重复 Agent eval，trajectory replay，RAG ingestion safety，以及 Shopify OAuth/webhook/sync 生产化骨架。
 
+## 演示动图
+
+下面是由当前仓库真实 runtime 截图生成的短版动图预览，用来让 GitHub 访客快速看到买家咨询、RAG 证据工作台、轨迹回放、评测、可信控制台、工具审计和 Shopify 集成状态。完整 90 秒录制节奏见 [`scripts/demo-recording.md`](scripts/demo-recording.md)；该 `.md` 是拍摄脚本，不是视频产物。
+
+![OmniMerchant v3 demo preview](docs/assets/demo/omnimerchant-demo-preview.gif)
+
+重新生成动图：
+
+```powershell
+.\scripts\capture-screenshots.ps1
+.\scripts\create-demo-gif.ps1
+```
+
 ## 公开核验证据
 
 | 证据 | 文件或命令 | 证明内容 |
 |------|------------|----------|
+| 短版演示动图 | `docs/assets/demo/omnimerchant-demo-preview.gif` | 由当前提交的真实 runtime 截图生成，快速展示核心页面链路 |
 | 一键本地 demo | `scripts/demo.ps1` / `scripts/demo.sh` | schema、v3 扩展表、seed commerce 数据和 eval cases 可从 fresh clone 初始化 |
 | Deterministic Agent eval | `scripts/run-evals.ps1` | 无 LLM key 也能生成 JSON/Markdown/JUnit 报告 |
 | Trace replay | `/admin/traces` + `agent_run` / `agent_step` | 每次回答可回放 intent、tool、latency、failure category |
@@ -400,7 +414,8 @@ mvn -q -Pintegration verify
 - Trace replay 与观测：[`docs/observability.md`](docs/observability.md)
 - RAG 安全审核：[`docs/rag-security.md`](docs/rag-security.md)
 - Shopify 生产化 connector 边界：[`docs/shopify-production-connector.md`](docs/shopify-production-connector.md)
-- 90 秒 demo 录制脚本：[`scripts/demo-recording.md`](scripts/demo-recording.md)
+- 短版演示动图：[`docs/assets/demo/omnimerchant-demo-preview.gif`](docs/assets/demo/omnimerchant-demo-preview.gif)
+- 90 秒 demo 录制脚本：[`scripts/demo-recording.md`](scripts/demo-recording.md)，这是拍摄脚本，不是录屏文件
 - 开源可信度审计：[`docs/open-source-audit-2026-06-20.md`](docs/open-source-audit-2026-06-20.md)
 
 截图生成：
@@ -410,6 +425,9 @@ mvn -q -Pintegration verify
 
 # 只生成公开页面截图，不需要管理员账号：
 .\scripts\capture-screenshots.ps1 -PublicOnly
+
+# 使用已生成截图拼出 README 动图预览：
+.\scripts\create-demo-gif.ps1
 ```
 
 ## 配置参考

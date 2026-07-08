@@ -1,5 +1,7 @@
 # 90-Second Demo Recording Script
 
+This file is the recording plan, not the rendered demo asset. The committed short preview GIF is `docs/assets/demo/omnimerchant-demo-preview.gif`; rebuild it from real runtime screenshots with `scripts/create-demo-gif.ps1`.
+
 Goal: prove OmniMerchant is a cross-border ecommerce helpdesk platform, not a plain RAG chat demo.
 
 ## Setup
