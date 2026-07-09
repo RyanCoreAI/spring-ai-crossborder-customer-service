@@ -43,13 +43,25 @@ public class AdminAuthFilter implements Filter {
             "/api/orders",
             "/api/products",
             "/api/escalations",
+            "/api/tickets",
             "/api/tool-calls",
             "/api/dashboard",
             "/api/integrations",
             "/api/evals",
             "/api/observability",
             "/api/rag",
-            "/api/admin"
+            "/api/admin",
+            "/api/channels",
+            "/api/inbox",
+            "/api/sla",
+            "/api/macros",
+            "/api/actions",
+            "/api/qa",
+            "/api/operations",
+            "/api/audit",
+            "/api/sre",
+            "/api/agent",
+            "/api/security"
     );
 
     private static final Set<String> PLATFORM_ADMIN_PATHS = Set.of(

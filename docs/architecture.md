@@ -72,7 +72,7 @@ All business tables are tenant-scoped. `tenant` is the only global table ignored
 - 30 orders with realistic statuses and tracking histories
 - policy documents
 - widget channel installs
-- 80 eval cases covering normal and adversarial scenarios
+- 200 eval cases covering normal and adversarial scenarios
 
 ## Extension Points
 

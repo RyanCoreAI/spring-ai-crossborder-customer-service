@@ -7,7 +7,7 @@ Goal: prove OmniMerchant is a cross-border ecommerce helpdesk platform, not a pl
 ## Setup
 
 1. Start backend and frontend.
-2. Load `sql/db_main.sql`, `sql/db_extensions.sql`, `sql/db_observability.sql`, `sql/db_eval_v2.sql`, `sql/db_shopify_v2.sql`, `sql/db_rag_safety.sql`, `sql/db_rag_deepening.sql`, `sql/demo_seed.sql`, and `sql/db_vector.sql`.
+2. Load `sql/db_main.sql`, `sql/db_extensions.sql`, `sql/db_channels.sql`, `sql/db_helpdesk.sql`, `sql/db_sla.sql`, `sql/db_actions.sql`, `sql/db_observability.sql`, `sql/db_eval_v2.sql`, `sql/db_shopify_v2.sql`, `sql/db_qa.sql`, `sql/db_rbac_audit.sql`, `sql/db_slo.sql`, `sql/db_rag_safety.sql`, `sql/db_rag_deepening.sql`, `sql/demo_seed.sql`, and `sql/db_vector.sql`.
 3. Login as the configured admin and select tenant `OM-FASHION`.
 
 ## Recording Flow

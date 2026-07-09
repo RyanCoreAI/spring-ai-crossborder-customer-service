@@ -45,11 +45,21 @@ const authStore = useAuthStore()
 const menuItems = [
   { path: '/admin', label: '数据概览', match: ['/admin'] },
   { path: '/admin/observability', label: '可信控制台', match: ['/admin/observability', '/admin/traces', '/admin/evals', '/admin/tool-calls'] },
-  { path: '/admin/inbox', label: '对话与工单', match: ['/admin/inbox', '/admin/conversations', '/admin/tickets', '/admin/customers', '/admin/orders', '/admin/products'] },
+  { path: '/admin/inbox', label: '客服工作台', match: ['/admin/inbox', '/admin/conversations'] },
+  { path: '/admin/channels', label: '多渠道接入', match: ['/admin/channels'] },
+  { path: '/admin/integrations', label: 'Shopify 集成', match: ['/admin/integrations'] },
+  { path: '/admin/tickets', label: '工单与订单', match: ['/admin/tickets', '/admin/customers', '/admin/orders', '/admin/products'] },
+  { path: '/admin/actions', label: '动作审批', match: ['/admin/actions'] },
+  { path: '/admin/sla', label: 'SLA 管理', match: ['/admin/sla', '/admin/macros'] },
+  { path: '/admin/qa', label: '客服质检', match: ['/admin/qa'] },
+  { path: '/admin/operations', label: '运营指标', match: ['/admin/operations'] },
   { path: '/admin/knowledge', label: '知识库管理', match: ['/admin/knowledge'] },
   { path: '/admin/rag-workbench', label: 'RAG 证据工作台', match: ['/admin/rag-workbench'] },
   { path: '/admin/rag-safety', label: 'RAG 安全审核', match: ['/admin/rag-safety'] },
-  { path: '/admin/integrations', label: '渠道集成', match: ['/admin/integrations'] },
+  { path: '/admin/agent-workflow', label: '多智能体工作流', match: ['/admin/agent-workflow'] },
+  { path: '/admin/security', label: '生产边界', match: ['/admin/security'] },
+  { path: '/admin/sre', label: '生产健康', match: ['/admin/sre'] },
+  { path: '/admin/audit', label: '审计日志', match: ['/admin/audit'] },
   { path: '/admin/usage', label: '用量计费', match: ['/admin/usage'] },
 ]
 
@@ -118,6 +128,7 @@ function handleLogout() {
   background: #101828;
   border-inline-end: none;
   flex: 1;
+  overflow-y: auto;
   padding: 0 18px;
 }
 

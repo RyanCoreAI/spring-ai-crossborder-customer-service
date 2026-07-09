@@ -242,21 +242,24 @@ const configs: Record<string, Config> = {
   },
   tickets: {
     title: '人工工单',
-    subtitle: 'AI 升级、退款/补发/地址变更审批和 SLA 队列。',
-    endpoint: '/escalations',
+    subtitle: '独立 Helpdesk 工单，承接 AI 升级、人工接管、SLA、CSAT 和关闭原因。',
+    endpoint: '/tickets',
     statusOptions: [
-      { label: '待分配', value: 1 },
-      { label: '待响应', value: 2 },
-      { label: '处理中', value: 3 },
-      { label: '已解决', value: 4 },
-      { label: '已关闭', value: 5 },
+      { label: '待分配', value: 'OPEN' },
+      { label: '处理中', value: 'ASSIGNED' },
+      { label: '待客户回复', value: 'WAITING_CUSTOMER' },
+      { label: '待审批', value: 'PENDING_APPROVAL' },
+      { label: '已解决', value: 'RESOLVED' },
+      { label: '已关闭', value: 'CLOSED' },
     ],
     columns: [
       { prop: 'ticketNo', label: '工单号', width: 210 },
       { prop: 'conversationUuid', label: '会话', width: 220 },
-      { prop: 'escalationReason', label: '原因', width: 180, tag: true },
+      { prop: 'subject', label: '主题', width: 220 },
+      { prop: 'intent', label: '意图', width: 130, tag: true },
       { prop: 'priority', label: '优先级', width: 90 },
-      { prop: 'status', label: '状态', width: 100, tag: true },
+      { prop: 'statusLabel', label: '状态', width: 110, tag: true },
+      { prop: 'slaState', label: 'SLA', width: 110, tag: true },
       { prop: 'assignedAgentId', label: '客服', width: 110 },
       { prop: 'createdAt', label: '创建时间', width: 190 },
     ],
@@ -455,7 +458,7 @@ async function reindexProducts() {
 }
 
 async function assignTicket(row: any) {
-  await api.put(`/escalations/${row.id}/assign`, { agentId: 1 })
+  await api.post(`/tickets/${row.id}/assign`, { agentId: 1, note: '后台人工接管' })
   message.success('已接管工单')
   loadData()
 }
@@ -463,7 +466,7 @@ async function assignTicket(row: any) {
 async function resolveTicket(row: any) {
   const note = window.prompt('填写解决备注')
   if (note === null) return
-  await api.put(`/escalations/${row.id}/resolve`, { resolution: 'RESOLVED', note })
+  await api.post(`/tickets/${row.id}/resolve`, { actorId: 1, note })
   message.success('工单已解决')
   loadData()
 }

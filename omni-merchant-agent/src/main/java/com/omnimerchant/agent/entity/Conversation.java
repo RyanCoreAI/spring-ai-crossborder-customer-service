@@ -27,6 +27,7 @@ public class Conversation {
     private Integer escalated;
     private String escalationReason;
     private LocalDateTime escalatedAt;
+    private Long humanAgentId;
     private Integer priority;
     private Integer messageCount;
     private Integer toolCallCount;
@@ -37,14 +38,20 @@ public class Conversation {
     private Integer avgResponseMs;
     private Integer csatScore;
     private String csatComment;
+    private LocalDateTime csatSubmittedAt;
     private Integer resolved;
     private LocalDateTime startedAt;
     private LocalDateTime lastMessageAt;
     private LocalDateTime endedAt;
     private Integer durationSeconds;
+    private String extAttr;
+    private String tags;
 
     @TableLogic
     private Integer isDeleted;
+
+    @Version
+    private Integer version;
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;

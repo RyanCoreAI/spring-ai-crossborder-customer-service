@@ -11,12 +11,26 @@ if [[ "$SKIP_DB" != "true" ]]; then
   docker exec -i "$MYSQL_CONTAINER" sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_main.sql
   echo "Applying sql/db_extensions.sql"
   docker exec -i "$MYSQL_CONTAINER" sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_extensions.sql
+  echo "Applying sql/db_channels.sql"
+  docker exec -i "$MYSQL_CONTAINER" sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_channels.sql
+  echo "Applying sql/db_helpdesk.sql"
+  docker exec -i "$MYSQL_CONTAINER" sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_helpdesk.sql
+  echo "Applying sql/db_sla.sql"
+  docker exec -i "$MYSQL_CONTAINER" sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_sla.sql
+  echo "Applying sql/db_actions.sql"
+  docker exec -i "$MYSQL_CONTAINER" sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_actions.sql
   echo "Applying sql/db_observability.sql"
   docker exec -i "$MYSQL_CONTAINER" sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_observability.sql
   echo "Applying sql/db_eval_v2.sql"
   docker exec -i "$MYSQL_CONTAINER" sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_eval_v2.sql
   echo "Applying sql/db_shopify_v2.sql"
   docker exec -i "$MYSQL_CONTAINER" sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_shopify_v2.sql
+  echo "Applying sql/db_qa.sql"
+  docker exec -i "$MYSQL_CONTAINER" sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_qa.sql
+  echo "Applying sql/db_rbac_audit.sql"
+  docker exec -i "$MYSQL_CONTAINER" sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_rbac_audit.sql
+  echo "Applying sql/db_slo.sql"
+  docker exec -i "$MYSQL_CONTAINER" sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_slo.sql
   echo "Applying sql/db_rag_safety.sql"
   docker exec -i "$MYSQL_CONTAINER" sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_rag_safety.sql
   echo "Applying sql/db_rag_deepening.sql"

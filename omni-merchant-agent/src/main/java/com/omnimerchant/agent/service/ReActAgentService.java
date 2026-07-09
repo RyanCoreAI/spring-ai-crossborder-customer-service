@@ -40,6 +40,7 @@ public class ReActAgentService {
     private final ToolCallbackProvider toolCallbackProvider;
     private final CircuitBreaker llmCircuitBreaker;
     private final AgentTraceService agentTraceService;
+    private final AgentOrchestratorService agentOrchestratorService;
     private static final Duration LLM_STREAM_TIMEOUT = Duration.ofSeconds(70);
 
     private static final String SYSTEM_PROMPT = """
@@ -74,7 +75,8 @@ public class ReActAgentService {
             TokenUsageAdvisor tokenUsageAdvisor,
             ToolCallbackProvider toolCallbackProvider,
             CircuitBreaker llmCircuitBreaker,
-            AgentTraceService agentTraceService) {
+            AgentTraceService agentTraceService,
+            AgentOrchestratorService agentOrchestratorService) {
         this.multiLingualEngine = multiLingualEngine;
         this.modelRouter = modelRouter;
         this.chatMemory = chatMemory;
@@ -83,6 +85,7 @@ public class ReActAgentService {
         this.toolCallbackProvider = toolCallbackProvider;
         this.llmCircuitBreaker = llmCircuitBreaker;
         this.agentTraceService = agentTraceService;
+        this.agentOrchestratorService = agentOrchestratorService;
     }
 
     public Flux<String> chat(Long tenantId, String conversationUuid, String userMessage, String intent) {
@@ -94,6 +97,7 @@ public class ReActAgentService {
                 return Flux.just("[SAFEGUARD] " + rejection);
             }
             var safeInput = safeGuardAdvisor.maskPii(userMessage);
+            var specialistPlan = agentOrchestratorService.plan(intent, safeInput);
             var processed = multiLingualEngine.preprocess(safeInput);
             var enText = processed.getTranslatedText();
             var originalLang = processed.getDetectedLanguage();
@@ -101,6 +105,16 @@ public class ReActAgentService {
             var traceStartedAt = System.currentTimeMillis();
             var traceId = agentTraceService.startChatRun(tenantId, conversationUuid, intent,
                     routed.providerName(), routed.modelName(), userMessage);
+            agentTraceService.addStep(traceId, "ROUTER", "supervisor_worker_plan", "SUCCESS",
+                    intent, specialistPlan.specialistLabel(), null, 0,
+                    Map.of(
+                            "specialist", specialistPlan.specialistKey(),
+                            "toolAllowlist", specialistPlan.toolAllowlist(),
+                            "riskLevel", specialistPlan.riskLevel(),
+                            "requiresIdentityVerification", specialistPlan.requiresIdentityVerification(),
+                            "requiresApproval", specialistPlan.requiresApproval(),
+                            "recommendHumanHandoff", specialistPlan.recommendHumanHandoff()
+                    ));
 
             if (!routed.available()) {
                 log.warn("Chat rejected because no LLM provider is configured: tenant={}, conv={}, intent={}",

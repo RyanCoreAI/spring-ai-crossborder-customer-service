@@ -131,6 +131,225 @@ paths:
         - $ref: '#/components/parameters/TenantId'
       responses:
         '200': { description: Dashboard metrics }
+  /api/channels/summary:
+    get:
+      summary: Channel implementation and conversation summary for the merchant console
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Channel summary list }
+  /api/channels/accounts:
+    get:
+      summary: Tenant channel account configuration and adapter status
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Channel account list }
+  /api/inbox/queues:
+    get:
+      summary: Unified helpdesk queue counts
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Inbox queue buckets }
+  /api/inbox/items:
+    get:
+      summary: List unified helpdesk work items from real conversations and tickets
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: queue, in: query, schema: { type: string } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: size, in: query, schema: { type: integer, default: 20 } }
+      responses:
+        '200': { description: Inbox work item page }
+  /api/tickets:
+    get:
+      summary: List first-class helpdesk tickets backed by the ticket table
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: status, in: query, schema: { type: string, enum: [OPEN, ASSIGNED, WAITING_CUSTOMER, RESOLVED, CLOSED] } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: size, in: query, schema: { type: integer, default: 20 } }
+      responses:
+        '200': { description: Ticket page }
+  /api/tickets/{id}/assign:
+    post:
+      summary: Assign a ticket to a human agent and mark it as human assigned
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200': { description: Updated ticket }
+  /api/tickets/{id}/resolve:
+    post:
+      summary: Resolve a ticket and preserve close reason for QA and operations
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200': { description: Updated ticket }
+  /api/inbox/{conversationUuid}/takeover:
+    post:
+      summary: Human agent takes over a conversation
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: conversationUuid, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Updated inbox work item }
+  /api/inbox/{conversationUuid}/reply:
+    post:
+      summary: Add a human reply to a conversation and optionally close it
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: conversationUuid, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Updated inbox work item }
+  /api/sla/summary:
+    get:
+      summary: SLA risk summary and risk ticket list
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: SLA summary }
+  /api/sla/policies:
+    get:
+      summary: Tenant SLA policy list including first response and resolution targets
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: SLA policy list }
+  /api/macros:
+    get:
+      summary: Tenant-visible support macros
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Macro list }
+  /api/actions:
+    get:
+      summary: List approval-gated commerce action requests
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: status, in: query, schema: { type: string } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: size, in: query, schema: { type: integer, default: 20 } }
+      responses:
+        '200': { description: Approval action page }
+  /api/actions/policies:
+    get:
+      summary: Approval policy for high-risk commerce actions
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Commerce action policy list }
+  /api/actions/{source}/{id}/approve:
+    post:
+      summary: Manually approve a high-risk commerce action without executing external writes
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: source, in: path, required: true, schema: { type: string, enum: [return_request, commerce_action_request] } }
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200': { description: Updated action request }
+  /api/actions/{source}/{id}/reject:
+    post:
+      summary: Reject a high-risk commerce action
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: source, in: path, required: true, schema: { type: string, enum: [return_request, commerce_action_request] } }
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200': { description: Updated action request }
+  /api/qa/queue:
+    get:
+      summary: List support QA review queue
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: status, in: query, schema: { type: string } }
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: size, in: query, schema: { type: integer, default: 20 } }
+      responses:
+        '200': { description: QA review page }
+  /api/qa/{id}/review:
+    post:
+      summary: Submit a human QA review
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200': { description: Updated QA review item }
+  /api/operations/summary:
+    get:
+      summary: Ecommerce support operations metrics by intent, channel, failure, cost, and takeover
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Operations summary }
+  /api/audit/events:
+    get:
+      summary: Tenant-scoped audit event list for support and approval operations
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: size, in: query, schema: { type: integer, default: 20 } }
+      responses:
+        '200': { description: Audit event page }
+  /api/sre/summary:
+    get:
+      summary: SLO, alert, backlog, failure, and cost health summary
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: SRE summary }
+  /api/sre/policies:
+    get:
+      summary: Tenant SLO policy targets and alert thresholds
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: SLO policy list }
+  /api/agent/workflow:
+    get:
+      summary: Supervisor-worker agent workflow and policy boundary summary
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Agent workflow summary }
+  /api/agent/plan:
+    post:
+      summary: Deterministically route a buyer message to a specialist agent and tool allowlist
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Agent routing plan }
+  /api/agent/guards:
+    get:
+      summary: Recent idempotency guard records for agent tool execution
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Agent idempotency guard list }
+  /api/security/readiness:
+    get:
+      summary: Production boundary readiness for security, retention, Shopify, and runbooks
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Production readiness statement backed by backend code and SQL boundaries }
+  /api/security/roles:
+    get:
+      summary: Support role policy matrix for pages, tools, and approval actions
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Role policy list }
+  /api/security/retention:
+    get:
+      summary: Tenant data retention policy for conversations, traces, evals, and audit evidence
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Data retention policy list }
   /api/integrations/shopify/connect:
     post:
       summary: Save encrypted Shopify credentials

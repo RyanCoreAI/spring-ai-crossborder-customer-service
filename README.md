@@ -33,6 +33,7 @@ Spring Boot 4 + Spring AI 2 trustworthy ecommerce customer-service agent platfor
 | RAG safety | `/admin/rag-safety` + `RagSafetyScanner` | prompt injection、hidden HTML/Markdown、PII/secret、cross-tenant 诱导进入审核 |
 | RAG eval | `scripts/run-rag-evals.ps1` | RAG 子集输出 JSON/Markdown/JUnit，并复用 persisted eval run 作为证据 |
 | Shopify connector | OAuth/HMAC/cursor sync/webhook replay tests | 证明是 connector backbone，不冒充 App Store 生产 app |
+| 商业客服控制面 | `/admin/inbox`、`/admin/actions`、`/admin/sla`、`/admin/qa`、`/admin/operations`、`/admin/sre`、`/admin/security` | 统一队列、人工接管、审批、SLA、质检、运营、SLO 和生产边界均由后端真实字段驱动 |
 | API contract | [`docs/openapi.yaml`](docs/openapi.yaml) | v3 管理、eval、trace、RAG safety、Shopify 接口静态契约 |
 
 ## 截图矩阵
@@ -46,11 +47,20 @@ Spring Boot 4 + Spring AI 2 trustworthy ecommerce customer-service agent platfor
 | 数据概览 | `/admin` | `docs/assets/screenshots/dashboard.png` |
 | 知识库对话测试 | `/chat` | `docs/assets/screenshots/knowledge-chat.png` |
 | 知识库管理 | `/admin/knowledge` | `docs/assets/screenshots/knowledge.png` |
-| 对话与工单 | `/admin/inbox` | `docs/assets/screenshots/inbox.png` |
+| 多渠道接入 | `/admin/channels` | `docs/assets/screenshots/channels.png` |
+| 统一客服工作台 | `/admin/inbox` | `docs/assets/screenshots/inbox.png` |
 | 订单 | `/admin/orders` | `docs/assets/screenshots/orders.png` |
 | 商品 | `/admin/products` | `docs/assets/screenshots/products.png` |
 | 工单 | `/admin/tickets` | `docs/assets/screenshots/tickets.png` |
-| 渠道集成 | `/admin/integrations` | `docs/assets/screenshots/integrations.png` |
+| 高风险动作审批 | `/admin/actions` | `docs/assets/screenshots/actions.png` |
+| SLA 管理 | `/admin/sla` | `docs/assets/screenshots/sla.png` |
+| 客服质检 | `/admin/qa` | `docs/assets/screenshots/qa.png` |
+| 运营指标 | `/admin/operations` | `docs/assets/screenshots/operations.png` |
+| Shopify 集成 | `/admin/integrations` | `docs/assets/screenshots/integrations.png` |
+| 多智能体工作流 | `/admin/agent-workflow` | `docs/assets/screenshots/agent-workflow.png` |
+| 生产边界 | `/admin/security` | `docs/assets/screenshots/security.png` |
+| 生产健康 | `/admin/sre` | `docs/assets/screenshots/sre.png` |
+| 审计日志 | `/admin/audit` | `docs/assets/screenshots/audit.png` |
 | 工具调用审计 | `/admin/tool-calls` | `docs/assets/screenshots/tool-calls.png` |
 | 智能体评测 | `/admin/evals` | `docs/assets/screenshots/evals.png` |
 | 可信控制台 | `/admin/observability` | `docs/assets/screenshots/observability.png` |
@@ -58,7 +68,7 @@ Spring Boot 4 + Spring AI 2 trustworthy ecommerce customer-service agent platfor
 | RAG 证据工作台 | `/admin/rag-workbench` | `docs/assets/screenshots/rag-workbench.png` |
 | RAG 安全审核 | `/admin/rag-safety` | `docs/assets/screenshots/rag-safety.png` |
 
-当前仓库保留买家咨询、登录、可信控制台、智能体评测、轨迹回放、RAG Workbench、RAG 安全等真实截图；没有运行后端时不提交伪造后台截图：
+当前仓库保留买家咨询、登录、商业客服、可信控制台、智能体评测、轨迹回放、RAG Workbench、RAG 安全等真实截图；没有运行后端时不提交伪造后台截图：
 
 ![Widget](docs/assets/screenshots/widget.png)
 
@@ -66,7 +76,7 @@ Spring Boot 4 + Spring AI 2 trustworthy ecommerce customer-service agent platfor
 
 ## Eval 证据
 
-默认 deterministic eval 覆盖 80 条 seeded golden conversations，按租户持久化 `agent_eval_run` / `agent_eval_result`，并输出：
+默认 deterministic eval 覆盖 200 条 seeded golden conversations（86 条手写业务/安全用例 + 114 条 SQL 生成的 scale cases），按租户持久化 `agent_eval_run` / `agent_eval_result`，并输出：
 
 当前已提交报告：`reports/agent-eval-report.md`，模式 `DETERMINISTIC`。
 
@@ -164,9 +174,16 @@ docker-compose up -d
 # MySQL 建表
 docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_main.sql
 docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_extensions.sql
+docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_channels.sql
+docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_helpdesk.sql
+docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_sla.sql
+docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_actions.sql
 docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_observability.sql
 docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_eval_v2.sql
 docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_shopify_v2.sql
+docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_qa.sql
+docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_rbac_audit.sql
+docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_slo.sql
 docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_rag_safety.sql
 docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_rag_deepening.sql
 docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/demo_seed.sql
@@ -321,6 +338,33 @@ mvn -q -Pintegration verify
 | PUT | `/api/escalations/{id}/resolve` | 解决工单 |
 | GET | `/api/tool-calls` | 工具调用审计 |
 | GET | `/api/dashboard/commerce` | 客服运营指标 |
+| GET | `/api/channels/summary` | 多渠道账号和会话统计 |
+| GET | `/api/channels/accounts` | 渠道账号配置、授权和 webhook 状态 |
+| GET | `/api/inbox/queues` | 统一客服队列 |
+| GET | `/api/inbox/items` | 统一客服工作项 |
+| GET | `/api/tickets` | 独立客服工单列表 |
+| POST | `/api/tickets/{id}/assign` | 分配/接管独立客服工单 |
+| POST | `/api/tickets/{id}/resolve` | 解决独立客服工单并保留关闭原因 |
+| POST | `/api/inbox/{conversationUuid}/takeover` | 人工客服接管会话 |
+| POST | `/api/inbox/{conversationUuid}/reply` | 人工客服回复会话 |
+| GET | `/api/sla/summary` | SLA 风险汇总 |
+| GET | `/api/sla/policies` | 租户 SLA 策略 |
+| GET | `/api/actions` | 高风险电商动作审批列表 |
+| GET | `/api/actions/policies` | 高风险动作审批策略 |
+| POST | `/api/actions/{source}/{id}/approve` | 人工批准高风险动作，不执行外部写操作 |
+| POST | `/api/actions/{source}/{id}/reject` | 人工拒绝高风险动作 |
+| GET | `/api/qa/queue` | 客服质检队列 |
+| POST | `/api/qa/{id}/review` | 提交人工质检复核 |
+| GET | `/api/operations/summary` | 运营指标汇总 |
+| GET | `/api/audit/events` | 租户审计日志 |
+| GET | `/api/sre/summary` | SLO、告警、backlog 和成本健康 |
+| GET | `/api/sre/policies` | 租户 SLO 策略 |
+| GET | `/api/agent/workflow` | Supervisor-worker 工作流边界 |
+| POST | `/api/agent/plan` | 按买家消息试算 specialist 和工具白名单 |
+| GET | `/api/agent/guards` | Agent 工具幂等 guard 记录 |
+| GET | `/api/security/readiness` | 安全、数据保留、Shopify 和 runbook 生产边界 |
+| GET | `/api/security/roles` | 角色、页面、工具和审批权限矩阵 |
+| GET | `/api/security/retention` | 租户数据保留策略 |
 | POST | `/api/integrations/shopify/connect` | 保存加密 Shopify Custom App 凭证 |
 | GET | `/api/integrations/shopify/install` | 生成 Shopify OAuth 安装 URL |
 | GET | `/api/integrations/shopify/oauth/callback` | Shopify OAuth 回调，验签、校验 state、保存离线 token |
@@ -350,7 +394,9 @@ mvn -q -Pintegration verify
 
 ## 核心能力
 
-**客服工作台** — `/admin/inbox`、`/admin/orders`、`/admin/products`、`/admin/customers`、`/admin/tickets`、`/admin/integrations`、`/admin/usage`、`/admin/evals`、`/admin/observability`、`/admin/traces`、`/admin/rag-workbench`、`/admin/rag-safety` 覆盖客服操作、回归评测、失败归因、RAG 调试和知识审核。
+**客服工作台** — `/admin/inbox`、`/admin/orders`、`/admin/products`、`/admin/customers`、`/admin/tickets`、`/admin/integrations`、`/admin/usage`、`/admin/evals`、`/admin/observability`、`/admin/traces`、`/admin/rag-workbench`、`/admin/rag-safety`、`/admin/security` 覆盖客服操作、回归评测、失败归因、RAG 调试、知识审核和生产边界。
+
+**多渠道模型** — `sql/db_channels.sql` 新增 `channel_account`、`channel_conversation`、`channel_message`、`channel_customer_identity` 和 `channel_delivery_receipt`。当前 demo 真实接入 Web Widget，Email 显示为 adapter-ready；WhatsApp/Instagram/Facebook/SMS/Voice 只标注路线图，不在前端伪装已接通。
 
 **买家 Widget** — `/widget` 公开聊天入口，不依赖管理员 JWT；创建 session 后使用短期 `WIDGET_CUSTOMER` token 绑定 tenant 与 conversation，订单敏感信息必须通过订单邮箱或手机号校验。
 
@@ -358,7 +404,7 @@ mvn -q -Pintegration verify
 
 **9 大业务工具** — `queryOrder`、`trackLogistics`、`searchProductCatalog`、`refundPolicyRAG`、`createReturnRequest`、`requestRefundOrReplacement`、`requestAddressChange`、`translate`、`escalateToHuman`。查询类可自动执行；退款、补发、改地址只创建内部审批请求，不让 LLM 直接修改外部平台。
 
-**Demo 数据闭环** — `sql/demo_seed.sql` 提供 2 个租户、10 个客户、20 个商品、30 个订单、物流轨迹、政策文档和 80 条 Agent 评测用例。推荐演示问题：
+**Demo 数据闭环** — `sql/demo_seed.sql` 提供 2 个租户、10 个客户、20 个商品、30 个订单、物流轨迹、政策文档和 200 条 deterministic Agent 评测用例。推荐演示问题：
 
 - `Where is my order #1001? My email is ava@example.com.`
 - `Can I return my rain jacket from #1002? lucia@example.es`
@@ -375,7 +421,7 @@ mvn -q -Pintegration verify
 
 **多租户隔离** — JWT claims 绑定平台管理员或租户授权，X-Tenant-Id 必须通过 membership 校验后才写入上下文；MyBatis-Plus TenantLineInnerInterceptor 自动注入 WHERE tenant_id = ?，缺租户上下文时拒绝业务表 SQL。PGVector 查询手动带 tenant_id。
 
-**Agent Eval 与 Trace Replay** — `agent_eval_run`、`agent_eval_result`、`agent_run`、`agent_step` 持久化 80 条 deterministic golden cases 和执行轨迹；失败 case 可跳转 trace timeline 做工具选择和失败归因。
+**Agent Eval 与 Trace Replay** — `agent_eval_run`、`agent_eval_result`、`agent_run`、`agent_step` 持久化 200 条 deterministic golden cases 和执行轨迹；失败 case 可跳转 trace timeline 做工具选择和失败归因。
 
 **RAG Safety** — 文档入库后先经过 `RagSafetyScanner` 生成 `rag_safety_review`，高风险 prompt injection、隐藏 HTML/Markdown 指令、疑似密钥/PII、跨租户诱导默认隔离，人工 approve 后才允许索引。
 
@@ -386,7 +432,8 @@ mvn -q -Pintegration verify
 ### v3 Scope Notes
 
 - Shopify 已有 OAuth install/callback、HMAC、cursor sync job、GraphQL throttle backoff、webhook 入库、payload-specific cache mutation 和 replay/DLQ 管理面；App Store embedded/billing、token rotation 自动化和真实外部写操作仍是后续生产化工作。
-- Agent eval 已有 80 条 seed golden cases、持久化 run/result、tool-selection scorer、citation faithfulness checker、retrieval precision@k、unsupported claim rate、JSON/Markdown/JUnit 报告和 trace link；`LIVE_AGENT` 真实模型评测是 opt-in，不污染默认 CI。
+- 商业客服页新增统一 Inbox、动作审批、SLA、QA、运营指标、SRE、生产边界和多智能体路由试算；页面字段全部来自后端 DTO，未接通渠道和未实现企业能力用 `PARTIAL/ROADMAP/NOT_ENABLED` 明确展示。
+- Agent eval 已有 200 条 seed golden cases（86 条手写 + 114 条 scale cases）、持久化 run/result、tool-selection scorer、citation faithfulness checker、retrieval precision@k、unsupported claim rate、JSON/Markdown/JUnit 报告和 trace link；`LIVE_AGENT` 真实模型评测是 opt-in，不污染默认 CI。
 - Observability 是本地 DB + Micrometer/Prometheus 的 Trust Console；没有强依赖 Langfuse、Jaeger 或 Grafana。
 - RAG safety 是 deterministic ingestion scanner + 人工 approve/reject + citation faithfulness checker + eval 指标；LLM-as-judge 和 sentence-level entailment 是 opt-in 增强，不作为默认 CI gate。
 - Testcontainers profile 已提供 MySQL、Redis、PostgreSQL/pgvector 回归入口；本地 Docker 不可用时默认单测和 package 不依赖真实外部服务。

@@ -93,10 +93,18 @@ docker-compose ps
 # 方式 1：使用容器内 MySQL 客户端
 docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_main.sql
 docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_extensions.sql
+docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_channels.sql
+docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_helpdesk.sql
+docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_sla.sql
+docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_actions.sql
 docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_observability.sql
 docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_eval_v2.sql
 docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_shopify_v2.sql
+docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_qa.sql
+docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_rbac_audit.sql
+docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_slo.sql
 docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_rag_safety.sql
+docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/db_rag_deepening.sql
 docker exec -i omni-mysql sh -c 'mysql -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' < sql/demo_seed.sql
 
 # 方式 2：使用 MySQL 工具（如 Navicat/DBeaver）连接 localhost:3306
@@ -282,4 +290,4 @@ omni-merchant/
 
 ## 十、下一步
 
-配置完成后，先按 README 的本地质量门和 [`docs/v1-release-checklist.md`](docs/v1-release-checklist.md) 跑一遍。v1 当前目标是本地可复现展示和安全边界可信；生产部署、完整 Shopify App 安装流、在线 LLM eval dashboard 属于后续 v2。
+配置完成后，先按 README 的本地质量门运行构建、前端 build、deterministic eval 和截图脚本。当前 v3 目标是本地可复现展示、Spring Boot 4 + Spring AI 2 技术栈、多租户安全、RAG 证据工程、客服工作流与生产边界可信；真实 App Store 上架、真实退款/取消/改地址外部写操作、企业 SSO/SCIM 仍按 README 标注为后续生产化工作。

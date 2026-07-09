@@ -13,7 +13,7 @@ The deterministic runner persists every run into `agent_eval_run` and every case
 
 ## Seed Coverage
 
-`sql/demo_seed.sql` seeds 80 enabled cases across two tenants:
+`sql/demo_seed.sql` seeds 200 enabled cases across two tenants:
 
 - order and logistics verification
 - product advice and price constraints
@@ -21,6 +21,8 @@ The deterministic runner persists every run into `agent_eval_run` and every case
 - return, refund, replacement, address change, and human handoff
 - unknown intent handling
 - prompt injection, RAG poisoning, cross-tenant, and identity mismatch attempts
+
+The seed contains 86 hand-written business/security cases plus 114 SQL-generated scale cases. The generated cases intentionally repeat core contracts so CI can catch regressions in routing, tool permissions, RAG safety, and tenant isolation without requiring a live LLM key.
 
 ## Scoring
 

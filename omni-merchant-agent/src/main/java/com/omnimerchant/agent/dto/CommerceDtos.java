@@ -458,6 +458,368 @@ public final class CommerceDtos {
             java.time.LocalDateTime createdAt) {
     }
 
+    public record ChannelSummaryVO(
+            String channel,
+            String channelLabel,
+            String implementationStatus,
+            String accountName,
+            String authMode,
+            String webhookStatus,
+            Integer inboundEnabled,
+            Integer outboundEnabled,
+            long conversations,
+            long openConversations,
+            long escalatedConversations,
+            java.math.BigDecimal avgFirstResponseSeconds,
+            java.math.BigDecimal csatAvg,
+            java.time.LocalDateTime lastEventAt,
+            String lastError) {
+    }
+
+    public record ChannelAccountVO(
+            Long id,
+            String channel,
+            String channelLabel,
+            String accountName,
+            String externalAccountId,
+            String adapterStatus,
+            Integer inboundEnabled,
+            Integer outboundEnabled,
+            String authMode,
+            String webhookStatus,
+            java.time.LocalDateTime lastEventAt,
+            String lastError,
+            java.time.LocalDateTime updatedAt) {
+    }
+
+    public record QueueBucketVO(
+            String queueKey,
+            String queueLabel,
+            long count,
+            String description) {
+    }
+
+    public record InboxWorkItemVO(
+            String workItemType,
+            Long ticketId,
+            String conversationUuid,
+            String customerName,
+            String customerEmail,
+            String channel,
+            String channelLabel,
+            String intent,
+            String sentiment,
+            Integer status,
+            String statusLabel,
+            Integer priority,
+            Long humanAgentId,
+            Integer messageCount,
+            Integer toolCallCount,
+            java.math.BigDecimal totalCostUsd,
+            String latestTicketNo,
+            String latestTicketStatus,
+            String slaState,
+            java.time.LocalDateTime lastMessageAt,
+            java.time.LocalDateTime startedAt) {
+    }
+
+    public record TakeoverRequest(Long agentId, String note) {
+    }
+
+    public record HumanReplyRequest(String message, Boolean closeAfterReply) {
+    }
+
+    public record SlaSummaryVO(
+            long openTickets,
+            long responseBreached,
+            long resolveBreached,
+            long dueSoon,
+            java.math.BigDecimal responseBreachRate,
+            java.math.BigDecimal resolveBreachRate,
+            java.util.List<SlaPolicyVO> policies,
+            java.util.List<SlaRiskTicketVO> riskTickets) {
+    }
+
+    public record SlaRiskTicketVO(
+            Long id,
+            String ticketNo,
+            String conversationUuid,
+            Integer priority,
+            Integer status,
+            String statusLabel,
+            String slaState,
+            java.time.LocalDateTime responseDueAt,
+            java.time.LocalDateTime resolveDueAt,
+            Long assignedAgentId,
+            String summary) {
+    }
+
+    public record MacroVO(
+            String macroCode,
+            String title,
+            String category,
+            String channel,
+            String content,
+            Integer requiresApproval,
+            Integer active) {
+    }
+
+    public record ActionRequestVO(
+            String source,
+            Long id,
+            String requestNo,
+            String actionType,
+            String status,
+            String statusLabel,
+            String externalOrderNumber,
+            String customerEmail,
+            String amount,
+            String currency,
+            String riskReason,
+            String requestedPayload,
+            String resolution,
+            String resolutionNote,
+            java.time.LocalDateTime createdAt,
+            java.time.LocalDateTime updatedAt) {
+    }
+
+    public record ActionDecisionRequest(Long actorId, String note) {
+    }
+
+    public record TicketVO(
+            Long id,
+            String ticketNo,
+            String conversationUuid,
+            String sourceType,
+            Long sourceId,
+            String channel,
+            String customerEmail,
+            String subject,
+            String summary,
+            String intent,
+            Integer priority,
+            String status,
+            String statusLabel,
+            Long assignedAgentId,
+            java.time.LocalDateTime assignedAt,
+            java.time.LocalDateTime firstResponseAt,
+            java.time.LocalDateTime resolvedAt,
+            java.time.LocalDateTime closedAt,
+            java.time.LocalDateTime slaResponseDueAt,
+            java.time.LocalDateTime slaResolveDueAt,
+            String slaState,
+            Integer csatScore,
+            String closeReason,
+            String tags,
+            java.time.LocalDateTime createdAt,
+            java.time.LocalDateTime updatedAt) {
+    }
+
+    public record SlaPolicyVO(
+            Long id,
+            String policyName,
+            Integer priority,
+            String channel,
+            Integer firstResponseMinutes,
+            Integer resolutionMinutes,
+            String businessHours,
+            String timezone,
+            String escalationRule,
+            Integer active) {
+    }
+
+    public record CommerceActionPolicyVO(
+            Long id,
+            String actionType,
+            Integer approvalRequired,
+            String minApproverRole,
+            String amountThreshold,
+            Integer requiresIdentityVerification,
+            Integer idempotencyWindowMinutes,
+            Integer externalWriteEnabled,
+            String policyNote,
+            Integer active) {
+    }
+
+    public record QaReviewItemVO(
+            Long id,
+            String sourceType,
+            Long sourceId,
+            String conversationUuid,
+            String ticketNo,
+            String status,
+            Integer autoScore,
+            Integer reviewerScore,
+            String reviewFlags,
+            String findings,
+            String actionItems,
+            Long reviewerId,
+            java.time.LocalDateTime reviewedAt,
+            java.time.LocalDateTime createdAt) {
+    }
+
+    public record QaReviewRequest(Long reviewerId, Integer score, String findings, String actionItems) {
+    }
+
+    public record OperationsSummaryVO(
+            long conversations,
+            long aiResolved,
+            long humanTakeovers,
+            long closedTickets,
+            long pendingActions,
+            java.math.BigDecimal aiResolutionRate,
+            java.math.BigDecimal humanTakeoverRate,
+            java.math.BigDecimal avgCsat,
+            java.math.BigDecimal avgFirstResponseSeconds,
+            java.math.BigDecimal costPerResolvedCase,
+            java.util.List<DimensionMetricVO> intents,
+            java.util.List<DimensionMetricVO> channels,
+            java.util.List<DimensionMetricVO> topFailureCategories) {
+    }
+
+    public record DimensionMetricVO(String name, long count, java.math.BigDecimal rate) {
+    }
+
+    public record AuditEventVO(
+            Long id,
+            Long actorId,
+            String actorRole,
+            String action,
+            String resourceType,
+            String resourceId,
+            String summary,
+            String riskLevel,
+            String metadataJson,
+            java.time.LocalDateTime createdAt) {
+    }
+
+    public record SreSummaryVO(
+            java.util.List<SloMetricVO> slos,
+            java.util.List<SloPolicyVO> policies,
+            java.util.List<AlertVO> alerts,
+            long webhookBacklog,
+            long failedTraces,
+            long failedTools,
+            long deadShopifyJobs,
+            java.math.BigDecimal estimatedCostUsd,
+            java.math.BigDecimal latestEvalPassRate,
+            java.time.LocalDateTime generatedAt) {
+    }
+
+    public record SloMetricVO(String key, String label, java.math.BigDecimal target, java.math.BigDecimal actual, String unit, String status) {
+    }
+
+    public record SloPolicyVO(
+            Long id,
+            String sloKey,
+            String sloLabel,
+            java.math.BigDecimal targetValue,
+            String unit,
+            Integer windowMinutes,
+            String severityOnBreach,
+            String runbook,
+            Integer active) {
+    }
+
+    public record AlertVO(String severity, String category, String message, java.time.LocalDateTime observedAt) {
+    }
+
+    public record AgentWorkflowVO(
+            String workflowName,
+            String currentMode,
+            java.util.List<AgentNodeVO> nodes,
+            java.util.List<AgentPolicyVO> policies) {
+    }
+
+    public record AgentNodeVO(String nodeKey, String nodeLabel, String responsibility, String toolAllowlist, String status) {
+    }
+
+    public record AgentPolicyVO(String policyKey, String description, String enforcement) {
+    }
+
+    public record AgentPlanRequest(String intent, String message) {
+    }
+
+    public record AgentPlanVO(
+            String specialistKey,
+            String specialistLabel,
+            java.util.List<String> toolAllowlist,
+            String riskLevel,
+            Boolean requiresIdentityVerification,
+            Boolean requiresApproval,
+            Boolean recommendHumanHandoff,
+            String routingEvidence) {
+    }
+
+    public record ProductionReadinessVO(
+            java.util.List<ReadinessControlVO> securityControls,
+            java.util.List<SupportRolePolicyVO> rolePolicies,
+            java.util.List<CommerceActionPolicyVO> actionPolicies,
+            java.util.List<DataRetentionPolicyVO> retentionPolicies,
+            java.util.List<ShopifyCapabilityVO> shopifyCapabilities,
+            java.util.List<RunbookVO> runbooks,
+            java.util.List<AgentGuardVO> recentAgentGuards,
+            java.util.List<String> explicitNonGoals,
+            java.time.LocalDateTime generatedAt) {
+    }
+
+    public record ReadinessControlVO(
+            String controlKey,
+            String controlLabel,
+            String status,
+            String evidence,
+            String nextStep,
+            String riskLevel) {
+    }
+
+    public record DataRetentionPolicyVO(
+            String dataSet,
+            Integer defaultRetentionDays,
+            String maskingDefault,
+            String exportSupport,
+            String deletionSupport,
+            String status,
+            String notes) {
+    }
+
+    public record SupportRolePolicyVO(
+            Long id,
+            String roleKey,
+            String roleLabel,
+            String permissionsJson,
+            String toolPolicyJson,
+            String approvalLimit,
+            String status) {
+    }
+
+    public record AgentGuardVO(
+            Long id,
+            String conversationUuid,
+            String guardKey,
+            String toolName,
+            String requestHash,
+            String status,
+            java.time.LocalDateTime firstSeenAt,
+            java.time.LocalDateTime lastSeenAt) {
+    }
+
+    public record ShopifyCapabilityVO(
+            String capabilityKey,
+            String capabilityLabel,
+            String status,
+            String evidence,
+            String defaultMode,
+            String nextStep) {
+    }
+
+    public record RunbookVO(
+            String incident,
+            String triggerSignal,
+            String firstAction,
+            String escalationOwner,
+            String status) {
+    }
+
     public record PageResult<T>(long total, List<T> records) {
     }
 }

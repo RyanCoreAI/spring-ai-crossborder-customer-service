@@ -32,7 +32,7 @@ Implemented platform evidence:
 - Refund, replacement, return, and address-change tools create internal approval requests only; they do not write external ecommerce systems.
 - Commerce APIs now cover customers, orders, products, escalations, tool calls, dashboard metrics, integrations, evals, widget sessions, and Shopify webhooks.
 - Tool calls are persisted to `tool_call_log` with tenant, conversation, params summary, result summary, latency, status, and error fields.
-- Demo data includes 2 tenants, 10 customers, 20 products, 30 orders, shipping histories, policy docs, widget channel installs, and 80 eval cases.
+- Demo data includes 2 tenants, 10 customers, 20 products, 30 orders, shipping histories, policy docs, widget channel installs, and 200 deterministic eval cases.
 - Frontend now includes merchant pages for inbox, customers, orders, products, tickets, integrations, usage, evals, observability, trace replay, RAG safety, and a public widget page.
 - Agent eval runs are persisted to `agent_eval_run` / `agent_eval_result`, scored with tool selection precision/recall, poisoning block rate, citation coverage, retrieval precision@k, and unsupported claim rate.
 - Agent execution traces are persisted to `agent_run` / `agent_step`, with failure attribution and replay APIs.
