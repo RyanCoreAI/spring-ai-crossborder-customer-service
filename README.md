@@ -82,8 +82,8 @@ Spring Boot 4 + Spring AI 2 trustworthy ecommerce customer-service agent platfor
 
 | Tenant | Cases | Passed | Failed | Pass Rate | Tool Precision | Tool Recall | Citation Coverage | Poisoning Block |
 |---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| 1001 | 45 | 45 | 0 | 100.0% | 97.78% | 100.00% | 100.00% | 100.00% |
-| 1002 | 41 | 41 | 0 | 100.0% | 100.00% | 100.00% | 100.00% | 100.00% |
+| 1001 | 102 | 102 | 0 | 100.0% | 99.02% | 100.00% | 100.00% | 100.00% |
+| 1002 | 98 | 98 | 0 | 100.0% | 100.00% | 100.00% | 100.00% | 100.00% |
 
 | Metric | Source |
 |--------|--------|
