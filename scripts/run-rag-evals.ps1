@@ -4,6 +4,7 @@ param(
     [string]$AdminPassword = $env:ADMIN_PASSWORD,
     [string]$OutputDir = "reports",
     [string]$Mode = "DETERMINISTIC",
+    [string[]]$RetrievalModes = @("VECTOR_ONLY", "BM25_ONLY", "HYBRID", "HYBRID_RERANK"),
     [switch]$SkipThreshold
 )
 
@@ -50,25 +51,42 @@ if (-not $token) {
 $headersBase = @{ Authorization = "Bearer $token" }
 $tenantIds = @(1001, 1002)
 $reports = @()
-$runSummaries = @()
 $healthSnapshots = @()
 
 foreach ($tenantId in $tenantIds) {
     $headers = $headersBase.Clone()
     $headers["X-Tenant-Id"] = "$tenantId"
-    Write-Host ('Running RAG evals for tenant {0} ({1})' -f $tenantId, $Mode)
-    $body = @{ mode = $Mode; failOnThreshold = $false } | ConvertTo-Json
-    $report = Invoke-RestMethod -Method Post -Uri "$ApiBase/api/rag/evals/run" -Headers $headers -ContentType "application/json" -Body $body
-    $reports += $report.data
-
-    $runs = Invoke-RestMethod -Method Get -Uri "$ApiBase/api/rag/evals/runs?page=1&size=1" -Headers $headers
-    $latest = $runs.data.records | Select-Object -First 1
-    if ($latest) {
-        $runSummaries += [pscustomobject]@{ tenantId = $tenantId; latestRun = $latest }
+    foreach ($retrievalMode in $RetrievalModes) {
+        Write-Host ('Running RAG evals for tenant {0} ({1}, {2})' -f $tenantId, $Mode, $retrievalMode)
+        $body = @{
+            mode = $Mode
+            failOnThreshold = $false
+            datasetKind = "CONTRACT"
+            datasetVersion = "contract-v1"
+            retrievalMode = $retrievalMode
+        } | ConvertTo-Json
+        $report = Invoke-RestMethod -Method Post -Uri "$ApiBase/api/rag/evals/run" -Headers $headers -ContentType "application/json" -Body $body
+        $runs = Invoke-RestMethod -Method Get -Uri "$ApiBase/api/rag/evals/runs?page=1&size=1" -Headers $headers
+        $latest = $runs.data.records | Select-Object -First 1
+        $reports += [pscustomobject]@{
+            tenantId = $tenantId
+            retrievalMode = $retrievalMode
+            report = $report.data
+            latestRun = $latest
+        }
     }
 
     $health = Invoke-RestMethod -Method Get -Uri "$ApiBase/api/rag/health" -Headers $headers
     $healthSnapshots += [pscustomobject]@{ tenantId = $tenantId; health = $health.data }
+}
+
+foreach ($entry in $reports) {
+    $healthEntry = $healthSnapshots | Where-Object { $_.tenantId -eq $entry.tenantId } | Select-Object -First 1
+    $runtimeStatus = "READY"
+    if ($entry.retrievalMode -eq "VECTOR_ONLY" -and $healthEntry.health.vectorStatus -ne "READY") {
+        $runtimeStatus = [string]$healthEntry.health.vectorStatus
+    }
+    $entry | Add-Member -NotePropertyName runtimeStatus -NotePropertyValue $runtimeStatus -Force
 }
 
 $jsonPath = Join-Path $OutputDir "rag-eval-report.json"
@@ -77,8 +95,17 @@ $junitPath = Join-Path $OutputDir "rag-eval-junit.xml"
 $bundle = [pscustomobject]@{
     generatedAt = (Get-Date).ToString("o")
     mode = $Mode
+    datasetKind = "CONTRACT"
+    datasetVersion = "contract-v1"
+    retrievalModes = $RetrievalModes
     reports = $reports
-    runSummaries = $runSummaries
+    runSummaries = @($reports | ForEach-Object {
+        [pscustomobject]@{
+            tenantId = $_.tenantId
+            retrievalMode = $_.retrievalMode
+            latestRun = $_.latestRun
+        }
+    })
     health = $healthSnapshots
 }
 Write-Utf8NoBomLf $jsonPath (($bundle | ConvertTo-Json -Depth 12) + $Lf)
@@ -86,30 +113,32 @@ Write-Utf8NoBomLf $jsonPath (($bundle | ConvertTo-Json -Depth 12) + $Lf)
 $lines = [System.Collections.Generic.List[string]]::new()
 Add-Line $lines '# OmniMerchant RAG Eval Report'
 Add-Line $lines ''
-Add-Line $lines ('Mode: `{0}`' -f $Mode)
+Add-Line $lines ('Mode: `{0}`; Dataset: `CONTRACT/contract-v1`' -f $Mode)
 Add-Line $lines ''
-Add-Line $lines '| Tenant | Total | Passed | Failed | Pass Rate | Citation Coverage | Retrieval Precision@K | Recall@K | MRR | nDCG@K | No-answer Accuracy | P95 Retrieval Latency | Unsupported Claim Rate | Poisoning Block | Pending Reviews | High Risk Docs |'
-Add-Line $lines '|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|'
+Add-Line $lines '| Tenant | Retrieval Mode | Runtime | Total | Passed | Failed | Pass Rate | Citation Coverage | Context Precision | Context Recall | MRR | nDCG@K | No-answer Accuracy | P95 Retrieval Latency | Faithfulness | Poisoning Block | Pending Reviews | High Risk Docs |'
+Add-Line $lines '|---:|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|'
 
-foreach ($r in $reports) {
-    $summary = $runSummaries | Where-Object { $_.tenantId -eq $r.tenantId } | Select-Object -First 1
-    $health = $healthSnapshots | Where-Object { $_.tenantId -eq $r.tenantId } | Select-Object -First 1
-    $latest = $summary.latestRun
+foreach ($entry in $reports) {
+    $r = $entry.report
+    $health = $healthSnapshots | Where-Object { $_.tenantId -eq $entry.tenantId } | Select-Object -First 1
+    $latest = $entry.latestRun
     $pending = if ($health) { $health.health.pendingReviews } else { "" }
     $highRisk = if ($health) { $health.health.highRiskDocs } else { "" }
+    $faithfulness = if ($null -ne $latest.unsupportedClaimRate) { 100 - [double]$latest.unsupportedClaimRate } else { "" }
     Add-TableRow $lines @(
-        $r.tenantId, $r.total, $r.passed, $r.failed, "$($r.passRate)%",
+        $entry.tenantId, $entry.retrievalMode, $entry.runtimeStatus, $r.total, $r.passed, $r.failed, "$($r.passRate)%",
         "$($latest.citationCoverage)%", "$($latest.retrievalPrecisionAtK)%",
         "$($latest.recallAtK)%", $latest.mrr, $latest.ndcgAtK,
         "$($latest.noAnswerAccuracy)%", "$($latest.p95RetrievalLatencyMs) ms",
-        "$($latest.unsupportedClaimRate)%", "$($latest.poisoningBlockRate)%",
+        "$faithfulness%", "$($latest.poisoningBlockRate)%",
         $pending, $highRisk
     )
 }
 
 Add-Line $lines ''
-foreach ($r in $reports) {
-    Add-Line $lines ('## Tenant {0}' -f $r.tenantId)
+foreach ($entry in $reports) {
+    $r = $entry.report
+    Add-Line $lines ('## Tenant {0} / {1}' -f $entry.tenantId, $entry.retrievalMode)
     Add-Line $lines ''
     Add-Line $lines '| Case | Intent | Status | Expected Tools | Actual Tools | Reranker | Rank | Latency | MRR | nDCG | No-answer | Failure | Trace Replay | Observation |'
     Add-Line $lines '|---|---|---|---|---|---|---:|---:|---:|---:|---|---|---|---|'
@@ -151,19 +180,29 @@ Write-Utf8NoBomLf $mdPath (($lines -join $Lf).TrimEnd() + $Lf)
 
 $tests = 0
 $failures = 0
-foreach ($r in $reports) {
+$skipped = 0
+foreach ($entry in $reports) {
+    $r = $entry.report
     $tests += [int]$r.total
-    $failures += [int]$r.failed
+    if ($entry.runtimeStatus -eq "READY") {
+        $failures += [int]$r.failed
+    } else {
+        $skipped += [int]$r.total
+    }
 }
 
 $xml = New-Object System.Text.StringBuilder
 [void]$xml.AppendLine('<?xml version=''1.0'' encoding=''UTF-8''?>')
-[void]$xml.AppendLine(('<testsuite name=''OmniMerchant RAG Eval'' tests=''{0}'' failures=''{1}''>' -f $tests, $failures))
-foreach ($r in $reports) {
+[void]$xml.AppendLine(('<testsuite name=''OmniMerchant RAG Eval'' tests=''{0}'' failures=''{1}'' skipped=''{2}''>' -f $tests, $failures, $skipped))
+foreach ($entry in $reports) {
+    $r = $entry.report
     foreach ($case in $r.results) {
-        $name = [System.Security.SecurityElement]::Escape(('tenant-{0}.{1}' -f $r.tenantId, $case.caseCode))
+        $name = [System.Security.SecurityElement]::Escape(('tenant-{0}.{1}.{2}' -f $entry.tenantId, $entry.retrievalMode, $case.caseCode))
         [void]$xml.AppendLine(('  <testcase classname=''rag-eval'' name=''{0}''>' -f $name))
-        if (-not $case.passed) {
+        if ($entry.runtimeStatus -ne "READY") {
+            $reason = [System.Security.SecurityElement]::Escape($entry.runtimeStatus)
+            [void]$xml.AppendLine(('    <skipped message=''{0}'' />' -f $reason))
+        } elseif (-not $case.passed) {
             $msg = [System.Security.SecurityElement]::Escape($case.actualObservation)
             [void]$xml.AppendLine(('    <failure message=''{0}'' />' -f $msg))
         }
@@ -178,16 +217,21 @@ Write-Host ('Wrote {0}' -f $mdPath)
 Write-Host ('Wrote {0}' -f $junitPath)
 
 if (-not $SkipThreshold) {
-    foreach ($r in $reports) {
-        if ([double]$r.passRate -lt 95) {
-            throw ('RAG eval pass rate below threshold for tenant {0}: {1}% below 95%' -f $r.tenantId, $r.passRate)
-        }
+    foreach ($entry in $reports) {
+        $r = $entry.report
         $securityFailures = @($r.results | Where-Object {
             $_.caseCode -match 'INJECT|CROSS|POISON' -and -not $_.passed
         })
         if ($securityFailures.Count -gt 0) {
             $failedCodes = ($securityFailures | ForEach-Object { $_.caseCode }) -join ', '
-            throw ('RAG security eval cases failed for tenant {0}: {1}' -f $r.tenantId, $failedCodes)
+            throw ('RAG security eval cases failed for tenant {0} / {1}: {2}' -f $entry.tenantId, $entry.retrievalMode, $failedCodes)
+        }
+        if ($entry.runtimeStatus -ne "READY") {
+            Write-Warning ('Skipping quality threshold for tenant {0} / {1}: {2}' -f $entry.tenantId, $entry.retrievalMode, $entry.runtimeStatus)
+            continue
+        }
+        if ([double]$r.passRate -lt 95) {
+            throw ('RAG eval pass rate below threshold for tenant {0} / {1}: {2}% below 95%' -f $entry.tenantId, $entry.retrievalMode, $r.passRate)
         }
     }
 }

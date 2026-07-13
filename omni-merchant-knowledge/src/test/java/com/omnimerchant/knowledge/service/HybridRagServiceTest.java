@@ -26,6 +26,7 @@ class HybridRagServiceTest {
                 mock(CrossEncoderReranker.class),
                 new RagQueryPlanningService(),
                 new RagContextPacker(),
+                mock(RagGovernanceService.class),
                 mock(KnowledgeDocMapper.class),
                 new OmniMerchantProperties());
 

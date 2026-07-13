@@ -2,11 +2,20 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   pull_request:
-    branches: [main]
+    branches: [master]
 
 jobs:
+  architecture:
+    name: Architecture Quality Gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify service, view, DTO, and read-path boundaries
+        shell: pwsh
+        run: scripts/verify-code-quality.ps1
+
   backend:
     name: Backend
     runs-on: ubuntu-latest
@@ -55,8 +64,47 @@ jobs:
         run: npm ci
       - name: Build frontend
         run: npm run build
+      - name: Run frontend unit tests
+        run: npm run test
       - name: Audit production dependencies
         run: npm audit --omit=dev --audit-level=high
+
+  eval:
+    name: Deterministic Eval Contracts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - name: Run agent and RAG contract tests
+        run: >-
+          mvn -q
+          -Dtest=ToolSelectionScorerTest,AgentOrchestratorServiceTest,AgentExecutionGuardServiceTest,AgentEvalDatasetServiceTest,HybridRagServiceTest,RagSafetyScannerTest,CitationFaithfulnessCheckerTest,RagGovernanceServiceTest
+          -Dsurefire.failIfNoSpecifiedTests=false test
+      - name: Verify committed deterministic evidence
+        shell: pwsh
+        run: scripts/verify-evidence.ps1
+
+  browser-smoke:
+    name: Browser Smoke (Desktop and Mobile)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: omnimerchant-web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: omnimerchant-web/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
 
   compose:
     name: Docker Compose Config
@@ -75,4 +123,7 @@ jobs:
           OPENAI_API_KEY: ci-placeholder
           ANTHROPIC_API_KEY: ci-placeholder
           DEEPSEEK_API_KEY: ci-placeholder
-        run: docker compose config --quiet
+        run: docker compose -f compose.demo.yml config --quiet
+      - name: Verify OpenAPI v4 endpoint contract
+        shell: pwsh
+        run: scripts/verify-openapi.ps1

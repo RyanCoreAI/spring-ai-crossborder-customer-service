@@ -4,12 +4,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.omnimerchant.agent.entity.Customer;
 import com.omnimerchant.agent.entity.OrderInfo;
 import com.omnimerchant.agent.entity.Product;
+import com.omnimerchant.agent.entity.ShopifyPrivacyRequest;
+import com.omnimerchant.agent.entity.ShopifyResourceCheckpoint;
 import com.omnimerchant.agent.entity.WebhookEvent;
 import com.omnimerchant.agent.mapper.CustomerMapper;
 import com.omnimerchant.agent.mapper.IntegrationCredentialMapper;
 import com.omnimerchant.agent.mapper.OrderInfoMapper;
 import com.omnimerchant.agent.mapper.ProductMapper;
 import com.omnimerchant.agent.mapper.ShopifySyncJobMapper;
+import com.omnimerchant.agent.mapper.ShopifyBulkOperationMapper;
+import com.omnimerchant.agent.mapper.ShopifyPrivacyRequestMapper;
+import com.omnimerchant.agent.mapper.ShopifyResourceCheckpointMapper;
 import com.omnimerchant.agent.mapper.WebhookEventMapper;
 import com.omnimerchant.common.exception.BusinessException;
 import com.omnimerchant.tenant.context.TenantContextHolder;
@@ -43,15 +48,28 @@ class ShopifyIntegrationServiceTest {
     private final CustomerMapper customerMapper = mock(CustomerMapper.class);
     private final ShopifySyncJobMapper syncJobMapper = mock(ShopifySyncJobMapper.class);
     private final WebhookEventMapper webhookEventMapper = mock(WebhookEventMapper.class);
+    private final ShopifyResourceCheckpointMapper resourceCheckpointMapper = mock(ShopifyResourceCheckpointMapper.class);
+    private final ShopifyPrivacyRequestMapper privacyRequestMapper = mock(ShopifyPrivacyRequestMapper.class);
+    private final ShopifyBulkOperationMapper bulkOperationMapper = mock(ShopifyBulkOperationMapper.class);
+    private final CredentialCipher credentialCipher = mock(CredentialCipher.class);
+    private final ShopifyWebhookProjectionService webhookProjectionService = new ShopifyWebhookProjectionService(
+            productMapper, customerMapper, orderMapper, objectMapper);
+    private final ShopifyWebhookService webhookService = new ShopifyWebhookService(
+            credentialMapper, customerMapper, orderMapper, webhookEventMapper, resourceCheckpointMapper,
+            privacyRequestMapper, credentialCipher, objectMapper, webhookProjectionService);
+    private final ShopifyCredentialService credentialService = new ShopifyCredentialService(
+            credentialMapper, syncJobMapper, credentialCipher, objectMapper);
     private final ShopifyIntegrationService service = new ShopifyIntegrationService(
             credentialMapper,
             productMapper,
             orderMapper,
             customerMapper,
             syncJobMapper,
-            webhookEventMapper,
-            mock(CredentialCipher.class),
-            objectMapper);
+            bulkOperationMapper,
+            credentialCipher,
+            objectMapper,
+            webhookService,
+            credentialService);
 
     @Test
     void verifiesWebhookHmac() throws Exception {
@@ -92,9 +110,9 @@ class ShopifyIntegrationServiceTest {
 
     @Test
     void oauthCallbackRejectsInvalidHmacBeforeTokenExchange() {
-        ReflectionTestUtils.setField(service, "shopifyClientId", "client-id");
-        ReflectionTestUtils.setField(service, "shopifyClientSecret", "client-secret");
-        ReflectionTestUtils.setField(service, "appBaseUrl", "http://localhost:8090");
+        ReflectionTestUtils.setField(credentialService, "shopifyClientId", "client-id");
+        ReflectionTestUtils.setField(credentialService, "shopifyClientSecret", "client-secret");
+        ReflectionTestUtils.setField(credentialService, "appBaseUrl", "http://localhost:8090");
         TenantContextHolder.set(1001L);
         try {
             var install = service.install("fixture-store.myshopify.com");
@@ -114,8 +132,8 @@ class ShopifyIntegrationServiceTest {
 
     @Test
     void oauthCallbackRejectsMissingStateNonceBeforeTokenExchange() {
-        ReflectionTestUtils.setField(service, "shopifyClientId", "client-id");
-        ReflectionTestUtils.setField(service, "shopifyClientSecret", "client-secret");
+        ReflectionTestUtils.setField(credentialService, "shopifyClientId", "client-id");
+        ReflectionTestUtils.setField(credentialService, "shopifyClientSecret", "client-secret");
 
         assertThatThrownBy(() -> service.completeOAuthCallback(Map.of(
                 "shop", "fixture-store.myshopify.com",
@@ -279,6 +297,66 @@ class ShopifyIntegrationServiceTest {
         assertThat(replay.status()).isEqualTo(2);
         assertThat(event.getStatus()).isEqualTo(2);
         assertThat(event.getLastError()).isNull();
+    }
+
+    @Test
+    void staleWebhookDoesNotOverwriteNewerResourceState() {
+        var event = event(18L, "products/update", """
+                {"id":321,"title":"Stale title","updated_at":"2026-06-20T10:00:00Z"}
+                """);
+        event.setEventUuid("older-event");
+        event.setCreatedAt(LocalDateTime.of(2026, 6, 20, 10, 0));
+        var checkpoint = new ShopifyResourceCheckpoint();
+        checkpoint.setLatestOccurredAt(LocalDateTime.of(2026, 6, 20, 11, 0));
+        checkpoint.setLatestEventUuid("newer-event");
+        when(webhookEventMapper.selectById(18L)).thenReturn(event);
+        when(resourceCheckpointMapper.selectOne(any())).thenReturn(checkpoint);
+
+        service.processWebhookEvent(18L);
+
+        verifyNoInteractions(productMapper, orderMapper, customerMapper);
+        assertThat(event.getStatus()).isEqualTo(2);
+        assertThat(event.getLastError()).isEqualTo("STALE_EVENT_IGNORED");
+    }
+
+    @Test
+    void customerRedactWebhookRemovesLocalPiiAndStoresOnlyHashes() {
+        var event = event(19L, "customers/redact", """
+                {"shop_domain":"fixture-store.myshopify.com",
+                 "customer":{"id":789,"email":"customer@example.com","phone":"+14155550123"},
+                 "orders_to_redact":[]}
+                """);
+        event.setExternalStoreId("fixture-store.myshopify.com");
+        var customer = new Customer();
+        customer.setId(77L);
+        customer.setExternalCustomerId("gid://shopify/Customer/789");
+        customer.setEmail("customer@example.com");
+        customer.setPhone("+14155550123");
+        customer.setDisplayName("Morgan Lee");
+        when(webhookEventMapper.selectById(19L)).thenReturn(event);
+        when(customerMapper.selectOne(any())).thenReturn(customer);
+
+        service.processWebhookEvent(19L);
+
+        assertThat(customer.getEmail()).isNull();
+        assertThat(customer.getPhone()).isNull();
+        assertThat(customer.getDisplayName()).isEqualTo("Redacted Customer");
+        assertThat(customer.getExternalCustomerId()).startsWith("redacted:");
+        var privacyCaptor = ArgumentCaptor.forClass(ShopifyPrivacyRequest.class);
+        verify(privacyRequestMapper).insert(privacyCaptor.capture());
+        assertThat(privacyCaptor.getValue().getPayloadHash()).hasSize(64);
+        assertThat(privacyCaptor.getValue().getCustomerEmailHash()).hasSize(64);
+        assertThat(privacyCaptor.getValue().getStatus()).isEqualTo("COMPLETED");
+    }
+
+    @Test
+    void bulkQueryUsesConnectionShapeRequiredByShopify() {
+        assertThat(service.bulkResourceQuery("products"))
+                .contains("products { edges { node")
+                .contains("id title handle");
+        assertThat(service.bulkResourceQuery("orders"))
+                .contains("orders { edges { node")
+                .contains("totalPriceSet");
     }
 
     private String sign(String secret, String body) throws Exception {

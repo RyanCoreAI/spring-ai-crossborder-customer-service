@@ -50,6 +50,16 @@ class LanguageDetectorTest {
     void shouldReturnEnglishForEmptyText() {
         assertThat(detector.detect("")).isEqualTo("en");
         assertThat(detector.detect(null)).isEqualTo("en");
+        assertThat(detector.detectWithConfidence("").confidence()).isZero();
+    }
+
+    @Test
+    void shouldExposeModelConfidenceInsteadOfFixedOne() {
+        var result = detector.detectWithConfidence("¿Dónde está mi pedido? Necesito ayuda con la entrega.");
+
+        assertThat(result.language()).isEqualTo("es");
+        assertThat(result.confidence()).isBetween(0.0, 1.0);
+        assertThat(result.confidence()).isGreaterThan(0.0);
     }
 
     @Test

@@ -5,6 +5,8 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.mock.http.MockHttpInputMessage;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.http.HttpMethod;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.List;
 
@@ -34,5 +36,15 @@ class GlobalExceptionHandlerTest {
 
         assertThat(response.getCode()).isEqualTo("400");
         assertThat(response.getMessage()).contains("JSON");
+    }
+
+    @Test
+    void shouldReturn404WhenResourceDoesNotExist() {
+        var request = new MockHttpServletRequest("GET", "/api/not-found");
+        var exception = new NoResourceFoundException(HttpMethod.GET, "/api/not-found", null);
+
+        var response = handler.handleNoResource(exception, request);
+
+        assertThat(response.getCode()).isEqualTo("404");
     }
 }

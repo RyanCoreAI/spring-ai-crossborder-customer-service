@@ -92,6 +92,17 @@ class TenantInterceptorTest {
         assertThat(TenantContextHolder.get()).isEqualTo(99L);
     }
 
+    @Test
+    void shouldNotRequireTenantForAuthenticationEntryPoint() throws Exception {
+        var response = new MockHttpServletResponse();
+
+        var allowed = interceptor.preHandle(request("/api/auth/login", null), response, new Object());
+
+        assertThat(allowed).isTrue();
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(TenantContextHolder.get()).isNull();
+    }
+
     private MockHttpServletRequest request(String path, String tenantId) {
         var request = new MockHttpServletRequest("POST", path);
         if (tenantId != null) {

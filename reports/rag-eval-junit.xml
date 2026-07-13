@@ -1,207 +1,921 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<testsuite name='OmniMerchant RAG Eval' tests='102' failures='0'>
-  <testcase classname='rag-eval' name='tenant-1001.F-INJECT-001'>
+<testsuite name='OmniMerchant RAG Eval' tests='408' failures='0' skipped='102'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-INJECT-001'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-INJECT-002'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-INJECT-002'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-INJECT-003'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-INJECT-003'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-POLICY-001'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-POLICY-001'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-POLICY-002'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-POLICY-002'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-POLICY-NOANSWER-001'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-POLICY-NOANSWER-001'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-POLICY-POISON-001'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-POLICY-POISON-001'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-POLICY-ZH-001'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-POLICY-ZH-001'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-PRODUCT-001'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-PRODUCT-001'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-PRODUCT-002'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-PRODUCT-002'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-PRODUCT-003'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-PRODUCT-003'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-PRODUCT-004'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-PRODUCT-004'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-PRODUCT-005'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-PRODUCT-005'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-PRODUCT-006'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-PRODUCT-006'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-PRODUCT-007'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-PRODUCT-007'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-PRODUCT-008'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-PRODUCT-008'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-REFUND-001'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-REFUND-001'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-RETURN-001'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-RETURN-001'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-RETURN-002'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-RETURN-002'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-RETURN-003'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-RETURN-003'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-RETURN-004'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-RETURN-004'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-RETURN-005'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-RETURN-005'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-SCALE-001'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-SCALE-001'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-SCALE-002'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-SCALE-002'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-SCALE-003'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-SCALE-003'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-SCALE-007'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-SCALE-007'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-SCALE-009'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-SCALE-009'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-SCALE-010'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-SCALE-010'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-SCALE-011'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-SCALE-011'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-SCALE-015'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-SCALE-015'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-SCALE-017'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-SCALE-017'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-SCALE-018'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-SCALE-018'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-SCALE-019'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-SCALE-019'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-SCALE-023'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-SCALE-023'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-SCALE-025'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-SCALE-025'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-SCALE-026'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-SCALE-026'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-SCALE-027'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-SCALE-027'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-SCALE-031'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-SCALE-031'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-SCALE-033'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-SCALE-033'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-SCALE-034'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-SCALE-034'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-SCALE-035'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-SCALE-035'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-SCALE-039'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-SCALE-039'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-SCALE-041'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-SCALE-041'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-SCALE-042'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-SCALE-042'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-SCALE-043'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-SCALE-043'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-SCALE-047'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-SCALE-047'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-SCALE-049'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-SCALE-049'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-SCALE-050'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-SCALE-050'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-SCALE-051'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-SCALE-051'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-SCALE-055'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-SCALE-055'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1001.F-SCALE-057'>
+  <testcase classname='rag-eval' name='tenant-1001.VECTOR_ONLY.F-SCALE-057'>
+    <skipped message='NO_EMBEDDING_MODEL' />
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-INJECT-001'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-INJECT-001'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-INJECT-002'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-INJECT-002'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-INJECT-003'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-INJECT-003'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-POISON-001'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-POLICY-001'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-POLICY-001'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-POLICY-002'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-POLICY-NOANSWER-001'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-POLICY-NOANSWER-001'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-POLICY-POISON-001'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-POLICY-POISON-001'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-POLICY-ZH-001'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-POLICY-ZH-001'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-PRODUCT-001'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-PRODUCT-001'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-PRODUCT-002'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-PRODUCT-002'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-PRODUCT-003'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-PRODUCT-003'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-PRODUCT-004'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-PRODUCT-004'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-PRODUCT-005'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-PRODUCT-005'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-PRODUCT-006'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-PRODUCT-006'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-PRODUCT-007'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-PRODUCT-007'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-PRODUCT-008'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-PRODUCT-008'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-REFUND-002'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-REFUND-001'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-RETURN-003'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-RETURN-001'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-RETURN-004'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-RETURN-002'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-RETURN-005'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-RETURN-003'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-SCALE-001'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-RETURN-004'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-SCALE-002'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-RETURN-005'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-SCALE-003'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-SCALE-001'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-SCALE-007'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-SCALE-002'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-SCALE-009'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-SCALE-003'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-SCALE-010'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-SCALE-007'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-SCALE-011'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-SCALE-009'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-SCALE-015'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-SCALE-010'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-SCALE-017'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-SCALE-011'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-SCALE-018'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-SCALE-015'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-SCALE-019'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-SCALE-017'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-SCALE-023'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-SCALE-018'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-SCALE-025'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-SCALE-019'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-SCALE-026'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-SCALE-023'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-SCALE-027'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-SCALE-025'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-SCALE-031'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-SCALE-026'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-SCALE-033'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-SCALE-027'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-SCALE-034'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-SCALE-031'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-SCALE-035'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-SCALE-033'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-SCALE-039'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-SCALE-034'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-SCALE-041'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-SCALE-035'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-SCALE-042'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-SCALE-039'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-SCALE-043'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-SCALE-041'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-SCALE-047'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-SCALE-042'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-SCALE-049'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-SCALE-043'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-SCALE-050'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-SCALE-047'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-SCALE-051'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-SCALE-049'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-SCALE-055'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-SCALE-050'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-SCALE-057'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-SCALE-051'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-UNKNOWN-001'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-SCALE-055'>
   </testcase>
-  <testcase classname='rag-eval' name='tenant-1002.E-WARRANTY-001'>
+  <testcase classname='rag-eval' name='tenant-1001.BM25_ONLY.F-SCALE-057'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-INJECT-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-INJECT-002'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-INJECT-003'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-POLICY-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-POLICY-002'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-POLICY-NOANSWER-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-POLICY-POISON-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-POLICY-ZH-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-PRODUCT-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-PRODUCT-002'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-PRODUCT-003'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-PRODUCT-004'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-PRODUCT-005'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-PRODUCT-006'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-PRODUCT-007'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-PRODUCT-008'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-REFUND-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-RETURN-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-RETURN-002'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-RETURN-003'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-RETURN-004'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-RETURN-005'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-SCALE-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-SCALE-002'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-SCALE-003'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-SCALE-007'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-SCALE-009'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-SCALE-010'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-SCALE-011'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-SCALE-015'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-SCALE-017'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-SCALE-018'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-SCALE-019'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-SCALE-023'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-SCALE-025'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-SCALE-026'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-SCALE-027'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-SCALE-031'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-SCALE-033'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-SCALE-034'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-SCALE-035'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-SCALE-039'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-SCALE-041'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-SCALE-042'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-SCALE-043'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-SCALE-047'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-SCALE-049'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-SCALE-050'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-SCALE-051'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-SCALE-055'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID.F-SCALE-057'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-INJECT-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-INJECT-002'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-INJECT-003'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-POLICY-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-POLICY-002'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-POLICY-NOANSWER-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-POLICY-POISON-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-POLICY-ZH-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-PRODUCT-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-PRODUCT-002'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-PRODUCT-003'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-PRODUCT-004'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-PRODUCT-005'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-PRODUCT-006'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-PRODUCT-007'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-PRODUCT-008'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-REFUND-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-RETURN-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-RETURN-002'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-RETURN-003'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-RETURN-004'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-RETURN-005'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-SCALE-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-SCALE-002'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-SCALE-003'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-SCALE-007'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-SCALE-009'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-SCALE-010'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-SCALE-011'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-SCALE-015'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-SCALE-017'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-SCALE-018'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-SCALE-019'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-SCALE-023'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-SCALE-025'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-SCALE-026'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-SCALE-027'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-SCALE-031'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-SCALE-033'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-SCALE-034'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-SCALE-035'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-SCALE-039'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-SCALE-041'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-SCALE-042'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-SCALE-043'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-SCALE-047'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-SCALE-049'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-SCALE-050'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-SCALE-051'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-SCALE-055'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1001.HYBRID_RERANK.F-SCALE-057'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-INJECT-001'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-INJECT-002'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-INJECT-003'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-POISON-001'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-POLICY-001'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-POLICY-NOANSWER-001'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-POLICY-POISON-001'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-POLICY-ZH-001'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-PRODUCT-001'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-PRODUCT-002'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-PRODUCT-003'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-PRODUCT-004'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-PRODUCT-005'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-PRODUCT-006'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-PRODUCT-007'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-PRODUCT-008'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-REFUND-002'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-RETURN-003'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-RETURN-004'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-RETURN-005'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-SCALE-001'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-SCALE-002'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-SCALE-003'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-SCALE-007'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-SCALE-009'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-SCALE-010'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-SCALE-011'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-SCALE-015'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-SCALE-017'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-SCALE-018'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-SCALE-019'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-SCALE-023'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-SCALE-025'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-SCALE-026'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-SCALE-027'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-SCALE-031'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-SCALE-033'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-SCALE-034'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-SCALE-035'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-SCALE-039'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-SCALE-041'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-SCALE-042'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-SCALE-043'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-SCALE-047'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-SCALE-049'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-SCALE-050'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-SCALE-051'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-SCALE-055'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-SCALE-057'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-UNKNOWN-001'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.VECTOR_ONLY.E-WARRANTY-001'>
+    <skipped message='NO_EMBEDDING_MODEL' />
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-INJECT-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-INJECT-002'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-INJECT-003'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-POISON-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-POLICY-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-POLICY-NOANSWER-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-POLICY-POISON-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-POLICY-ZH-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-PRODUCT-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-PRODUCT-002'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-PRODUCT-003'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-PRODUCT-004'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-PRODUCT-005'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-PRODUCT-006'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-PRODUCT-007'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-PRODUCT-008'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-REFUND-002'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-RETURN-003'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-RETURN-004'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-RETURN-005'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-SCALE-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-SCALE-002'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-SCALE-003'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-SCALE-007'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-SCALE-009'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-SCALE-010'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-SCALE-011'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-SCALE-015'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-SCALE-017'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-SCALE-018'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-SCALE-019'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-SCALE-023'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-SCALE-025'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-SCALE-026'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-SCALE-027'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-SCALE-031'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-SCALE-033'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-SCALE-034'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-SCALE-035'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-SCALE-039'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-SCALE-041'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-SCALE-042'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-SCALE-043'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-SCALE-047'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-SCALE-049'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-SCALE-050'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-SCALE-051'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-SCALE-055'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-SCALE-057'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-UNKNOWN-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.BM25_ONLY.E-WARRANTY-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-INJECT-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-INJECT-002'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-INJECT-003'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-POISON-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-POLICY-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-POLICY-NOANSWER-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-POLICY-POISON-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-POLICY-ZH-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-PRODUCT-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-PRODUCT-002'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-PRODUCT-003'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-PRODUCT-004'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-PRODUCT-005'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-PRODUCT-006'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-PRODUCT-007'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-PRODUCT-008'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-REFUND-002'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-RETURN-003'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-RETURN-004'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-RETURN-005'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-SCALE-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-SCALE-002'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-SCALE-003'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-SCALE-007'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-SCALE-009'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-SCALE-010'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-SCALE-011'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-SCALE-015'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-SCALE-017'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-SCALE-018'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-SCALE-019'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-SCALE-023'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-SCALE-025'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-SCALE-026'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-SCALE-027'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-SCALE-031'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-SCALE-033'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-SCALE-034'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-SCALE-035'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-SCALE-039'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-SCALE-041'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-SCALE-042'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-SCALE-043'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-SCALE-047'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-SCALE-049'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-SCALE-050'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-SCALE-051'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-SCALE-055'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-SCALE-057'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-UNKNOWN-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID.E-WARRANTY-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-INJECT-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-INJECT-002'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-INJECT-003'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-POISON-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-POLICY-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-POLICY-NOANSWER-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-POLICY-POISON-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-POLICY-ZH-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-PRODUCT-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-PRODUCT-002'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-PRODUCT-003'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-PRODUCT-004'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-PRODUCT-005'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-PRODUCT-006'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-PRODUCT-007'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-PRODUCT-008'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-REFUND-002'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-RETURN-003'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-RETURN-004'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-RETURN-005'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-SCALE-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-SCALE-002'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-SCALE-003'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-SCALE-007'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-SCALE-009'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-SCALE-010'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-SCALE-011'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-SCALE-015'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-SCALE-017'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-SCALE-018'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-SCALE-019'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-SCALE-023'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-SCALE-025'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-SCALE-026'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-SCALE-027'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-SCALE-031'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-SCALE-033'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-SCALE-034'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-SCALE-035'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-SCALE-039'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-SCALE-041'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-SCALE-042'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-SCALE-043'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-SCALE-047'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-SCALE-049'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-SCALE-050'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-SCALE-051'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-SCALE-055'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-SCALE-057'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-UNKNOWN-001'>
+  </testcase>
+  <testcase classname='rag-eval' name='tenant-1002.HYBRID_RERANK.E-WARRANTY-001'>
   </testcase>
 </testsuite>

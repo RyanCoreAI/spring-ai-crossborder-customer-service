@@ -2,7 +2,9 @@ package com.omnimerchant.agent.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.omnimerchant.agent.dto.CommerceDtos;
+import com.omnimerchant.agent.dto.ChatStreamEvent;
 import com.omnimerchant.agent.service.AgentEvalRunnerService;
+import com.omnimerchant.agent.service.AgentEvalDatasetService;
 import com.omnimerchant.agent.service.CommercePlatformService;
 import com.omnimerchant.agent.service.ReActAgentService;
 import com.omnimerchant.agent.service.ShopifyIntegrationService;
@@ -38,6 +40,8 @@ class CommerceControllerTest {
     @Mock
     AgentEvalRunnerService evalRunnerService;
     @Mock
+    AgentEvalDatasetService evalDatasetService;
+    @Mock
     ReActAgentService reActAgentService;
 
     private final JwtUtil jwtUtil = new JwtUtil("01234567890123456789012345678901", 86_400_000);
@@ -46,7 +50,7 @@ class CommerceControllerTest {
     @BeforeEach
     void setUp() {
         TenantContextHolder.clear();
-        controller = new CommerceController(commerceService, shopifyService, evalRunnerService,
+        controller = new CommerceController(commerceService, shopifyService, evalRunnerService, evalDatasetService,
                 reActAgentService, new ObjectMapper(), jwtUtil);
     }
 
@@ -113,7 +117,7 @@ class CommerceControllerTest {
     @Test
     void widgetChatValidTokenShouldEnterStreamAndClearTenantContext() throws IOException {
         var token = widgetToken("OM-FASHION", "conv-1");
-        when(reActAgentService.chat(eq(7L), eq("conv-1"), eq("hello"), eq("UNKNOWN")))
+        when(reActAgentService.chatEvents(eq(7L), eq("conv-1"), eq("hello"), eq("UNKNOWN")))
                 .thenReturn(Flux.empty());
 
         var emitter = controller.widgetChat("Bearer " + token,
@@ -121,7 +125,7 @@ class CommerceControllerTest {
 
         assertThat(emitter).isInstanceOf(SseEmitter.class);
         assertThat(TenantContextHolder.get()).isNull();
-        verify(reActAgentService).chat(eq(7L), eq("conv-1"), eq("hello"), eq("UNKNOWN"));
+        verify(reActAgentService).chatEvents(eq(7L), eq("conv-1"), eq("hello"), eq("UNKNOWN"));
     }
 
     private String widgetToken(String tenantCode, String conversationUuid) {

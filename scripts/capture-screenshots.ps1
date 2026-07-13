@@ -117,9 +117,20 @@ function Save-Screenshot {
     $CommandId.Value++
     $shot = Invoke-Cdp -Socket $Socket -Id $CommandId.Value -Method "Page.captureScreenshot" -Params @{
         format = "png"
-        captureBeyondViewport = $true
+        captureBeyondViewport = $false
     }
-    [IO.File]::WriteAllBytes($OutPath, [Convert]::FromBase64String($shot.data))
+    $bytes = [Convert]::FromBase64String($shot.data)
+    for ($attempt = 0; $attempt -lt 5; $attempt++) {
+        try {
+            [IO.File]::WriteAllBytes($OutPath, $bytes)
+            return
+        } catch {
+            if ($attempt -eq 4) {
+                throw
+            }
+            Start-Sleep -Milliseconds 400
+        }
+    }
 }
 
 function Remove-ProfileDir {
@@ -194,7 +205,7 @@ try {
         $escapedToken = ($token | ConvertTo-Json -Compress)
         $emailForStorage = if ($AdminEmail) { $AdminEmail } else { "admin@example.com" }
         $escapedEmail = ($emailForStorage | ConvertTo-Json -Compress)
-        $script = "localStorage.setItem('token',$escapedToken); localStorage.setItem('email',$escapedEmail); localStorage.setItem('selectedTenantId','$TenantId');"
+        $script = "sessionStorage.setItem('omni_access_token',$escapedToken); sessionStorage.setItem('omni_email',$escapedEmail); localStorage.setItem('selectedTenantId','$TenantId');"
         $commandId++
         Invoke-Cdp -Socket $socket -Id $commandId -Method "Page.addScriptToEvaluateOnNewDocument" -Params @{ source = $script } | Out-Null
         $commandId++
@@ -206,6 +217,8 @@ try {
             @{ Name = "knowledge"; Path = "/admin/knowledge" },
             @{ Name = "channels"; Path = "/admin/channels" },
             @{ Name = "inbox"; Path = "/admin/inbox" },
+            @{ Name = "conversations"; Path = "/admin/conversations" },
+            @{ Name = "customers"; Path = "/admin/customers" },
             @{ Name = "orders"; Path = "/admin/orders" },
             @{ Name = "products"; Path = "/admin/products" },
             @{ Name = "tickets"; Path = "/admin/tickets" },
@@ -215,9 +228,14 @@ try {
             @{ Name = "operations"; Path = "/admin/operations" },
             @{ Name = "integrations"; Path = "/admin/integrations" },
             @{ Name = "agent-workflow"; Path = "/admin/agent-workflow" },
+            @{ Name = "multilingual"; Path = "/admin/multilingual" },
             @{ Name = "security"; Path = "/admin/security" },
             @{ Name = "sre"; Path = "/admin/sre" },
             @{ Name = "audit"; Path = "/admin/audit" },
+            @{ Name = "usage"; Path = "/admin/usage" },
+            @{ Name = "tenants"; Path = "/admin/tenants" },
+            @{ Name = "users"; Path = "/admin/users" },
+            @{ Name = "macros"; Path = "/admin/macros" },
             @{ Name = "tool-calls"; Path = "/admin/tool-calls" },
             @{ Name = "evals"; Path = "/admin/evals" },
             @{ Name = "observability"; Path = "/admin/observability" },
@@ -226,6 +244,25 @@ try {
             @{ Name = "rag-safety"; Path = "/admin/rag-safety" }
         )
         foreach ($page in $adminPages) {
+            $out = Join-Path $resolvedOutputDir "$($page.Name).png"
+            Save-Screenshot -Socket $socket -CommandId ([ref]$commandId) -Url "$BaseUrl$($page.Path)" -OutPath $out
+        }
+
+        $commandId++
+        Invoke-Cdp -Socket $socket -Id $commandId -Method "Emulation.setDeviceMetricsOverride" -Params @{
+            width = 412
+            height = 915
+            deviceScaleFactor = 1
+            mobile = $true
+        } | Out-Null
+        $mobilePages = @(
+            @{ Name = "login-mobile"; Path = "/login" },
+            @{ Name = "widget-mobile"; Path = "/widget" },
+            @{ Name = "dashboard-mobile"; Path = "/admin" },
+            @{ Name = "inbox-mobile"; Path = "/admin/inbox" },
+            @{ Name = "rag-workbench-mobile"; Path = "/admin/rag-workbench" }
+        )
+        foreach ($page in $mobilePages) {
             $out = Join-Path $resolvedOutputDir "$($page.Name).png"
             Save-Screenshot -Socket $socket -CommandId ([ref]$commandId) -Url "$BaseUrl$($page.Path)" -OutPath $out
         }

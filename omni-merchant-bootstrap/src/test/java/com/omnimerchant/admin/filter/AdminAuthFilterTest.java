@@ -29,6 +29,16 @@ class AdminAuthFilterTest {
     }
 
     @Test
+    void shouldRejectRuntimeMetadataWithoutBearerToken() throws Exception {
+        var request = new MockHttpServletRequest("GET", "/api/system/runtime");
+        var response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, new MockFilterChain());
+
+        assertThat(response.getStatus()).isEqualTo(401);
+    }
+
+    @Test
     void shouldAttachPrincipalForProtectedPath() throws Exception {
         var request = new MockHttpServletRequest("POST", "/api/chat/stream");
         request.addHeader("Authorization", "Bearer " +
