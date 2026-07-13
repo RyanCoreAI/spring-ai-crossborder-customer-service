@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @TableName("tenant")
 public class Tenant {
 
-    @TableId(type = IdType.ASSIGN_ID)
+    @TableId(type = IdType.AUTO)
     private Long id;
 
     /** 租户业务编码（对外展示，如 OM-A1B2C3） */

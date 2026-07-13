@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @Data
 @TableName("agent_eval_result")
 public class AgentEvalResult {
-    @TableId(type = IdType.ASSIGN_ID)
+    @TableId(type = IdType.AUTO)
     private Long id;
     private Long tenantId;
     private Long runId;

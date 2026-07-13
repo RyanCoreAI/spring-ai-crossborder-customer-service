@@ -28,20 +28,22 @@ public class MultiLingualEngine {
      * 如果已经是英语则跳过翻译，节省 token。
      */
     public ProcessedMessage preprocess(String rawMessage) {
-        var lang = languageDetector.detect(rawMessage);
+        var detection = languageDetector.detectWithConfidence(rawMessage);
+        var lang = detection.language();
         var needsTranslation = languageDetector.needsTranslation(lang);
-
-        var translated = rawMessage;
-        if (needsTranslation) {
-            translated = translationService.toEnglish(rawMessage, lang);
-        }
+        var translation = translationService.translateDetailed(rawMessage, lang, "en");
 
         var result = ProcessedMessage.builder()
                 .originalText(rawMessage)
                 .detectedLanguage(lang)
-                .translatedText(translated)
+                .translatedText(translation.translatedText())
                 .needsTranslation(needsTranslation)
-                .confidence(1.0)
+                .confidence(detection.confidence())
+                .translationProvider(translation.provider())
+                .translationModel(translation.model())
+                .translationStatus(translation.status())
+                .translationLatencyMs(translation.latencyMs())
+                .fallbackReason(translation.fallbackReason())
                 .build();
 
         log.debug("Preprocess: {} -> {} (needsTranslation={})", lang, "en", needsTranslation);
@@ -52,10 +54,15 @@ public class MultiLingualEngine {
      * 后处理：将英语响应翻译回目标语言。
      */
     public String postprocess(String englishResponse, String targetLang) {
+        return postprocessDetailed(englishResponse, targetLang).translatedText();
+    }
+
+    public TranslationResult postprocessDetailed(String englishResponse, String targetLang) {
         if (!languageDetector.needsTranslation(targetLang)) {
-            return englishResponse;
+            return new TranslationResult(englishResponse, englishResponse, "en", targetLang,
+                    "LOCAL", "none", "SKIPPED", 0, null);
         }
-        var translated = translationService.fromEnglish(englishResponse, targetLang);
+        var translated = translationService.translateDetailed(englishResponse, "en", targetLang);
         log.debug("Postprocess: en -> {}", targetLang);
         return translated;
     }

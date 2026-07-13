@@ -12,6 +12,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.stream.Collectors;
 
@@ -59,6 +60,13 @@ public class GlobalExceptionHandler {
         log.warn("请求体无法解析: method={}, path={}, message={}",
                 request.getMethod(), request.getRequestURI(), e.getMostSpecificCause().getMessage());
         return R.fail(ErrorCode.BAD_REQUEST, "请求体必须是合法 JSON");
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public R<Void> handleNoResource(NoResourceFoundException e, HttpServletRequest request) {
+        log.warn("请求资源不存在: method={}, path={}", request.getMethod(), request.getRequestURI());
+        return R.fail("404", "请求资源不存在");
     }
 
     @ExceptionHandler(Exception.class)

@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 @Data
 @TableName("qa_review_queue")
 public class QaReviewQueue {
-    @TableId(type = IdType.ASSIGN_ID)
+    @TableId(type = IdType.AUTO)
     private Long id;
     private Long tenantId;
     private String sourceType;

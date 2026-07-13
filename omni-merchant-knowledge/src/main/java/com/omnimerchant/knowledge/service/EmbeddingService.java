@@ -59,6 +59,10 @@ public class EmbeddingService {
         return results;
     }
 
+    public boolean isAvailable() {
+        return embeddingModel.getIfAvailable() != null;
+    }
+
     private EmbeddingModel requireEmbeddingModel() {
         var model = embeddingModel.getIfAvailable();
         if (model == null) {

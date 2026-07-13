@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 @TableName("knowledge_doc")
 public class KnowledgeDoc {
 
-    @TableId(type = IdType.ASSIGN_ID)
+    @TableId(type = IdType.AUTO)
     private Long id;
 
     private String docUuid;

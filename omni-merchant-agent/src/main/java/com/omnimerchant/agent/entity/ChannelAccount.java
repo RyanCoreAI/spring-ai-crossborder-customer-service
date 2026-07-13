@@ -12,12 +12,14 @@ import java.time.LocalDateTime;
 @Data
 @TableName("channel_account")
 public class ChannelAccount {
-    @TableId(type = IdType.ASSIGN_ID)
+    @TableId(type = IdType.AUTO)
     private Long id;
     private Long tenantId;
     private String channel;
     private String accountName;
     private String externalAccountId;
+    private String callbackKey;
+    private Long credentialId;
     private String adapterStatus;
     private Integer inboundEnabled;
     private Integer outboundEnabled;

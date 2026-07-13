@@ -2,6 +2,8 @@ package com.omnimerchant.knowledge.config;
 
 import com.omnimerchant.common.config.OmniMerchantProperties;
 import com.zaxxer.hikari.HikariDataSource;
+import org.flywaydb.core.Flyway;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -39,5 +41,18 @@ public class PgVectorDataSourceConfig {
     @Bean("pgVectorNamedJdbcTemplate")
     public NamedParameterJdbcTemplate pgVectorNamedJdbcTemplate(@org.springframework.beans.factory.annotation.Qualifier("pgVectorDataSource") DataSource ds) {
         return new NamedParameterJdbcTemplate(ds);
+    }
+
+    @Bean(initMethod = "migrate")
+    @ConditionalOnProperty(name = "omnimerchant.pgvector.migration-enabled", havingValue = "true", matchIfMissing = true)
+    public Flyway pgVectorFlyway(
+            @org.springframework.beans.factory.annotation.Qualifier("pgVectorDataSource") DataSource ds) {
+        return Flyway.configure()
+                .dataSource(ds)
+                .locations("classpath:db/migration/postgresql")
+                .table("flyway_schema_history_pgvector")
+                .cleanDisabled(true)
+                .validateOnMigrate(true)
+                .load();
     }
 }

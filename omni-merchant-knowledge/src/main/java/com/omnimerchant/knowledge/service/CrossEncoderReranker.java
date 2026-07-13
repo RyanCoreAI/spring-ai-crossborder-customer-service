@@ -25,8 +25,15 @@ public class CrossEncoderReranker {
     private final OmniMerchantProperties props;
 
     public List<HybridSearchResult> rerank(String query, List<HybridSearchResult> candidates, int topN) {
-        if (candidates.isEmpty() || candidates.size() <= topN) {
-            return candidates;
+        return rerankWithEvidence(query, candidates, topN).results();
+    }
+
+    public RerankOutcome rerankWithEvidence(String query, List<HybridSearchResult> candidates, int topN) {
+        if (candidates.isEmpty()) {
+            return new RerankOutcome(List.of(), "skipped-empty");
+        }
+        if (candidates.size() <= topN) {
+            return new RerankOutcome(candidates, "skipped-not-required");
         }
         var url = props.getKnowledge().getReranker().getUrl();
         var documents = candidates.stream()
@@ -39,14 +46,14 @@ public class CrossEncoderReranker {
             var response = restTemplate.postForObject(url, request, Map.class);
             if (response == null || !response.containsKey("scores")) {
                 log.warn("BGE Reranker returned empty response, using RRF results");
-                return candidates.subList(0, Math.min(topN, candidates.size()));
+                return new RerankOutcome(candidates.subList(0, Math.min(topN, candidates.size())), "fallback-rrf");
             }
             @SuppressWarnings("unchecked")
             var scores = (List<Map<String, Object>>) response.get("scores");
             if (scores == null) {
-                return candidates.subList(0, Math.min(topN, candidates.size()));
+                return new RerankOutcome(candidates.subList(0, Math.min(topN, candidates.size())), "fallback-rrf");
             }
-            return scores.stream()
+            var results = scores.stream()
                     .map(s -> {
                         int idx = ((Number) s.get("index")).intValue();
                         double score = ((Number) s.get("score")).doubleValue();
@@ -58,11 +65,15 @@ public class CrossEncoderReranker {
                     .sorted(Comparator.comparingDouble(HybridSearchResult::rerankScore).reversed())
                     .limit(topN)
                     .toList();
+            return new RerankOutcome(results, "cross-encoder");
         } catch (Exception e) {
             log.error("BGE Reranker call failed: {}", e.getMessage());
             log.warn("Reranker fallback: returning top-{} RRF results", topN);
-            return candidates.subList(0, Math.min(topN, candidates.size()));
+            return new RerankOutcome(candidates.subList(0, Math.min(topN, candidates.size())), "fallback-rrf");
         }
+    }
+
+    public record RerankOutcome(List<HybridSearchResult> results, String mode) {
     }
 
     record RerankRequest(String query, List<String> documents) {

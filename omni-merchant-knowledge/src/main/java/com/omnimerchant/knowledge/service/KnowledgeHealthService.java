@@ -9,7 +9,7 @@ import com.omnimerchant.knowledge.entity.RagSafetyReview;
 import com.omnimerchant.knowledge.mapper.KnowledgeDocMapper;
 import com.omnimerchant.knowledge.mapper.RagSafetyReviewMapper;
 import com.omnimerchant.tenant.context.TenantContextHolder;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -18,12 +18,25 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-@RequiredArgsConstructor
 public class KnowledgeHealthService {
 
     private final KnowledgeDocMapper docMapper;
     private final RagSafetyReviewMapper reviewMapper;
     private final JdbcTemplate jdbcTemplate;
+    private final JdbcTemplate pgVectorJdbcTemplate;
+    private final EmbeddingService embeddingService;
+
+    public KnowledgeHealthService(KnowledgeDocMapper docMapper,
+                                  RagSafetyReviewMapper reviewMapper,
+                                  JdbcTemplate jdbcTemplate,
+                                  @Qualifier("pgVectorJdbcTemplate") JdbcTemplate pgVectorJdbcTemplate,
+                                  EmbeddingService embeddingService) {
+        this.docMapper = docMapper;
+        this.reviewMapper = reviewMapper;
+        this.jdbcTemplate = jdbcTemplate;
+        this.pgVectorJdbcTemplate = pgVectorJdbcTemplate;
+        this.embeddingService = embeddingService;
+    }
 
     public RagDtos.Health health() {
         var tenantId = requireTenant();
@@ -50,6 +63,10 @@ public class KnowledgeHealthService {
         var indexFailedDocs = docMapper.selectCount(new LambdaQueryWrapper<KnowledgeDoc>()
                 .eq(KnowledgeDoc::getTenantId, tenantId)
                 .eq(KnowledgeDoc::getStatus, 3));
+        var vectorChunkCount = safeVectorCount(tenantId);
+        var embeddingConfigured = embeddingService.isAvailable();
+        var vectorStatus = !embeddingConfigured ? "NO_EMBEDDING_MODEL"
+                : vectorChunkCount == 0 ? "EMPTY_INDEX" : "READY";
         return new RagDtos.Health(
                 approvedDocs,
                 pendingReviews,
@@ -60,7 +77,20 @@ public class KnowledgeHealthService {
                 indexFailedDocs,
                 safeCount("SELECT COUNT(*) FROM agent_eval_run WHERE tenant_id = ? AND unsupported_claim_rate > 0", tenantId),
                 safeCount("SELECT COUNT(*) FROM agent_eval_run WHERE tenant_id = ? AND citation_coverage < 100", tenantId),
-                topFailedQueries(tenantId));
+                topFailedQueries(tenantId),
+                embeddingConfigured,
+                vectorChunkCount,
+                vectorStatus);
+    }
+
+    private long safeVectorCount(Long tenantId) {
+        try {
+            var value = pgVectorJdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM policy_vectors WHERE tenant_id = ?", Long.class, tenantId);
+            return value == null ? 0 : value;
+        } catch (Exception ignored) {
+            return 0;
+        }
     }
 
     private long safeCount(String sql, Long tenantId) {

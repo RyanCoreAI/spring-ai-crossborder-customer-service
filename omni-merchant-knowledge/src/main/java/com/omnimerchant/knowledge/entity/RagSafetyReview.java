@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 @Data
 @TableName("rag_safety_review")
 public class RagSafetyReview {
-    @TableId(type = IdType.ASSIGN_ID)
+    @TableId(type = IdType.AUTO)
     private Long id;
     private Long tenantId;
     private String docUuid;

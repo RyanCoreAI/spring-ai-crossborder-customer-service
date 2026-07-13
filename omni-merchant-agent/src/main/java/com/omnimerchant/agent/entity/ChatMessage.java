@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 @TableName("chat_message")
 public class ChatMessage {
 
-    @TableId(type = IdType.ASSIGN_ID)
+    @TableId(type = IdType.AUTO)
     private Long id;
 
     private String messageUuid;
@@ -21,7 +21,15 @@ public class ChatMessage {
     private String content;
     private String contentType;
     private String originalLang;
+    private BigDecimal detectionConfidence;
     private String translatedContent;
+    private String translationLang;
+    private Integer isTranslated;
+    private String translationProvider;
+    private String translationModel;
+    private String translationStatus;
+    private Integer translationLatencyMs;
+    private String translationFallbackReason;
     private String toolCalls;
     private String toolName;
     private String modelProvider;

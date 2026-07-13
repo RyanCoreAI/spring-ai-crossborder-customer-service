@@ -1,5 +1,7 @@
 package com.omnimerchant.agent.service;
 
+import com.omnimerchant.agent.dto.ObservabilityDtos;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.omnimerchant.agent.dto.CommerceDtos;
 import com.omnimerchant.agent.entity.AgentEvalRun;
@@ -37,7 +39,7 @@ public class ObservabilityService {
     private final WebhookEventMapper webhookEventMapper;
     private final AgentTraceService agentTraceService;
 
-    public CommerceDtos.ObservabilitySummaryVO summary() {
+    public ObservabilityDtos.ObservabilitySummaryVO summary() {
         var conversations = conversationMapper.selectCount(new LambdaQueryWrapper<Conversation>());
         var aiResolved = conversationMapper.selectCount(new LambdaQueryWrapper<Conversation>()
                 .eq(Conversation::getResolved, 1)
@@ -65,7 +67,7 @@ public class ObservabilityService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         var webhookBacklog = webhookEventMapper.selectCount(new LambdaQueryWrapper<WebhookEvent>()
                 .in(WebhookEvent::getStatus, List.of(0, 2, 3)));
-        return new CommerceDtos.ObservabilitySummaryVO(
+        return new ObservabilityDtos.ObservabilitySummaryVO(
                 conversations,
                 aiResolved,
                 escalations,
@@ -95,7 +97,7 @@ public class ObservabilityService {
                 webhookBacklog);
     }
 
-    public List<CommerceDtos.FailureBucketVO> failures(String category) {
+    public List<ObservabilityDtos.FailureBucketVO> failures(String category) {
         var runs = agentRunMapper.selectList(new LambdaQueryWrapper<AgentRun>()
                 .isNotNull(AgentRun::getFailureCategory)
                 .eq(category != null && !category.isBlank(), AgentRun::getFailureCategory, category)
@@ -106,7 +108,7 @@ public class ObservabilityService {
                 .collect(Collectors.groupingBy(AgentRun::getFailureCategory, Collectors.counting()))
                 .entrySet().stream()
                 .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
-                .map(e -> new CommerceDtos.FailureBucketVO(e.getKey(), e.getValue(), rate(e.getValue(), total)))
+                .map(e -> new ObservabilityDtos.FailureBucketVO(e.getKey(), e.getValue(), rate(e.getValue(), total)))
                 .toList();
     }
 
@@ -114,11 +116,11 @@ public class ObservabilityService {
         return agentTraceService.listTraces(conversationUuid, status, page, size);
     }
 
-    public CommerceDtos.TraceDetailVO trace(String traceId) {
+    public ObservabilityDtos.TraceDetailVO trace(String traceId) {
         return agentTraceService.getTrace(traceId);
     }
 
-    public List<CommerceDtos.ToolMetricVO> tools() {
+    public List<ObservabilityDtos.ToolMetricVO> tools() {
         var logs = toolCallLogMapper.selectList(new LambdaQueryWrapper<ToolCallLog>()
                 .orderByDesc(ToolCallLog::getCreatedAt)
                 .last("LIMIT 1000"));
@@ -128,22 +130,22 @@ public class ObservabilityService {
                 .map(entry -> {
                     var calls = entry.getValue().size();
                     var failures = entry.getValue().stream().filter(t -> Integer.valueOf(0).equals(t.getSuccess())).count();
-                    return new CommerceDtos.ToolMetricVO(entry.getKey(), calls, failures,
+                    return new ObservabilityDtos.ToolMetricVO(entry.getKey(), calls, failures,
                             rate(calls - failures, calls),
                             percentile(entry.getValue().stream().map(ToolCallLog::getLatencyMs).toList(), 95));
                 })
-                .sorted(Comparator.comparingLong(CommerceDtos.ToolMetricVO::failures).reversed()
-                        .thenComparing(CommerceDtos.ToolMetricVO::toolName))
+                .sorted(Comparator.comparingLong(ObservabilityDtos.ToolMetricVO::failures).reversed()
+                        .thenComparing(ObservabilityDtos.ToolMetricVO::toolName))
                 .toList();
     }
 
-    public List<CommerceDtos.EvalTrendVO> evalTrend(int limit) {
+    public List<ObservabilityDtos.EvalTrendVO> evalTrend(int limit) {
         var capped = Math.max(1, Math.min(limit, 50));
         return evalRunMapper.selectList(new LambdaQueryWrapper<AgentEvalRun>()
                         .orderByDesc(AgentEvalRun::getStartedAt)
                         .last("LIMIT " + capped))
                 .stream()
-                .map(run -> new CommerceDtos.EvalTrendVO(run.getId(), run.getRunUuid(), run.getStatus(),
+                .map(run -> new ObservabilityDtos.EvalTrendVO(run.getId(), run.getRunUuid(), run.getStatus(),
                         run.getTotalCases() == null ? 0 : run.getTotalCases(),
                         safeDecimal(run.getPassRate()), safeDecimal(run.getToolPrecision()),
                         safeDecimal(run.getToolRecall()), safeDecimal(run.getCitationCoverage()),
@@ -152,16 +154,16 @@ public class ObservabilityService {
                 .toList();
     }
 
-    public CommerceDtos.RagMetricVO rag() {
+    public ObservabilityDtos.RagMetricVO rag() {
         var runs = evalRunMapper.selectList(new LambdaQueryWrapper<AgentEvalRun>()
                 .orderByDesc(AgentEvalRun::getStartedAt)
                 .last("LIMIT 20"));
         var measuredRuns = runs.stream().filter(this::hasRagMetricEvidence).toList();
         if (measuredRuns.isEmpty()) {
-            return new CommerceDtos.RagMetricVO(0, BigDecimal.ZERO, BigDecimal.ZERO, null, null, null,
+            return new ObservabilityDtos.RagMetricVO(0, BigDecimal.ZERO, BigDecimal.ZERO, null, null, null,
                     BigDecimal.ZERO, BigDecimal.ZERO, null, null);
         }
-        return new CommerceDtos.RagMetricVO(measuredRuns.size(),
+        return new ObservabilityDtos.RagMetricVO(measuredRuns.size(),
                 avg(measuredRuns.stream().map(AgentEvalRun::getCitationCoverage).toList()),
                 avg(measuredRuns.stream().map(AgentEvalRun::getRetrievalPrecisionAtK).toList()),
                 avg(measuredRuns.stream().map(AgentEvalRun::getRecallAtK).toList()),

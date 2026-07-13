@@ -20,6 +20,10 @@
             <artifactId>omni-merchant-tenant</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.github.binarywang</groupId>
+            <artifactId>weixin-java-cp</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>

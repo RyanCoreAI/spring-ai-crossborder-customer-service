@@ -1,5 +1,7 @@
 package com.omnimerchant.agent.service;
 
+import com.omnimerchant.agent.dto.GovernanceDtos;
+
 import com.omnimerchant.agent.dto.CommerceDtos;
 import org.springframework.stereotype.Service;
 
@@ -16,9 +18,12 @@ public class AgentOrchestratorService {
                 || message.contains("生气") || message.contains("糟糕");
         return switch (normalizedIntent) {
             case "ORDER_STATUS" -> new SpecialistPlan("order", "订单智能体",
-                    List.of("queryOrder"), "MEDIUM", true, false, angry);
+                    angry ? List.of("queryOrder", "escalateToHuman") : List.of("queryOrder"),
+                    "MEDIUM", true, false, angry);
             case "LOGISTICS" -> new SpecialistPlan("order", "订单/物流智能体",
-                    List.of("queryOrder", "trackLogistics"), angry ? "HIGH" : "MEDIUM", false, false, angry);
+                    angry ? List.of("queryOrder", "trackLogistics", "escalateToHuman")
+                            : List.of("queryOrder", "trackLogistics"),
+                    angry ? "HIGH" : "MEDIUM", false, false, angry);
             case "RETURN_REFUND", "CANCEL_ORDER", "ADDRESS_CHANGE" -> new SpecialistPlan("return", "退货/退款智能体",
                     List.of("queryOrder", "createReturnRequest", "requestRefundOrReplacement", "requestAddressChange", "escalateToHuman"),
                     "HIGH", true, true, true);
@@ -33,7 +38,7 @@ public class AgentOrchestratorService {
         };
     }
 
-    public CommerceDtos.AgentWorkflowVO describeWorkflow() {
+    public GovernanceDtos.AgentWorkflowVO describeWorkflow() {
         var nodes = List.of(
                 node("triage", "意图分流", "识别语言、意图、风险和是否需要身份校验", "detectLanguage, classifyIntent", "IMPLEMENTED"),
                 node("order", "订单智能体", "订单查询、身份校验和物流状态解释", "queryOrder, trackLogistics", "BACKED_BY_TOOLS"),
@@ -45,16 +50,16 @@ public class AgentOrchestratorService {
                 node("qa", "质检智能体", "关闭会话后进入 QA 队列和评测回归", "qaReview", "PARTIAL")
         );
         var policies = List.of(
-                new CommerceDtos.AgentPolicyVO("tool_allowlist", "不同 specialist 只能调用自己的工具集合", "AgentOrchestratorService.plan"),
-                new CommerceDtos.AgentPolicyVO("approval_gate", "退款、补发、改地址、取消订单进入人工审批", "commerce_action_request / return_request"),
-                new CommerceDtos.AgentPolicyVO("tenant_fail_closed", "缺租户上下文、跨租户访问和 widget token mismatch 拒绝", "TenantInterceptor + JWT claims"),
-                new CommerceDtos.AgentPolicyVO("trace_replay", "每次路由、工具调用、RAG、失败归因可回放", "agent_run / agent_step / tool_call_log")
+                new GovernanceDtos.AgentPolicyVO("tool_allowlist", "不同 specialist 只能调用自己的工具集合", "AgentOrchestratorService.plan"),
+                new GovernanceDtos.AgentPolicyVO("approval_gate", "退款、补发、改地址、取消订单进入人工审批", "commerce_action_request / return_request"),
+                new GovernanceDtos.AgentPolicyVO("tenant_fail_closed", "缺租户上下文、跨租户访问和 widget token mismatch 拒绝", "TenantInterceptor + JWT claims"),
+                new GovernanceDtos.AgentPolicyVO("trace_replay", "每次路由、工具调用、RAG、失败归因可回放", "agent_run / agent_step / tool_call_log")
         );
-        return new CommerceDtos.AgentWorkflowVO("Supervisor-Worker 客服工作流", "ORCHESTRATOR_BACKBONE", nodes, policies);
+        return new GovernanceDtos.AgentWorkflowVO("Supervisor-Worker 客服工作流", "ORCHESTRATOR_BACKBONE", nodes, policies);
     }
 
-    private CommerceDtos.AgentNodeVO node(String key, String label, String responsibility, String tools, String status) {
-        return new CommerceDtos.AgentNodeVO(key, label, responsibility, tools, status);
+    private GovernanceDtos.AgentNodeVO node(String key, String label, String responsibility, String tools, String status) {
+        return new GovernanceDtos.AgentNodeVO(key, label, responsibility, tools, status);
     }
 
     public record SpecialistPlan(

@@ -20,9 +20,20 @@ public class CredentialCipher {
     private final SecureRandom secureRandom = new SecureRandom();
 
     public CredentialCipher(@Value("${omnimerchant.integrations.encryption-key:}") String encryptionKey) {
-        this.key = encryptionKey == null || encryptionKey.isBlank()
-                ? null
-                : Base64.getDecoder().decode(encryptionKey);
+        if (encryptionKey == null || encryptionKey.isBlank()) {
+            this.key = null;
+            return;
+        }
+        try {
+            this.key = Base64.getDecoder().decode(encryptionKey);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException(
+                    "INTEGRATION_ENCRYPTION_KEY must be a Base64 encoded AES-128/192/256 key", e);
+        }
+        if (!(key.length == 16 || key.length == 24 || key.length == 32)) {
+            throw new IllegalStateException(
+                    "INTEGRATION_ENCRYPTION_KEY must decode to 16, 24, or 32 bytes");
+        }
     }
 
     public String encrypt(String plainText) {

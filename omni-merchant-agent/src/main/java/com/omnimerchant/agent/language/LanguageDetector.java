@@ -54,13 +54,19 @@ public class LanguageDetector {
      * 检测文本语言，返回 ISO 639-1 代码。
      */
     public String detect(String text) {
+        return detectWithConfidence(text).language();
+    }
+
+    public DetectionResult detectWithConfidence(String text) {
         if (text == null || text.isBlank()) {
-            return "en";
+            return new DetectionResult("en", 0.0);
         }
         var language = detector.detectLanguageOf(text);
         var iso = LANG_TO_ISO.getOrDefault(language, "en");
+        var confidenceValues = detector.computeLanguageConfidenceValues(text);
+        var confidence = Math.max(0.0, Math.min(1.0, confidenceValues.getOrDefault(language, 0.0)));
         log.debug("Language detected: {} -> {}", iso, text.length() > 30 ? text.substring(0, 30) + "..." : text);
-        return iso;
+        return new DetectionResult(iso, confidence);
     }
 
     /**
@@ -75,5 +81,8 @@ public class LanguageDetector {
      */
     public Set<String> getSupportedLanguages() {
         return Set.copyOf(LANG_TO_ISO.values());
+    }
+
+    public record DetectionResult(String language, double confidence) {
     }
 }

@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @TableName("integration_credential")
 public class IntegrationCredential {
 
-    @TableId(type = IdType.ASSIGN_ID)
+    @TableId(type = IdType.AUTO)
     private Long id;
 
     private Long tenantId;
@@ -21,6 +21,7 @@ public class IntegrationCredential {
     private String shopDomain;
     private String accessTokenEncrypted;
     private String webhookSecretEncrypted;
+    private String credentialPayloadEncrypted;
     private Integer status;
     private LocalDateTime lastSyncAt;
     private String lastSyncStatus;

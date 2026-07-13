@@ -1,50 +1,31 @@
 package com.omnimerchant.agent.service;
 
+import com.omnimerchant.agent.dto.IntegrationDtos;
+import com.omnimerchant.agent.dto.HelpdeskDtos;
+import com.omnimerchant.agent.dto.GovernanceDtos;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.omnimerchant.agent.dto.CommerceDtos;
-import com.omnimerchant.agent.entity.AgentEvalRun;
-import com.omnimerchant.agent.entity.AgentIdempotencyGuard;
-import com.omnimerchant.agent.entity.AgentRun;
-import com.omnimerchant.agent.entity.AuditEvent;
 import com.omnimerchant.agent.entity.ChannelAccount;
 import com.omnimerchant.agent.entity.ChatMessage;
-import com.omnimerchant.agent.entity.CommerceActionPolicy;
-import com.omnimerchant.agent.entity.CommerceActionRequest;
 import com.omnimerchant.agent.entity.Conversation;
-import com.omnimerchant.agent.entity.DataRetentionPolicy;
-import com.omnimerchant.agent.entity.EscalationRecord;
-import com.omnimerchant.agent.entity.QaReviewQueue;
-import com.omnimerchant.agent.entity.ReturnRequest;
-import com.omnimerchant.agent.entity.ShopifySyncJob;
+import com.omnimerchant.agent.entity.Customer;
+import com.omnimerchant.agent.entity.OrderInfo;
 import com.omnimerchant.agent.entity.SlaPolicy;
-import com.omnimerchant.agent.entity.SloPolicy;
-import com.omnimerchant.agent.entity.SupportRolePolicy;
 import com.omnimerchant.agent.entity.SupportMacro;
 import com.omnimerchant.agent.entity.Ticket;
 import com.omnimerchant.agent.entity.ToolCallLog;
-import com.omnimerchant.agent.entity.WebhookEvent;
-import com.omnimerchant.agent.mapper.AgentEvalRunMapper;
-import com.omnimerchant.agent.mapper.AgentIdempotencyGuardMapper;
-import com.omnimerchant.agent.mapper.AgentRunMapper;
-import com.omnimerchant.agent.mapper.AuditEventMapper;
 import com.omnimerchant.agent.mapper.ChannelAccountMapper;
 import com.omnimerchant.agent.mapper.ChatMessageMapper;
-import com.omnimerchant.agent.mapper.CommerceActionPolicyMapper;
-import com.omnimerchant.agent.mapper.CommerceActionRequestMapper;
 import com.omnimerchant.agent.mapper.ConversationMapper;
-import com.omnimerchant.agent.mapper.DataRetentionPolicyMapper;
-import com.omnimerchant.agent.mapper.EscalationRecordMapper;
-import com.omnimerchant.agent.mapper.QaReviewQueueMapper;
-import com.omnimerchant.agent.mapper.ReturnRequestMapper;
-import com.omnimerchant.agent.mapper.ShopifySyncJobMapper;
+import com.omnimerchant.agent.mapper.CustomerMapper;
+import com.omnimerchant.agent.mapper.OrderInfoMapper;
 import com.omnimerchant.agent.mapper.SlaPolicyMapper;
-import com.omnimerchant.agent.mapper.SloPolicyMapper;
-import com.omnimerchant.agent.mapper.SupportRolePolicyMapper;
 import com.omnimerchant.agent.mapper.SupportMacroMapper;
 import com.omnimerchant.agent.mapper.TicketMapper;
 import com.omnimerchant.agent.mapper.ToolCallLogMapper;
-import com.omnimerchant.agent.mapper.WebhookEventMapper;
+import com.omnimerchant.agent.mapper.SupportIdentityLookupMapper;
 import com.omnimerchant.common.exception.BusinessException;
 import com.omnimerchant.common.exception.ErrorCode;
 import com.omnimerchant.tenant.context.TenantContextHolder;
@@ -70,34 +51,29 @@ import java.util.stream.Collectors;
 public class CommercialOpsService {
 
     private final ConversationMapper conversationMapper;
+    private final CustomerMapper customerMapper;
+    private final OrderInfoMapper orderInfoMapper;
     private final ChannelAccountMapper channelAccountMapper;
     private final TicketMapper ticketMapper;
     private final SlaPolicyMapper slaPolicyMapper;
-    private final CommerceActionPolicyMapper actionPolicyMapper;
-    private final SupportRolePolicyMapper rolePolicyMapper;
     private final SupportMacroMapper supportMacroMapper;
-    private final DataRetentionPolicyMapper retentionPolicyMapper;
-    private final SloPolicyMapper sloPolicyMapper;
-    private final AgentIdempotencyGuardMapper idempotencyGuardMapper;
-    private final EscalationRecordMapper escalationMapper;
-    private final ReturnRequestMapper returnRequestMapper;
-    private final CommerceActionRequestMapper actionRequestMapper;
-    private final QaReviewQueueMapper qaReviewQueueMapper;
-    private final AuditEventMapper auditEventMapper;
     private final ChatMessageMapper chatMessageMapper;
     private final ToolCallLogMapper toolCallLogMapper;
-    private final AgentRunMapper agentRunMapper;
-    private final AgentEvalRunMapper evalRunMapper;
-    private final WebhookEventMapper webhookEventMapper;
-    private final ShopifySyncJobMapper shopifySyncJobMapper;
+    private final SupportIdentityLookupMapper identityLookupMapper;
     private final AgentOrchestratorService agentOrchestratorService;
+    private final HelpdeskProjectionService helpdeskProjectionService;
+    private final OperationsAnalyticsService operationsAnalyticsService;
+    private final CommerceApprovalService commerceApprovalService;
+    private final SupportQualityService supportQualityService;
+    private final SupportAuditService supportAuditService;
+    private final ProductionReadinessService productionReadinessService;
 
-    public List<CommerceDtos.ChannelSummaryVO> channels() {
+    public List<IntegrationDtos.ChannelSummaryVO> channels() {
         var conversations = conversationMapper.selectList(new LambdaQueryWrapper<Conversation>()
                 .orderByDesc(Conversation::getStartedAt)
                 .last("LIMIT 2000"));
         var grouped = conversations.stream()
-                .collect(Collectors.groupingBy(c -> valueOr(c.getChannel(), "UNKNOWN"), LinkedHashMap::new, Collectors.toList()));
+                .collect(Collectors.groupingBy(c -> normalizeChannel(c.getChannel()), LinkedHashMap::new, Collectors.toList()));
         var accounts = channelAccountMapper.selectList(new LambdaQueryWrapper<ChannelAccount>()
                 .orderByAsc(ChannelAccount::getChannel)
                 .orderByDesc(ChannelAccount::getUpdatedAt));
@@ -106,18 +82,23 @@ public class CommercialOpsService {
                 a -> a,
                 (left, right) -> left,
                 LinkedHashMap::new));
-        var channelOrder = new ArrayList<>(List.of("WEB_WIDGET", "WEB", "EMAIL", "WHATSAPP", "INSTAGRAM", "FACEBOOK", "SMS", "VOICE"));
+        var channelOrder = new ArrayList<>(List.of("WEB_WIDGET", "WECHAT_KF", "EMAIL"));
         for (var account : accounts) {
-            var channel = valueOr(account.getChannel(), "UNKNOWN");
+            var channel = normalizeChannel(account.getChannel());
             if (!channelOrder.contains(channel)) {
                 channelOrder.add(channel);
             }
         }
-        var channels = new ArrayList<CommerceDtos.ChannelSummaryVO>();
+        for (var channel : grouped.keySet()) {
+            if (!channelOrder.contains(channel)) {
+                channelOrder.add(channel);
+            }
+        }
+        var channels = new ArrayList<IntegrationDtos.ChannelSummaryVO>();
         for (var channel : channelOrder) {
             var rows = grouped.getOrDefault(channel, List.of());
             var account = accountByChannel.get(channel);
-            channels.add(new CommerceDtos.ChannelSummaryVO(
+            channels.add(new IntegrationDtos.ChannelSummaryVO(
                     channel,
                     channelLabel(channel),
                     channelStatus(channel, rows, account),
@@ -138,7 +119,12 @@ public class CommercialOpsService {
         return channels;
     }
 
-    public List<CommerceDtos.ChannelAccountVO> channelAccounts() {
+    private String normalizeChannel(String channel) {
+        var normalized = valueOr(channel, "UNKNOWN").toUpperCase(Locale.ROOT);
+        return "WEB".equals(normalized) ? "WEB_WIDGET" : normalized;
+    }
+
+    public List<IntegrationDtos.ChannelAccountVO> channelAccounts() {
         return channelAccountMapper.selectList(new LambdaQueryWrapper<ChannelAccount>()
                         .orderByAsc(ChannelAccount::getChannel)
                         .orderByDesc(ChannelAccount::getUpdatedAt))
@@ -147,8 +133,7 @@ public class CommercialOpsService {
                 .toList();
     }
 
-    public List<CommerceDtos.QueueBucketVO> inboxQueues() {
-        backfillTicketsFromEscalations();
+    public List<HelpdeskDtos.QueueBucketVO> inboxQueues() {
         var conversations = conversationMapper.selectList(new LambdaQueryWrapper<Conversation>().last("LIMIT 2000"));
         var tickets = ticketMapper.selectList(new LambdaQueryWrapper<Ticket>().last("LIMIT 2000"));
         return List.of(
@@ -162,10 +147,9 @@ public class CommercialOpsService {
         );
     }
 
-    public CommerceDtos.PageResult<CommerceDtos.InboxWorkItemVO> inboxItems(String queue, int page, int size) {
-        backfillTicketsFromEscalations();
+    public CommerceDtos.PageResult<HelpdeskDtos.InboxWorkItemVO> inboxItems(String queue, int page, int size) {
         var queueKey = valueOr(queue, "all");
-        var items = new ArrayList<CommerceDtos.InboxWorkItemVO>();
+        var items = new ArrayList<HelpdeskDtos.InboxWorkItemVO>();
         var conversations = conversationMapper.selectList(new LambdaQueryWrapper<Conversation>()
                         .orderByDesc(Conversation::getLastMessageAt)
                         .orderByDesc(Conversation::getStartedAt)
@@ -187,7 +171,7 @@ public class CommercialOpsService {
                 .map(this::toInboxItem)
                 .forEach(items::add);
         var sorted = items.stream()
-                .sorted(Comparator.comparing(CommerceDtos.InboxWorkItemVO::lastMessageAt,
+                .sorted(Comparator.comparing(HelpdeskDtos.InboxWorkItemVO::lastMessageAt,
                         Comparator.nullsLast(Comparator.reverseOrder())))
                 .toList();
         var from = Math.max(0, (page - 1) * clamp(size));
@@ -195,8 +179,62 @@ public class CommercialOpsService {
         return new CommerceDtos.PageResult<>(sorted.size(), from >= sorted.size() ? List.of() : sorted.subList(from, to));
     }
 
-    public CommerceDtos.PageResult<CommerceDtos.TicketVO> tickets(String status, int page, int size) {
-        backfillTicketsFromEscalations();
+    public HelpdeskDtos.InboxContextVO inboxContext(String conversationUuid) {
+        var conversation = requireConversation(conversationUuid);
+        var messages = chatMessageMapper.selectList(new LambdaQueryWrapper<ChatMessage>()
+                        .eq(ChatMessage::getConversationUuid, conversationUuid)
+                        .orderByAsc(ChatMessage::getSeqNo)
+                        .orderByAsc(ChatMessage::getCreatedAt))
+                .stream().map(this::toInboxMessageVO).toList();
+
+        Customer customer = null;
+        if (conversation.getCustomerId() != null) {
+            customer = customerMapper.selectById(conversation.getCustomerId());
+        }
+        if (customer == null && conversation.getCustomerEmail() != null) {
+            customer = customerMapper.selectOne(new LambdaQueryWrapper<Customer>()
+                    .eq(Customer::getEmail, conversation.getCustomerEmail())
+                    .last("LIMIT 1"));
+        }
+
+        var ordersWrapper = new LambdaQueryWrapper<OrderInfo>()
+                .orderByDesc(OrderInfo::getPlacedAt)
+                .last("LIMIT 5");
+        if (customer != null && customer.getId() != null) {
+            ordersWrapper.eq(OrderInfo::getCustomerId, customer.getId());
+        } else if (conversation.getCustomerEmail() != null) {
+            ordersWrapper.eq(OrderInfo::getCustomerEmail, conversation.getCustomerEmail());
+        } else {
+            ordersWrapper.eq(OrderInfo::getId, -1L);
+        }
+
+        var tickets = ticketMapper.selectList(new LambdaQueryWrapper<Ticket>()
+                        .eq(Ticket::getConversationUuid, conversationUuid)
+                        .orderByDesc(Ticket::getUpdatedAt))
+                .stream().map(this::toTicketVO).toList();
+        var actions = commerceApprovalService.forConversation(conversation);
+        var tools = toolCallLogMapper.selectList(new LambdaQueryWrapper<ToolCallLog>()
+                        .eq(ToolCallLog::getConversationUuid, conversationUuid)
+                        .orderByDesc(ToolCallLog::getCreatedAt)
+                        .last("LIMIT 20"))
+                .stream().map(this::toInboxToolSummaryVO).toList();
+        var latestTicket = ticketMapper.selectOne(new LambdaQueryWrapper<Ticket>()
+                .eq(Ticket::getConversationUuid, conversationUuid)
+                .orderByDesc(Ticket::getUpdatedAt)
+                .last("LIMIT 1"));
+
+        return new HelpdeskDtos.InboxContextVO(
+                toInboxItem(conversation),
+                messages,
+                toInboxCustomerContextVO(customer),
+                orderInfoMapper.selectList(ordersWrapper).stream().map(this::toInboxOrderContextVO).toList(),
+                tickets,
+                actions,
+                tools,
+                toSlaRisk(latestTicket));
+    }
+
+    public CommerceDtos.PageResult<HelpdeskDtos.TicketVO> tickets(String status, int page, int size) {
         var wrapper = new LambdaQueryWrapper<Ticket>()
                 .eq(status != null && !status.isBlank(), Ticket::getStatus, status)
                 .orderByDesc(Ticket::getPriority)
@@ -206,48 +244,65 @@ public class CommercialOpsService {
     }
 
     @Transactional
-    public CommerceDtos.TicketVO assignTicket(Long id, CommerceDtos.TakeoverRequest request) {
+    public HelpdeskDtos.TicketVO assignTicket(Long id, HelpdeskDtos.TakeoverRequest request) {
         var ticket = requireTicket(id);
-        ticket.setAssignedAgentId(request == null || request.agentId() == null ? 1L : request.agentId());
+        var actorId = requireActor(request == null ? null : request.agentId());
+        if (List.of("RESOLVED", "CLOSED").contains(ticket.getStatus())) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "已结束工单不能重新分配");
+        }
+        ticket.setAssignedAgentId(actorId);
         ticket.setAssignedAt(LocalDateTime.now());
         ticket.setStatus("ASSIGNED");
         ticketMapper.updateById(ticket);
-        writeAudit(ticket.getAssignedAgentId(), "SUPPORT_AGENT", "ASSIGN_TICKET", "TICKET",
+        supportAuditService.record(ticket.getAssignedAgentId(), "SUPPORT_AGENT", "ASSIGN_TICKET", "TICKET",
                 String.valueOf(id), "人工客服接管独立工单 " + ticket.getTicketNo(), "MEDIUM", request == null ? null : request.note());
         return toTicketVO(ticket);
     }
 
     @Transactional
-    public CommerceDtos.TicketVO resolveTicket(Long id, CommerceDtos.ActionDecisionRequest request) {
+    public HelpdeskDtos.TicketVO resolveTicket(Long id, HelpdeskDtos.ActionDecisionRequest request) {
         var ticket = requireTicket(id);
+        var actorId = requireActor(request == null ? null : request.actorId());
+        if (List.of("RESOLVED", "CLOSED").contains(ticket.getStatus())) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "工单已经结束");
+        }
         ticket.setStatus("RESOLVED");
         ticket.setResolvedAt(LocalDateTime.now());
         ticket.setClosedAt(LocalDateTime.now());
         ticket.setCloseReason(request == null || request.note() == null ? "RESOLVED" : request.note());
         ticketMapper.updateById(ticket);
-        writeAudit(request == null ? null : request.actorId(), "SUPPORT_AGENT", "RESOLVE_TICKET", "TICKET",
+        helpdeskProjectionService.enqueueForTicket(ticket);
+        supportAuditService.record(actorId, "SUPPORT_AGENT", "RESOLVE_TICKET", "TICKET",
                 String.valueOf(id), "解决独立工单 " + ticket.getTicketNo(), "MEDIUM", ticket.getCloseReason());
         return toTicketVO(ticket);
     }
 
     @Transactional
-    public CommerceDtos.InboxWorkItemVO takeover(String conversationUuid, CommerceDtos.TakeoverRequest request) {
+    public HelpdeskDtos.InboxWorkItemVO takeover(String conversationUuid, HelpdeskDtos.TakeoverRequest request) {
         var conversation = requireConversation(conversationUuid);
-        conversation.setHumanAgentId(request == null ? 1L : request.agentId() == null ? 1L : request.agentId());
+        var actorId = requireActor(request == null ? null : request.agentId());
+        if (Integer.valueOf(5).equals(conversation.getStatus())) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "已关闭会话不能接管");
+        }
+        conversation.setHumanAgentId(actorId);
         conversation.setStatus(4);
         conversation.setEscalated(1);
         conversation.setEscalatedAt(conversation.getEscalatedAt() == null ? LocalDateTime.now() : conversation.getEscalatedAt());
         conversationMapper.updateById(conversation);
-        writeAudit(conversation.getHumanAgentId(), "SUPPORT_AGENT", "TAKEOVER_CONVERSATION",
+        supportAuditService.record(conversation.getHumanAgentId(), "SUPPORT_AGENT", "TAKEOVER_CONVERSATION",
                 "CONVERSATION", conversationUuid, "人工客服接管会话", "MEDIUM", request == null ? null : request.note());
         return toInboxItem(conversation);
     }
 
     @Transactional
-    public CommerceDtos.InboxWorkItemVO humanReply(String conversationUuid, CommerceDtos.HumanReplyRequest request) {
+    public HelpdeskDtos.InboxWorkItemVO humanReply(String conversationUuid, HelpdeskDtos.HumanReplyRequest request) {
         var conversation = requireConversation(conversationUuid);
         if (request == null || request.message() == null || request.message().isBlank()) {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "人工回复不能为空");
+        }
+        var actorId = requireActor(request.actorId());
+        if (conversation.getHumanAgentId() == null || !conversation.getHumanAgentId().equals(actorId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "请先接管会话后再回复");
         }
         var seq = chatMessageMapper.selectCount(new LambdaQueryWrapper<ChatMessage>()
                 .eq(ChatMessage::getConversationUuid, conversationUuid)).intValue() + 1;
@@ -274,24 +329,22 @@ public class CommercialOpsService {
             conversation.setResolved(1);
             conversation.setEndedAt(LocalDateTime.now());
             conversation.setDurationSeconds(durationSeconds(conversation.getStartedAt(), conversation.getEndedAt()));
+            helpdeskProjectionService.enqueueForConversation(conversation);
         } else {
             conversation.setStatus(2);
         }
         conversationMapper.updateById(conversation);
-        writeAudit(conversation.getHumanAgentId(), "SUPPORT_AGENT", "HUMAN_REPLY",
+        supportAuditService.record(conversation.getHumanAgentId(), "SUPPORT_AGENT", "HUMAN_REPLY",
                 "CONVERSATION", conversationUuid, "人工客服发送回复", "LOW", null);
         return toInboxItem(conversation);
     }
 
-    public CommerceDtos.SlaSummaryVO slaSummary() {
-        backfillTicketsFromEscalations();
+    public HelpdeskDtos.SlaSummaryVO slaSummary() {
         var now = LocalDateTime.now();
-        var open = escalationMapper.selectList(new LambdaQueryWrapper<EscalationRecord>()
-                .in(EscalationRecord::getStatus, List.of(1, 2, 3)));
-        var responseBreached = open.stream().filter(t -> Integer.valueOf(1).equals(t.getSlaResponseBreached())
-                || dueBefore(t.getSlaResponseDueAt(), now)).count();
-        var resolveBreached = open.stream().filter(t -> Integer.valueOf(1).equals(t.getSlaResolveBreached())
-                || dueBefore(t.getSlaResolveDueAt(), now)).count();
+        var open = ticketMapper.selectList(new LambdaQueryWrapper<Ticket>()
+                .notIn(Ticket::getStatus, List.of("RESOLVED", "CLOSED")));
+        var responseBreached = open.stream().filter(t -> dueBefore(t.getSlaResponseDueAt(), now)).count();
+        var resolveBreached = open.stream().filter(t -> dueBefore(t.getSlaResolveDueAt(), now)).count();
         var dueSoon = open.stream().filter(t -> !dueBefore(t.getSlaResolveDueAt(), now)
                 && t.getSlaResolveDueAt() != null
                 && t.getSlaResolveDueAt().isBefore(now.plusMinutes(30))).count();
@@ -299,15 +352,15 @@ public class CommercialOpsService {
                 .filter(t -> dueBefore(t.getSlaResponseDueAt(), now)
                         || dueBefore(t.getSlaResolveDueAt(), now)
                         || (t.getSlaResolveDueAt() != null && t.getSlaResolveDueAt().isBefore(now.plusMinutes(30))))
-                .sorted(Comparator.comparing(EscalationRecord::getSlaResolveDueAt, Comparator.nullsLast(Comparator.naturalOrder())))
+                .sorted(Comparator.comparing(Ticket::getSlaResolveDueAt, Comparator.nullsLast(Comparator.naturalOrder())))
                 .limit(20)
                 .map(this::toSlaRisk)
                 .toList();
-        return new CommerceDtos.SlaSummaryVO(open.size(), responseBreached, resolveBreached, dueSoon,
+        return new HelpdeskDtos.SlaSummaryVO(open.size(), responseBreached, resolveBreached, dueSoon,
                 rateDecimal(responseBreached, open.size()), rateDecimal(resolveBreached, open.size()), slaPolicies(), risks);
     }
 
-    public List<CommerceDtos.SlaPolicyVO> slaPolicies() {
+    public List<HelpdeskDtos.SlaPolicyVO> slaPolicies() {
         return slaPolicyMapper.selectList(new LambdaQueryWrapper<SlaPolicy>()
                         .orderByDesc(SlaPolicy::getActive)
                         .orderByAsc(SlaPolicy::getPriority)
@@ -315,7 +368,7 @@ public class CommercialOpsService {
                 .stream().map(this::toSlaPolicyVO).toList();
     }
 
-    public List<CommerceDtos.MacroVO> macros() {
+    public List<HelpdeskDtos.MacroVO> macros() {
         return supportMacroMapper.selectList(new LambdaQueryWrapper<SupportMacro>()
                         .eq(SupportMacro::getEnabled, 1)
                         .orderByAsc(SupportMacro::getCategory)
@@ -325,315 +378,140 @@ public class CommercialOpsService {
                 .toList();
     }
 
-    public List<CommerceDtos.CommerceActionPolicyVO> actionPolicies() {
-        return actionPolicyMapper.selectList(new LambdaQueryWrapper<CommerceActionPolicy>()
-                        .orderByDesc(CommerceActionPolicy::getActive)
-                        .orderByAsc(CommerceActionPolicy::getActionType))
-                .stream().map(this::toActionPolicyVO).toList();
+    public List<HelpdeskDtos.CommerceActionPolicyVO> actionPolicies() {
+        return commerceApprovalService.policies();
     }
 
-    public CommerceDtos.PageResult<CommerceDtos.ActionRequestVO> actions(String status, int page, int size) {
-        var records = new ArrayList<CommerceDtos.ActionRequestVO>();
-        var returnRows = returnRequestMapper.selectList(new LambdaQueryWrapper<ReturnRequest>()
-                .orderByDesc(ReturnRequest::getCreatedAt)
-                .last("LIMIT 500"));
-        returnRows.stream().map(this::toReturnActionVO).forEach(records::add);
-        var actionRows = actionRequestMapper.selectList(new LambdaQueryWrapper<CommerceActionRequest>()
-                .orderByDesc(CommerceActionRequest::getCreatedAt)
-                .last("LIMIT 500"));
-        actionRows.stream().map(this::toCommerceActionVO).forEach(records::add);
-        var filtered = records.stream()
-                .filter(r -> status == null || status.isBlank() || status.equalsIgnoreCase(r.status()))
-                .sorted(Comparator.comparing(CommerceDtos.ActionRequestVO::createdAt, Comparator.nullsLast(Comparator.reverseOrder())))
-                .toList();
-        var from = Math.max(0, (page - 1) * clamp(size));
-        var to = Math.min(filtered.size(), from + clamp(size));
-        return new CommerceDtos.PageResult<>(filtered.size(), from >= filtered.size() ? List.of() : filtered.subList(from, to));
+    public CommerceDtos.PageResult<HelpdeskDtos.ActionRequestVO> actions(String status, int page, int size) {
+        return commerceApprovalService.page(status, page, size);
     }
 
     @Transactional
-    public CommerceDtos.ActionRequestVO approveAction(String source, Long id, CommerceDtos.ActionDecisionRequest request) {
-        if ("return_request".equals(source)) {
-            var row = requireReturnRequest(id);
-            row.setStatus(2);
-            row.setResolution("APPROVED_MANUAL");
-            row.setResolutionNote(request == null ? null : request.note());
-            returnRequestMapper.updateById(row);
-            writeAudit(actor(request), "SUPPORT_SUPERVISOR", "APPROVE_ACTION", "RETURN_REQUEST",
-                    String.valueOf(id), "批准人工审核动作 " + row.getRequestNo(), "HIGH", row.getRequestType());
-            return toReturnActionVO(row);
-        }
-        var row = requireActionRequest(id);
-        row.setStatus("APPROVED_MANUAL");
-        row.setApprovedBy(actor(request));
-        row.setApprovedAt(LocalDateTime.now());
-        row.setExternalResult("Manual approval recorded; no external ecommerce write was executed by AI.");
-        actionRequestMapper.updateById(row);
-        writeAudit(actor(request), "SUPPORT_SUPERVISOR", "APPROVE_ACTION", "COMMERCE_ACTION_REQUEST",
-                String.valueOf(id), "批准人工审核动作 " + row.getRequestNo(), "HIGH", row.getActionType());
-        return toCommerceActionVO(row);
+    public HelpdeskDtos.ActionRequestVO approveAction(String source, Long id, HelpdeskDtos.ActionDecisionRequest request) {
+        return commerceApprovalService.approve(source, id, request);
     }
 
     @Transactional
-    public CommerceDtos.ActionRequestVO rejectAction(String source, Long id, CommerceDtos.ActionDecisionRequest request) {
-        if ("return_request".equals(source)) {
-            var row = requireReturnRequest(id);
-            row.setStatus(3);
-            row.setResolution("REJECTED");
-            row.setResolutionNote(request == null ? null : request.note());
-            returnRequestMapper.updateById(row);
-            writeAudit(actor(request), "SUPPORT_SUPERVISOR", "REJECT_ACTION", "RETURN_REQUEST",
-                    String.valueOf(id), "拒绝人工审核动作 " + row.getRequestNo(), "HIGH", row.getRequestType());
-            return toReturnActionVO(row);
-        }
-        var row = requireActionRequest(id);
-        row.setStatus("REJECTED");
-        row.setExternalResult(request == null ? null : request.note());
-        actionRequestMapper.updateById(row);
-        writeAudit(actor(request), "SUPPORT_SUPERVISOR", "REJECT_ACTION", "COMMERCE_ACTION_REQUEST",
-                String.valueOf(id), "拒绝人工审核动作 " + row.getRequestNo(), "HIGH", row.getActionType());
-        return toCommerceActionVO(row);
+    public HelpdeskDtos.ActionRequestVO rejectAction(String source, Long id, HelpdeskDtos.ActionDecisionRequest request) {
+        return commerceApprovalService.reject(source, id, request);
     }
 
-    public CommerceDtos.PageResult<CommerceDtos.QaReviewItemVO> qaQueue(String status, int page, int size) {
-        backfillQaFromResolvedTickets();
-        var wrapper = new LambdaQueryWrapper<QaReviewQueue>()
-                .eq(status != null && !status.isBlank(), QaReviewQueue::getStatus, status)
-                .orderByDesc(QaReviewQueue::getCreatedAt);
-        var result = qaReviewQueueMapper.selectPage(new Page<>(page, clamp(size)), wrapper);
-        return new CommerceDtos.PageResult<>(result.getTotal(), result.getRecords().stream().map(this::toQaVO).toList());
+    public CommerceDtos.PageResult<HelpdeskDtos.QaReviewItemVO> qaQueue(String status, int page, int size) {
+        return supportQualityService.queue(status, page, size);
+    }
+
+    public HelpdeskDtos.QaSummaryVO qaSummary() {
+        return supportQualityService.summary();
     }
 
     @Transactional
-    public CommerceDtos.QaReviewItemVO reviewQa(Long id, CommerceDtos.QaReviewRequest request) {
-        var row = qaReviewQueueMapper.selectById(id);
-        if (row == null) {
-            throw new BusinessException(ErrorCode.NOT_FOUND, "质检任务不存在");
-        }
-        row.setStatus("REVIEWED");
-        row.setReviewerId(request == null ? null : request.reviewerId());
-        row.setReviewerScore(request == null ? null : request.score());
-        row.setFindings(request == null ? null : request.findings());
-        row.setActionItems(request == null ? null : request.actionItems());
-        row.setReviewedAt(LocalDateTime.now());
-        qaReviewQueueMapper.updateById(row);
-        writeAudit(row.getReviewerId(), "SUPPORT_QA", "REVIEW_QA", "QA_REVIEW_QUEUE",
-                String.valueOf(id), "完成客服质检复核", "MEDIUM", row.getTicketNo());
-        return toQaVO(row);
+    public HelpdeskDtos.QaReviewItemVO reviewQa(Long id, HelpdeskDtos.QaReviewRequest request) {
+        return supportQualityService.review(id, request);
     }
 
-    public CommerceDtos.OperationsSummaryVO operations() {
-        var conversations = conversationMapper.selectList(new LambdaQueryWrapper<Conversation>()
-                .orderByDesc(Conversation::getStartedAt)
-                .last("LIMIT 2000"));
-        var traces = agentRunMapper.selectList(new LambdaQueryWrapper<AgentRun>()
-                .orderByDesc(AgentRun::getStartedAt)
-                .last("LIMIT 1000"));
-        var total = conversations.size();
-        var aiResolved = conversations.stream().filter(c -> Integer.valueOf(1).equals(c.getResolved())
-                && !Integer.valueOf(1).equals(c.getEscalated())).count();
-        var takeovers = conversations.stream().filter(c -> c.getHumanAgentId() != null || Integer.valueOf(1).equals(c.getEscalated())).count();
-        var closedTickets = escalationMapper.selectCount(new LambdaQueryWrapper<EscalationRecord>()
-                .in(EscalationRecord::getStatus, List.of(4, 5)));
-        var resolvedCases = Math.max(1, aiResolved + closedTickets);
-        var cost = conversations.stream().map(Conversation::getTotalCostUsd).filter(v -> v != null).reduce(BigDecimal.ZERO, BigDecimal::add);
-        return new CommerceDtos.OperationsSummaryVO(total, aiResolved, takeovers, closedTickets, pendingActionCount(),
-                rateDecimal(aiResolved, total), rateDecimal(takeovers, total), averageCsat(conversations.stream().map(Conversation::getCsatScore).toList()),
-                averageSeconds(conversations.stream().map(Conversation::getFirstResponseMs).toList()),
-                cost.divide(BigDecimal.valueOf(resolvedCases), 4, RoundingMode.HALF_UP),
-                dimensions(conversations.stream().map(c -> valueOr(c.getIntentPrimary(), "UNKNOWN")).toList(), total),
-                dimensions(conversations.stream().map(c -> valueOr(c.getChannel(), "UNKNOWN")).toList(), total),
-                dimensions(traces.stream().map(r -> valueOr(r.getFailureCategory(), "NONE")).filter(v -> !"NONE".equals(v)).toList(), traces.size()));
+    public HelpdeskDtos.OperationsSummaryVO operations() {
+        return operationsAnalyticsService.operations();
     }
 
-    public CommerceDtos.PageResult<CommerceDtos.AuditEventVO> auditEvents(int page, int size) {
-        var result = auditEventMapper.selectPage(new Page<>(page, clamp(size)),
-                new LambdaQueryWrapper<AuditEvent>().orderByDesc(AuditEvent::getCreatedAt));
-        return new CommerceDtos.PageResult<>(result.getTotal(), result.getRecords().stream().map(this::toAuditVO).toList());
+    public CommerceDtos.PageResult<HelpdeskDtos.AuditEventVO> auditEvents(int page, int size) {
+        return supportAuditService.page(page, size);
     }
 
-    public CommerceDtos.SreSummaryVO sre() {
-        var summary = buildSloMetrics();
-        var alerts = buildAlerts(summary);
-        var webhookBacklog = webhookEventMapper.selectCount(new LambdaQueryWrapper<WebhookEvent>()
-                .in(WebhookEvent::getStatus, List.of(0, 2, 3)));
-        var failedTraces = agentRunMapper.selectCount(new LambdaQueryWrapper<AgentRun>().eq(AgentRun::getStatus, "FAILED"));
-        var failedTools = toolCallLogMapper.selectCount(new LambdaQueryWrapper<ToolCallLog>().eq(ToolCallLog::getSuccess, 0));
-        var deadJobs = shopifySyncJobMapper.selectCount(new LambdaQueryWrapper<ShopifySyncJob>().eq(ShopifySyncJob::getStatus, "DEAD"));
-        var cost = conversationMapper.selectList(new LambdaQueryWrapper<Conversation>().last("LIMIT 2000"))
-                .stream().map(Conversation::getTotalCostUsd).filter(v -> v != null).reduce(BigDecimal.ZERO, BigDecimal::add);
-        var latestEval = evalRunMapper.selectOne(new LambdaQueryWrapper<AgentEvalRun>()
-                .orderByDesc(AgentEvalRun::getStartedAt)
-                .last("LIMIT 1"));
-        return new CommerceDtos.SreSummaryVO(summary, sloPolicies(), alerts, webhookBacklog, failedTraces, failedTools, deadJobs,
-                cost, latestEval == null ? BigDecimal.ZERO : latestEval.getPassRate(), LocalDateTime.now());
+    public GovernanceDtos.SreSummaryVO sre() {
+        return operationsAnalyticsService.sre();
     }
 
-    public CommerceDtos.AgentWorkflowVO agentWorkflow() {
+    public GovernanceDtos.AgentWorkflowVO agentWorkflow() {
         return agentOrchestratorService.describeWorkflow();
     }
 
-    public CommerceDtos.AgentPlanVO agentPlan(CommerceDtos.AgentPlanRequest request) {
+    public GovernanceDtos.AgentPlanVO agentPlan(GovernanceDtos.AgentPlanRequest request) {
         var intent = request == null ? null : request.intent();
         var message = request == null ? null : request.message();
         var plan = agentOrchestratorService.plan(intent, message);
         var evidence = "intent=" + valueOr(intent, "UNKNOWN")
                 + ", messageLength=" + (message == null ? 0 : message.length())
                 + ", allowlist=" + String.join(",", plan.toolAllowlist());
-        return new CommerceDtos.AgentPlanVO(plan.specialistKey(), plan.specialistLabel(),
+        return new GovernanceDtos.AgentPlanVO(plan.specialistKey(), plan.specialistLabel(),
                 plan.toolAllowlist(), plan.riskLevel(), plan.requiresIdentityVerification(),
                 plan.requiresApproval(), plan.recommendHumanHandoff(), evidence);
     }
 
-    public CommerceDtos.ProductionReadinessVO productionReadiness() {
-        var rolePolicies = rolePolicies();
-        var actionPolicies = actionPolicies();
-        var retentionPolicies = retentionPolicies();
-        var recentGuards = recentAgentGuards();
-        var security = List.of(
-                readiness("tenant_fail_closed", "租户隔离 fail-closed", "IMPLEMENTED",
-                        "TenantInterceptor + JWT tenantIds/platformAdmin + MyBatis tenant handler", "持续补跨租户回归用例", "LOW"),
-                readiness("widget_session_token", "买家咨询组件短期 token", "IMPLEMENTED",
-                        "/api/widget/session 签发短期 customerSessionToken，chat 校验 tenant/conversation", "增加渠道级密钥轮换", "LOW"),
-                readiness("tool_approval_gate", "高风险工具审批流", "IMPLEMENTED",
-                        "return_request / commerce_action_request；退款、补发、改地址、取消订单不由 AI 直接执行", "接入真实外部写操作前补幂等键和回滚说明", "MEDIUM"),
-                readiness("rbac_abac", "RBAC/ABAC 权限模型", "PARTIAL",
-                        rolePolicies.isEmpty() ? "当前区分 platformAdmin、租户 membership 和后台 JWT；细粒度页面/动作权限仍是路线图" : "support_role_policy 已声明页面、工具和审批权限策略",
-                        "继续把 role policy 接入 method-level 权限和前端按钮级权限", "MEDIUM"),
-                readiness("pii_redaction", "PII 脱敏与 trace 边界", "PARTIAL",
-                        "trace/eval 默认记录摘要和元数据；demo profile 才允许完整 transcript", "补 DLP 规则和导出脱敏测试", "MEDIUM"),
-                readiness("sso_scim", "OIDC/SAML/SCIM 企业身份", "ROADMAP",
-                        "文档和 readiness 中标注，不伪装已接通", "按 Auth0/Keycloak/OIDC 做独立 profile", "LOW")
-        );
-        var retention = retentionPolicies.isEmpty() ? defaultRetentionPolicies() : retentionPolicies;
-        var shopify = List.of(
-                shopify("oauth_install", "OAuth 安装流", "IMPLEMENTED", "/api/integrations/shopify/install + oauth/callback HMAC/state", "opt-in", "补真实 dev-store smoke"),
-                shopify("webhook_hmac_dedupe", "Webhook HMAC 与去重", "IMPLEMENTED", "X-Shopify-Hmac-Sha256 + X-Shopify-Webhook-Id 入库去重", "default-on", "补乱序事件版本保护"),
-                shopify("cursor_sync", "GraphQL cursor 同步与 throttle backoff", "IMPLEMENTED", "shopify_sync_job cursor/throttleStatus/nextRunAt", "opt-in", "补 bulk operation 初始全量同步"),
-                shopify("dlq_replay", "失败队列和重放", "IMPLEMENTED", "FAILED/DEAD 状态 + replay endpoint", "manual", "补重放权限细分"),
-                shopify("gdpr_webhooks", "GDPR mandatory webhooks", "PARTIAL", "能力边界已标注，默认未声称 App Store 生产 app", "roadmap", "补 customers/data_request、customers/redact、shop/redact"),
-                shopify("external_write_actions", "真实退款/取消/改地址外部写操作", "NOT_ENABLED", "默认只进入内部审批流，AI 不直接执行外部写操作", "disabled", "接真实写操作前补审批、幂等、审计和回滚")
-        );
-        var runbooks = List.of(
-                runbook("LLM provider unavailable", "MODEL_UNAVAILABLE / LLM_TIMEOUT spike", "切换降级模型或转人工，保留 traceId", "平台管理员", "POLICY_DECLARED"),
-                runbook("Redis rate limiter unavailable", "RATE_LIMIT failure 或 fallback quota exhausted", "付费 LLM endpoint fail-closed，检查 Redis 和本地 fallback 配额", "后端/SRE", "POLICY_DECLARED"),
-                runbook("Shopify throttle/backlog", "webhookBacklog、deadShopifyJobs 或 throttleStatus 异常", "暂停重试，检查 nextRunAt，按店铺限流恢复", "集成负责人", "POLICY_DECLARED"),
-                runbook("RAG poisoning spike", "poisoning block rate 或 quarantined docs 激增", "暂停索引、人工审核、从 RAG Workbench 复现 query", "知识库管理员", "POLICY_DECLARED")
-        );
-        return new CommerceDtos.ProductionReadinessVO(security, rolePolicies, actionPolicies, retention, shopify, runbooks, recentGuards,
-                List.of("不承诺 App Store embedded admin UI 已完成", "不执行真实退款/取消/改地址外部写操作",
-                        "不把 WhatsApp/Instagram/Facebook/SMS/Voice 显示为已接通"), LocalDateTime.now());
+    public GovernanceDtos.ProductionReadinessVO productionReadiness() {
+        return productionReadinessService.snapshot();
     }
 
-    public List<CommerceDtos.SupportRolePolicyVO> rolePolicies() {
-        return rolePolicyMapper.selectList(new LambdaQueryWrapper<SupportRolePolicy>()
-                        .orderByAsc(SupportRolePolicy::getRoleKey))
-                .stream().map(this::toRolePolicyVO).toList();
+    public List<GovernanceDtos.SupportRolePolicyVO> rolePolicies() {
+        return productionReadinessService.rolePolicies();
     }
 
-    public List<CommerceDtos.DataRetentionPolicyVO> retentionPolicies() {
-        return retentionPolicyMapper.selectList(new LambdaQueryWrapper<DataRetentionPolicy>()
-                        .orderByAsc(DataRetentionPolicy::getDataSet))
-                .stream().map(this::toRetentionVO).toList();
+    public List<GovernanceDtos.DataRetentionPolicyVO> retentionPolicies() {
+        return productionReadinessService.retentionPolicies();
     }
 
-    public List<CommerceDtos.SloPolicyVO> sloPolicies() {
-        return sloPolicyMapper.selectList(new LambdaQueryWrapper<SloPolicy>()
-                        .orderByDesc(SloPolicy::getActive)
-                        .orderByAsc(SloPolicy::getSloKey))
-                .stream().map(this::toSloPolicyVO).toList();
+    public List<GovernanceDtos.SloPolicyVO> sloPolicies() {
+        return productionReadinessService.sloPolicies();
     }
 
-    public List<CommerceDtos.AgentGuardVO> recentAgentGuards() {
-        return idempotencyGuardMapper.selectList(new LambdaQueryWrapper<AgentIdempotencyGuard>()
-                        .orderByDesc(AgentIdempotencyGuard::getLastSeenAt)
-                        .last("LIMIT 20"))
-                .stream().map(this::toAgentGuardVO).toList();
+    public List<GovernanceDtos.AgentGuardVO> recentAgentGuards() {
+        return productionReadinessService.recentAgentGuards();
     }
 
-    private void backfillQaFromResolvedTickets() {
-        var resolved = escalationMapper.selectList(new LambdaQueryWrapper<EscalationRecord>()
-                .in(EscalationRecord::getStatus, List.of(4, 5))
-                .orderByDesc(EscalationRecord::getResolvedAt)
-                .last("LIMIT 100"));
-        for (var ticket : resolved) {
-            var existing = qaReviewQueueMapper.selectOne(new LambdaQueryWrapper<QaReviewQueue>()
-                    .eq(QaReviewQueue::getSourceType, "ESCALATION")
-                    .eq(QaReviewQueue::getSourceId, ticket.getId())
-                    .last("LIMIT 1"));
-            if (existing != null) {
-                continue;
-            }
-            var qa = new QaReviewQueue();
-            qa.setTenantId(requireTenant());
-            qa.setSourceType("ESCALATION");
-            qa.setSourceId(ticket.getId());
-            qa.setConversationUuid(ticket.getConversationUuid());
-            qa.setTicketNo(ticket.getTicketNo());
-            qa.setStatus("PENDING");
-            qa.setAutoScore(autoQaScore(ticket));
-            qa.setReviewFlags(qaFlags(ticket));
-            qaReviewQueueMapper.insert(qa);
-        }
-    }
-
-    private void backfillTicketsFromEscalations() {
-        var rows = escalationMapper.selectList(new LambdaQueryWrapper<EscalationRecord>()
-                .orderByDesc(EscalationRecord::getCreatedAt)
-                .last("LIMIT 500"));
-        for (var source : rows) {
-            var existing = ticketMapper.selectOne(new LambdaQueryWrapper<Ticket>()
-                    .eq(Ticket::getSourceType, "ESCALATION")
-                    .eq(Ticket::getSourceId, source.getId())
-                    .last("LIMIT 1"));
-            if (existing != null) {
-                continue;
-            }
-            var ticket = new Ticket();
-            ticket.setTenantId(requireTenant());
-            ticket.setTicketNo(source.getTicketNo());
-            ticket.setConversationUuid(source.getConversationUuid());
-            ticket.setSourceType("ESCALATION");
-            ticket.setSourceId(source.getId());
-            ticket.setChannel("WEB_WIDGET");
-            ticket.setCustomerId(source.getCustomerId());
-            ticket.setSubject(valueOr(source.getEscalationReason(), "人工升级工单"));
-            ticket.setSummary(source.getSummary());
-            ticket.setIntent(source.getCustomerIntent());
-            ticket.setPriority(source.getPriority());
-            ticket.setStatus(ticketStatusKey(source.getStatus()));
-            ticket.setAssignedAgentId(source.getAssignedAgentId());
-            ticket.setAssignedAt(source.getAssignedAt());
-            ticket.setFirstResponseAt(source.getFirstResponseAt());
-            ticket.setResolvedAt(source.getResolvedAt());
-            ticket.setClosedAt(source.getClosedAt());
-            ticket.setSlaResponseDueAt(source.getSlaResponseDueAt());
-            ticket.setSlaResolveDueAt(source.getSlaResolveDueAt());
-            ticket.setSlaState(slaState(source));
-            ticket.setCsatScore(source.getCsatScore());
-            ticket.setCsatComment(source.getCsatComment());
-            ticket.setCloseReason(source.getResolution());
-            ticket.setTags(source.getTags());
-            ticketMapper.insert(ticket);
-        }
-    }
-
-    private CommerceDtos.InboxWorkItemVO toInboxItem(Conversation c) {
+    private HelpdeskDtos.InboxWorkItemVO toInboxItem(Conversation c) {
         var latest = latestTicket(c.getConversationUuid());
-        return new CommerceDtos.InboxWorkItemVO("CONVERSATION", latest == null ? null : latest.getId(),
+        return new HelpdeskDtos.InboxWorkItemVO("CONVERSATION", latest == null ? null : latest.getId(),
                 c.getConversationUuid(), c.getCustomerName(), c.getCustomerEmail(),
                 c.getChannel(), channelLabel(c.getChannel()), c.getIntentPrimary(), c.getSentiment(), c.getStatus(),
-                statusLabel(c.getStatus()), c.getPriority(), c.getHumanAgentId(), c.getMessageCount(), c.getToolCallCount(),
+                statusLabel(c.getStatus()), c.getPriority(), c.getHumanAgentId(), displayName(c.getHumanAgentId()),
+                c.getMessageCount(), c.getToolCallCount(),
                 c.getTotalCostUsd(), latest == null ? null : latest.getTicketNo(),
                 latest == null ? null : ticketStatusLabel(latest.getStatus()), latest == null ? null : latest.getSlaState(),
                 c.getLastMessageAt(), c.getStartedAt());
     }
 
-    private CommerceDtos.InboxWorkItemVO toInboxItem(Ticket t) {
-        return new CommerceDtos.InboxWorkItemVO("TICKET", t.getId(), t.getConversationUuid(), null, t.getCustomerEmail(),
+    private HelpdeskDtos.InboxWorkItemVO toInboxItem(Ticket t) {
+        return new HelpdeskDtos.InboxWorkItemVO("TICKET", t.getId(), t.getConversationUuid(), null, t.getCustomerEmail(),
                 t.getChannel(), channelLabel(t.getChannel()), t.getIntent(), null, null, ticketStatusLabel(t.getStatus()),
-                t.getPriority(), t.getAssignedAgentId(), 0, 0, BigDecimal.ZERO, t.getTicketNo(),
+                t.getPriority(), t.getAssignedAgentId(), displayName(t.getAssignedAgentId()), 0, 0, BigDecimal.ZERO, t.getTicketNo(),
                 ticketStatusLabel(t.getStatus()), t.getSlaState(), t.getUpdatedAt(), t.getCreatedAt());
+    }
+
+    private HelpdeskDtos.InboxMessageVO toInboxMessageVO(ChatMessage message) {
+        return new HelpdeskDtos.InboxMessageVO(message.getId(), message.getMessageUuid(), message.getRole(),
+                message.getSeqNo(), message.getContent(), message.getContentType(), message.getOriginalLang(),
+                message.getDetectionConfidence(), message.getTranslatedContent(), message.getTranslationProvider(),
+                message.getTranslationStatus(), message.getTranslationLatencyMs(), message.getTranslationFallbackReason(),
+                message.getToolName(), message.getCreatedAt());
+    }
+
+    private HelpdeskDtos.InboxCustomerContextVO toInboxCustomerContextVO(Customer customer) {
+        if (customer == null) {
+            return null;
+        }
+        return new HelpdeskDtos.InboxCustomerContextVO(customer.getId(), customer.getDisplayName(), customer.getEmail(),
+                customer.getPhone(), customer.getCountryCode(), customer.getLanguagePref(), customer.getCustomerTier(),
+                customer.getTotalOrders(), customer.getTotalSpent(), customer.getSatisfactionAvg(), customer.getIsBlacklisted());
+    }
+
+    private HelpdeskDtos.InboxOrderContextVO toInboxOrderContextVO(OrderInfo order) {
+        return new HelpdeskDtos.InboxOrderContextVO(order.getId(), order.getExternalOrderNumber(), order.getPlatform(),
+                order.getOrderStatus(), order.getPaymentStatus(), order.getFulfillmentStatus(), order.getCurrency(),
+                order.getTotalAmount(), order.getRefundedAmount(), order.getTrackingCarrier(), order.getTrackingNumber(),
+                order.getTrackingStatus(), order.getEstimatedDeliveryAt(), order.getPlacedAt());
+    }
+
+    private HelpdeskDtos.InboxToolSummaryVO toInboxToolSummaryVO(ToolCallLog tool) {
+        return new HelpdeskDtos.InboxToolSummaryVO(tool.getId(), tool.getTraceId(), tool.getToolCallId(), tool.getToolName(),
+                tool.getSuccess(), tool.getLatencyMs(), tool.getErrorCode(), tool.getErrorMessage(), tool.getCreatedAt());
+    }
+
+    private HelpdeskDtos.SlaRiskTicketVO toSlaRisk(Ticket ticket) {
+        if (ticket == null) {
+            return null;
+        }
+        return new HelpdeskDtos.SlaRiskTicketVO(ticket.getId(), ticket.getTicketNo(), ticket.getConversationUuid(),
+                ticket.getPriority(), null, ticketStatusLabel(ticket.getStatus()), ticket.getSlaState(),
+                ticket.getSlaResponseDueAt(), ticket.getSlaResolveDueAt(), ticket.getAssignedAgentId(), ticket.getSummary());
     }
 
     private Ticket latestTicket(String conversationUuid) {
@@ -673,151 +551,47 @@ public class CommercialOpsService {
         };
     }
 
-    private CommerceDtos.SlaRiskTicketVO toSlaRisk(EscalationRecord e) {
-        return new CommerceDtos.SlaRiskTicketVO(e.getId(), e.getTicketNo(), e.getConversationUuid(), e.getPriority(),
-                e.getStatus(), ticketStatusLabel(e.getStatus()), slaState(e), e.getSlaResponseDueAt(),
-                e.getSlaResolveDueAt(), e.getAssignedAgentId(), e.getSummary());
-    }
-
-    private CommerceDtos.ActionRequestVO toReturnActionVO(ReturnRequest r) {
-        return new CommerceDtos.ActionRequestVO("return_request", r.getId(), r.getRequestNo(), r.getRequestType(),
-                String.valueOf(r.getStatus()), returnStatusLabel(r.getStatus()), r.getExternalOrderNumber(),
-                r.getCustomerEmail(), r.getAmount() == null ? null : r.getAmount().toPlainString(), r.getCurrency(),
-                r.getApprovalRequiredReason(), r.getRequestedItems(), r.getResolution(), r.getResolutionNote(),
-                r.getCreatedAt(), r.getUpdatedAt());
-    }
-
-    private CommerceDtos.ActionRequestVO toCommerceActionVO(CommerceActionRequest r) {
-        return new CommerceDtos.ActionRequestVO("commerce_action_request", r.getId(), r.getRequestNo(), r.getActionType(),
-                r.getStatus(), actionStatusLabel(r.getStatus()), r.getExternalOrderNumber(), r.getCustomerEmail(),
-                null, null, r.getRiskReason(), r.getRequestedPayload(), r.getExternalResult(), null,
-                r.getCreatedAt(), r.getUpdatedAt());
-    }
-
-    private CommerceDtos.QaReviewItemVO toQaVO(QaReviewQueue q) {
-        return new CommerceDtos.QaReviewItemVO(q.getId(), q.getSourceType(), q.getSourceId(), q.getConversationUuid(),
-                q.getTicketNo(), q.getStatus(), q.getAutoScore(), q.getReviewerScore(), q.getReviewFlags(),
-                q.getFindings(), q.getActionItems(), q.getReviewerId(), q.getReviewedAt(), q.getCreatedAt());
-    }
-
-    private CommerceDtos.AuditEventVO toAuditVO(AuditEvent event) {
-        return new CommerceDtos.AuditEventVO(event.getId(), event.getActorId(), event.getActorRole(), event.getAction(),
-                event.getResourceType(), event.getResourceId(), event.getSummary(), event.getRiskLevel(),
-                event.getMetadataJson(), event.getCreatedAt());
-    }
-
-    private CommerceDtos.TicketVO toTicketVO(Ticket t) {
-        return new CommerceDtos.TicketVO(t.getId(), t.getTicketNo(), t.getConversationUuid(), t.getSourceType(),
+    private HelpdeskDtos.TicketVO toTicketVO(Ticket t) {
+        return new HelpdeskDtos.TicketVO(t.getId(), t.getTicketNo(), t.getConversationUuid(), t.getSourceType(),
                 t.getSourceId(), t.getChannel(), t.getCustomerEmail(), t.getSubject(), t.getSummary(), t.getIntent(),
-                t.getPriority(), t.getStatus(), ticketStatusLabel(t.getStatus()), t.getAssignedAgentId(), t.getAssignedAt(),
+                t.getPriority(), t.getStatus(), ticketStatusLabel(t.getStatus()), t.getAssignedAgentId(),
+                displayName(t.getAssignedAgentId()), t.getAssignedAt(),
                 t.getFirstResponseAt(), t.getResolvedAt(), t.getClosedAt(), t.getSlaResponseDueAt(), t.getSlaResolveDueAt(),
                 t.getSlaState(), t.getCsatScore(), t.getCloseReason(), t.getTags(), t.getCreatedAt(), t.getUpdatedAt());
     }
 
-    private CommerceDtos.MacroVO toMacroVO(SupportMacro macro) {
-        return new CommerceDtos.MacroVO(macro.getMacroCode(), macro.getTitle(), macro.getCategory(), macro.getChannel(),
+    private HelpdeskDtos.MacroVO toMacroVO(SupportMacro macro) {
+        return new HelpdeskDtos.MacroVO(macro.getMacroCode(), macro.getTitle(), macro.getCategory(), macro.getChannel(),
                 macro.getContent(), macro.getRequiresApproval(), macro.getEnabled());
     }
 
-    private CommerceDtos.SlaPolicyVO toSlaPolicyVO(SlaPolicy p) {
-        return new CommerceDtos.SlaPolicyVO(p.getId(), p.getPolicyName(), p.getPriority(), p.getChannel(),
+    private HelpdeskDtos.SlaPolicyVO toSlaPolicyVO(SlaPolicy p) {
+        return new HelpdeskDtos.SlaPolicyVO(p.getId(), p.getPolicyName(), p.getPriority(), p.getChannel(),
                 p.getFirstResponseMinutes(), p.getResolutionMinutes(), p.getBusinessHours(), p.getTimezone(),
                 p.getEscalationRule(), p.getActive());
     }
 
-    private CommerceDtos.CommerceActionPolicyVO toActionPolicyVO(CommerceActionPolicy p) {
-        return new CommerceDtos.CommerceActionPolicyVO(p.getId(), p.getActionType(), p.getApprovalRequired(),
-                p.getMinApproverRole(), p.getAmountThreshold() == null ? null : p.getAmountThreshold().toPlainString(),
-                p.getRequiresIdentityVerification(), p.getIdempotencyWindowMinutes(), p.getExternalWriteEnabled(),
-                p.getPolicyNote(), p.getActive());
-    }
-
-    private CommerceDtos.SupportRolePolicyVO toRolePolicyVO(SupportRolePolicy p) {
-        return new CommerceDtos.SupportRolePolicyVO(p.getId(), p.getRoleKey(), p.getRoleLabel(), p.getPermissionsJson(),
-                p.getToolPolicyJson(), p.getApprovalLimit() == null ? null : p.getApprovalLimit().toPlainString(), p.getStatus());
-    }
-
-    private CommerceDtos.DataRetentionPolicyVO toRetentionVO(DataRetentionPolicy p) {
-        return new CommerceDtos.DataRetentionPolicyVO(p.getDataSet(), p.getRetentionDays(), p.getMaskingDefault(),
-                p.getExportSupport(), p.getDeletionSupport(), p.getStatus(), p.getNotes());
-    }
-
-    private CommerceDtos.SloPolicyVO toSloPolicyVO(SloPolicy p) {
-        return new CommerceDtos.SloPolicyVO(p.getId(), p.getSloKey(), p.getSloLabel(), p.getTargetValue(), p.getUnit(),
-                p.getWindowMinutes(), p.getSeverityOnBreach(), p.getRunbook(), p.getActive());
-    }
-
-    private CommerceDtos.AgentGuardVO toAgentGuardVO(AgentIdempotencyGuard g) {
-        return new CommerceDtos.AgentGuardVO(g.getId(), g.getConversationUuid(), g.getGuardKey(), g.getToolName(),
-                g.getRequestHash(), g.getStatus(), g.getFirstSeenAt(), g.getLastSeenAt());
-    }
-
-    private CommerceDtos.ChannelAccountVO toChannelAccountVO(ChannelAccount account) {
-        return new CommerceDtos.ChannelAccountVO(account.getId(), account.getChannel(), channelLabel(account.getChannel()),
+    private IntegrationDtos.ChannelAccountVO toChannelAccountVO(ChannelAccount account) {
+        return new IntegrationDtos.ChannelAccountVO(account.getId(), account.getChannel(), channelLabel(account.getChannel()),
                 account.getAccountName(), account.getExternalAccountId(), account.getAdapterStatus(),
                 account.getInboundEnabled(), account.getOutboundEnabled(), account.getAuthMode(),
                 account.getWebhookStatus(), account.getLastEventAt(), account.getLastError(), account.getUpdatedAt());
     }
 
-    private List<CommerceDtos.SloMetricVO> buildSloMetrics() {
-        var observability = agentRunMapper.selectList(new LambdaQueryWrapper<AgentRun>().last("LIMIT 1000"));
-        var tools = toolCallLogMapper.selectList(new LambdaQueryWrapper<ToolCallLog>().last("LIMIT 1000"));
-        var eval = evalRunMapper.selectOne(new LambdaQueryWrapper<AgentEvalRun>()
-                .orderByDesc(AgentEvalRun::getStartedAt)
-                .last("LIMIT 1"));
-        var firstTokenP95 = percentile(observability.stream().map(AgentRun::getFirstTokenLatencyMs).toList(), 95);
-        var fullP95 = percentile(observability.stream().map(AgentRun::getTotalLatencyMs).toList(), 95);
-        var toolSuccess = rateDecimal(tools.stream().filter(t -> !Integer.valueOf(0).equals(t.getSuccess())).count(), tools.size());
-        var evalPass = eval == null || eval.getPassRate() == null ? BigDecimal.ZERO : eval.getPassRate();
-        return List.of(
-                slo("first_token", "AI 首字延迟 P95", BigDecimal.valueOf(3000), decimal(firstTokenP95), "ms", lessOrEqual(decimal(firstTokenP95), BigDecimal.valueOf(3000))),
-                slo("full_response", "完整回复 P95", BigDecimal.valueOf(15000), decimal(fullP95), "ms", lessOrEqual(decimal(fullP95), BigDecimal.valueOf(15000))),
-                slo("tool_success", "工具成功率", BigDecimal.valueOf(95), toolSuccess, "%", toolSuccess.compareTo(BigDecimal.valueOf(95)) >= 0 ? "OK" : "BREACH"),
-                slo("eval_pass", "评测通过率", BigDecimal.valueOf(95), evalPass, "%", evalPass.compareTo(BigDecimal.valueOf(95)) >= 0 ? "OK" : "WARN")
-        );
+    private String displayName(Long userId) {
+        if (userId == null) {
+            return null;
+        }
+        var name = identityLookupMapper.findDisplayName(userId);
+        return name == null || name.isBlank() ? "用户 #" + userId : name;
     }
 
-    private List<CommerceDtos.AlertVO> buildAlerts(List<CommerceDtos.SloMetricVO> slos) {
-        var alerts = new ArrayList<CommerceDtos.AlertVO>();
-        for (var slo : slos) {
-            if (!"OK".equals(slo.status()) && slo.actual() != null && slo.actual().compareTo(BigDecimal.ZERO) > 0) {
-                alerts.add(new CommerceDtos.AlertVO("WARN", "SLO", slo.label() + " 未达目标", LocalDateTime.now()));
-            }
-        }
-        var backlog = webhookEventMapper.selectCount(new LambdaQueryWrapper<WebhookEvent>().in(WebhookEvent::getStatus, List.of(0, 2, 3)));
-        if (backlog > 0) {
-            alerts.add(new CommerceDtos.AlertVO("WARN", "SHOPIFY_WEBHOOK", "存在待处理或失败的 Shopify Webhook: " + backlog, LocalDateTime.now()));
-        }
-        var pending = pendingActionCount();
-        if (pending > 0) {
-            alerts.add(new CommerceDtos.AlertVO("INFO", "APPROVAL", "有待审批高风险动作: " + pending, LocalDateTime.now()));
-        }
-        return alerts;
+    public List<GovernanceDtos.SloMetricVO> currentSloMetrics() {
+        return operationsAnalyticsService.currentSloMetrics();
     }
 
-    private List<CommerceDtos.DimensionMetricVO> dimensions(List<String> values, long total) {
-        return values.stream()
-                .collect(Collectors.groupingBy(v -> valueOr(v, "UNKNOWN"), Collectors.counting()))
-                .entrySet().stream()
-                .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
-                .limit(8)
-                .map(e -> new CommerceDtos.DimensionMetricVO(e.getKey(), e.getValue(), rateDecimal(e.getValue(), total)))
-                .toList();
-    }
-
-    private void writeAudit(Long actorId, String actorRole, String action, String resourceType,
-                            String resourceId, String summary, String riskLevel, String metadata) {
-        var event = new AuditEvent();
-        event.setTenantId(requireTenant());
-        event.setActorId(actorId);
-        event.setActorRole(actorRole);
-        event.setAction(action);
-        event.setResourceType(resourceType);
-        event.setResourceId(resourceId);
-        event.setSummary(summary);
-        event.setRiskLevel(riskLevel);
-        event.setMetadataJson(metadata);
-        auditEventMapper.insert(event);
+    public List<GovernanceDtos.AlertVO> currentAlerts(List<GovernanceDtos.SloMetricVO> slos) {
+        return operationsAnalyticsService.currentAlerts(slos);
     }
 
     private Conversation requireConversation(String conversationUuid) {
@@ -826,22 +600,6 @@ public class CommercialOpsService {
                 .last("LIMIT 1"));
         if (row == null) {
             throw new BusinessException(ErrorCode.NOT_FOUND, "会话不存在");
-        }
-        return row;
-    }
-
-    private ReturnRequest requireReturnRequest(Long id) {
-        var row = returnRequestMapper.selectById(id);
-        if (row == null) {
-            throw new BusinessException(ErrorCode.NOT_FOUND, "审批请求不存在");
-        }
-        return row;
-    }
-
-    private CommerceActionRequest requireActionRequest(Long id) {
-        var row = actionRequestMapper.selectById(id);
-        if (row == null) {
-            throw new BusinessException(ErrorCode.NOT_FOUND, "审批请求不存在");
         }
         return row;
     }
@@ -868,55 +626,25 @@ public class CommercialOpsService {
     }
 
     private long pendingActionCount() {
-        var pendingReturns = returnRequestMapper.selectCount(new LambdaQueryWrapper<ReturnRequest>().eq(ReturnRequest::getStatus, 1));
-        var pendingActions = actionRequestMapper.selectCount(new LambdaQueryWrapper<CommerceActionRequest>()
-                .in(CommerceActionRequest::getStatus, List.of("PENDING_APPROVAL", "REQUESTED", "NEEDS_APPROVAL")));
-        return pendingReturns + pendingActions;
+        return commerceApprovalService.pendingCount();
     }
 
     private long slaRiskCount() {
         var now = LocalDateTime.now();
-        return escalationMapper.selectList(new LambdaQueryWrapper<EscalationRecord>()
-                        .in(EscalationRecord::getStatus, List.of(1, 2, 3)))
+        return ticketMapper.selectList(new LambdaQueryWrapper<Ticket>()
+                        .notIn(Ticket::getStatus, List.of("RESOLVED", "CLOSED", "CANCELLED")))
                 .stream()
                 .filter(t -> dueBefore(t.getSlaResponseDueAt(), now) || dueBefore(t.getSlaResolveDueAt(), now)
+                        || "BREACHED".equals(t.getSlaState()) || "DUE_SOON".equals(t.getSlaState())
                         || (t.getSlaResolveDueAt() != null && t.getSlaResolveDueAt().isBefore(now.plusMinutes(30))))
                 .count();
     }
 
-    private int autoQaScore(EscalationRecord ticket) {
-        var score = 80;
-        if (Integer.valueOf(1).equals(ticket.getSlaResponseBreached())) {
-            score -= 15;
+    private Long requireActor(Long actorId) {
+        if (actorId == null) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "缺少操作者身份");
         }
-        if (Integer.valueOf(1).equals(ticket.getSlaResolveBreached())) {
-            score -= 15;
-        }
-        if (ticket.getResolution() == null || ticket.getResolution().isBlank()) {
-            score -= 10;
-        }
-        if (ticket.getCsatScore() != null && ticket.getCsatScore() <= 2) {
-            score -= 20;
-        }
-        return Math.max(0, score);
-    }
-
-    private String qaFlags(EscalationRecord ticket) {
-        var flags = new ArrayList<String>();
-        if (Integer.valueOf(1).equals(ticket.getSlaResponseBreached()) || Integer.valueOf(1).equals(ticket.getSlaResolveBreached())) {
-            flags.add("SLA_BREACH");
-        }
-        if (ticket.getCsatScore() != null && ticket.getCsatScore() <= 2) {
-            flags.add("LOW_CSAT");
-        }
-        if (ticket.getResolution() == null || ticket.getResolution().isBlank()) {
-            flags.add("MISSING_RESOLUTION");
-        }
-        return String.join(",", flags);
-    }
-
-    private Long actor(CommerceDtos.ActionDecisionRequest request) {
-        return request == null || request.actorId() == null ? 1L : request.actorId();
+        return actorId;
     }
 
     private Long requireTenant() {
@@ -927,59 +655,12 @@ public class CommercialOpsService {
         return tenantId;
     }
 
-    private CommerceDtos.QueueBucketVO bucket(String key, String label, long count, String description) {
-        return new CommerceDtos.QueueBucketVO(key, label, count, description);
-    }
-
-    private List<CommerceDtos.DataRetentionPolicyVO> defaultRetentionPolicies() {
-        return List.of(
-                retention("conversation/chat_message", 180, "默认摘要脱敏", "ROADMAP", "ROADMAP", "POLICY_DECLARED", "需要补后台租户配置和清理 job"),
-                retention("agent_run/agent_step/tool_call_log", 90, "默认不保存完整 prompt/tool result", "ROADMAP", "ROADMAP", "POLICY_DECLARED", "用于可观测与回放，生产应按租户缩短保留期"),
-                retention("agent_eval_*", 365, "评测输入应使用脱敏样例", "SUPPORTED_BY_REPORTS", "ROADMAP", "PARTIAL", "deterministic eval 已可生成报告，删除/导出流程待补"),
-                retention("audit_event", 730, "仅记录操作摘要和资源 ID", "SUPPORTED_BY_API", "RESTRICTED", "IMPLEMENTED", "关键审计日志不提供普通管理员删除入口")
-        );
-    }
-
-    private CommerceDtos.SloMetricVO slo(String key, String label, BigDecimal target, BigDecimal actual, String unit, String status) {
-        return new CommerceDtos.SloMetricVO(key, label, target, actual, unit, status);
-    }
-
-    private CommerceDtos.ReadinessControlVO readiness(String key, String label, String status,
-                                                      String evidence, String nextStep, String riskLevel) {
-        return new CommerceDtos.ReadinessControlVO(key, label, status, evidence, nextStep, riskLevel);
-    }
-
-    private CommerceDtos.DataRetentionPolicyVO retention(String dataSet, Integer days, String masking,
-                                                         String exportSupport, String deletionSupport,
-                                                         String status, String notes) {
-        return new CommerceDtos.DataRetentionPolicyVO(dataSet, days, masking, exportSupport, deletionSupport, status, notes);
-    }
-
-    private CommerceDtos.ShopifyCapabilityVO shopify(String key, String label, String status,
-                                                     String evidence, String defaultMode, String nextStep) {
-        return new CommerceDtos.ShopifyCapabilityVO(key, label, status, evidence, defaultMode, nextStep);
-    }
-
-    private CommerceDtos.RunbookVO runbook(String incident, String triggerSignal, String firstAction,
-                                           String owner, String status) {
-        return new CommerceDtos.RunbookVO(incident, triggerSignal, firstAction, owner, status);
+    private HelpdeskDtos.QueueBucketVO bucket(String key, String label, long count, String description) {
+        return new HelpdeskDtos.QueueBucketVO(key, label, count, description);
     }
 
     private boolean dueBefore(LocalDateTime dueAt, LocalDateTime now) {
         return dueAt != null && dueAt.isBefore(now);
-    }
-
-    private String slaState(EscalationRecord ticket) {
-        var now = LocalDateTime.now();
-        if (dueBefore(ticket.getSlaResponseDueAt(), now) || dueBefore(ticket.getSlaResolveDueAt(), now)
-                || Integer.valueOf(1).equals(ticket.getSlaResponseBreached())
-                || Integer.valueOf(1).equals(ticket.getSlaResolveBreached())) {
-            return "已超时";
-        }
-        if (ticket.getSlaResolveDueAt() != null && ticket.getSlaResolveDueAt().isBefore(now.plusMinutes(30))) {
-            return "即将超时";
-        }
-        return "正常";
     }
 
     private String statusLabel(Integer status) {
@@ -1006,17 +687,6 @@ public class CommercialOpsService {
         };
     }
 
-    private String ticketStatusKey(Integer status) {
-        return switch (status == null ? 0 : status) {
-            case 1 -> "OPEN";
-            case 2, 3 -> "ASSIGNED";
-            case 4 -> "RESOLVED";
-            case 5 -> "CLOSED";
-            case 6 -> "CANCELLED";
-            default -> "OPEN";
-        };
-    }
-
     private String ticketStatusLabel(String status) {
         return switch (valueOr(status, "OPEN")) {
             case "OPEN" -> "待分配";
@@ -1030,29 +700,10 @@ public class CommercialOpsService {
         };
     }
 
-    private String returnStatusLabel(Integer status) {
-        return switch (status == null ? 0 : status) {
-            case 1 -> "待人工审批";
-            case 2 -> "已人工批准";
-            case 3 -> "已拒绝";
-            case 4 -> "已执行";
-            default -> "未知";
-        };
-    }
-
-    private String actionStatusLabel(String status) {
-        return switch (valueOr(status, "PENDING_APPROVAL")) {
-            case "APPROVED_MANUAL" -> "已人工批准";
-            case "REJECTED" -> "已拒绝";
-            case "EXECUTED" -> "已执行";
-            case "FAILED" -> "执行失败";
-            default -> "待人工审批";
-        };
-    }
-
     private String channelLabel(String channel) {
         return switch (valueOr(channel, "UNKNOWN")) {
             case "WEB_WIDGET", "WEB", "CHAT" -> "买家咨询组件";
+            case "WECHAT_KF" -> "企业微信 / 微信客服";
             case "EMAIL" -> "邮件";
             case "WHATSAPP" -> "WhatsApp";
             case "INSTAGRAM" -> "Instagram";
@@ -1065,23 +716,30 @@ public class CommercialOpsService {
 
     private String channelStatus(String channel, List<Conversation> rows, ChannelAccount account) {
         if (account != null) {
+            if (isFixtureAccount(account)) {
+                return "Fixture";
+            }
             return switch (valueOr(account.getAdapterStatus(), "CONFIGURED")) {
-                case "CONNECTED" -> "已接入";
-                case "CONFIGURED" -> "已配置";
-                case "ADAPTER_READY" -> "适配器就绪";
+                case "CONNECTED" -> "真实连接";
+                case "CONFIGURED", "ADAPTER_READY" -> "未接通";
                 case "DISABLED" -> "已停用";
-                case "ERROR" -> "异常";
+                case "ERROR" -> "错误";
                 case "PLANNED" -> "路线图";
                 default -> account.getAdapterStatus();
             };
         }
         if ("WEB_WIDGET".equals(channel) || "WEB".equals(channel)) {
-            return rows.isEmpty() ? "已配置，暂无会话" : "已接入";
+            return rows.isEmpty() ? "未接通" : "真实连接";
         }
         if ("EMAIL".equals(channel)) {
-            return rows.isEmpty() ? "适配器待接入" : "已接入";
+            return rows.isEmpty() ? "未接通" : "真实连接";
         }
         return "路线图";
+    }
+
+    private boolean isFixtureAccount(ChannelAccount account) {
+        return account != null && account.getConfigJson() != null
+                && account.getConfigJson().toLowerCase(Locale.ROOT).contains("\"fixturemode\": true");
     }
 
     private BigDecimal averageSeconds(List<Integer> millis) {
@@ -1108,23 +766,6 @@ public class CommercialOpsService {
         }
         return BigDecimal.valueOf(numerator).multiply(BigDecimal.valueOf(100))
                 .divide(BigDecimal.valueOf(denominator), 2, RoundingMode.HALF_UP);
-    }
-
-    private Integer percentile(List<Integer> values, int percentile) {
-        var sorted = values.stream().filter(v -> v != null && v >= 0).sorted().toList();
-        if (sorted.isEmpty()) {
-            return null;
-        }
-        var index = (int) Math.ceil(percentile / 100.0 * sorted.size()) - 1;
-        return sorted.get(Math.max(0, Math.min(index, sorted.size() - 1)));
-    }
-
-    private BigDecimal decimal(Integer value) {
-        return value == null ? BigDecimal.ZERO : BigDecimal.valueOf(value);
-    }
-
-    private String lessOrEqual(BigDecimal actual, BigDecimal target) {
-        return actual.compareTo(BigDecimal.ZERO) == 0 || actual.compareTo(target) <= 0 ? "OK" : "BREACH";
     }
 
     private int clamp(int size) {

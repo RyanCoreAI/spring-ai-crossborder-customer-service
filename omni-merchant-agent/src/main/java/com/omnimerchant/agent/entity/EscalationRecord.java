@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 @TableName("escalation_record")
 public class EscalationRecord {
 
-    @TableId(type = IdType.ASSIGN_ID)
+    @TableId(type = IdType.AUTO)
     private Long id;
 
     private String ticketNo;

@@ -33,7 +33,7 @@ public class ChatController {
      * <p>
      * Returns SSE stream of text chunks from the ReAct agent.
      * The client should use EventSource to consume the stream.
-     * Late SSE events: data:{chunk}, [DONE] event, or error:{message}
+     * SSE events: status, translated_delta, final, and error.
      */
     @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter stream(@Valid @RequestBody ChatRequest request) {
@@ -44,14 +44,14 @@ public class ChatController {
         log.info("Chat stream start: tenant={}, conv={}, intent={}, msgLen={}",
                 tenantId, request.conversationUuid(), intent, request.message().length());
 
-        reActAgentService.chat(tenantId, request.conversationUuid(), request.message(), intent)
+        reActAgentService.chatEvents(tenantId, request.conversationUuid(), request.message(), intent)
                 .subscribeOn(Schedulers.boundedElastic())
                 .subscribe(
-                        chunk -> {
+                        event -> {
                             try {
                                 emitter.send(SseEmitter.event()
-                                        .name("message")
-                                        .data(chunk));
+                                        .name(event.type())
+                                        .data(event.data()));
                             } catch (Exception e) {
                                 log.error("SSE send failed: {}", e.getMessage());
                                 emitter.completeWithError(e);
@@ -69,13 +69,6 @@ public class ChatController {
                             emitter.complete();
                         },
                         () -> {
-                            try {
-                                emitter.send(SseEmitter.event()
-                                        .name("done")
-                                        .data("[DONE]"));
-                            } catch (Exception ex) {
-                                log.warn("Failed to send done SSE event: {}", ex.getMessage());
-                            }
                             emitter.complete();
                             log.info("Chat stream complete: conv={}", request.conversationUuid());
                         }

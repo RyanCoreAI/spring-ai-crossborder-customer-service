@@ -34,6 +34,7 @@ public class OmniMerchantProperties {
         private String username = "omnimerchant";
         private String password;
         private String driverClassName = "org.postgresql.Driver";
+        private boolean migrationEnabled = true;
         private HikariConfig hikari = new HikariConfig();
 
         @Data

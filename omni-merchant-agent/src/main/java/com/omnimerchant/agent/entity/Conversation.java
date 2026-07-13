@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 @TableName("conversation")
 public class Conversation {
 
-    @TableId(type = IdType.ASSIGN_ID)
+    @TableId(type = IdType.AUTO)
     private Long id;
 
     private String conversationUuid;

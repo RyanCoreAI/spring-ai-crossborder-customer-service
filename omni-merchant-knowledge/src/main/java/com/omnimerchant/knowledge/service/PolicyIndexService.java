@@ -31,6 +31,7 @@ public class PolicyIndexService {
     private final DocumentChunkingService chunkingService;
     private final EmbeddingService embeddingService;
     private final RagSafetyReviewService ragSafetyReviewService;
+    private final RagGovernanceService ragGovernanceService;
 
     @Autowired
     @Qualifier("pgVectorJdbcTemplate")
@@ -107,7 +108,8 @@ public class PolicyIndexService {
                 .toList();
         var review = ragSafetyReviewService.latestReview(doc.getTenantId(), doc.getDocUuid());
         var riskLevel = review == null || review.getRiskLevel() == null ? "LOW" : review.getRiskLevel();
-        var indexVersion = review == null || review.getIndexVersion() == null ? "v1" : review.getIndexVersion();
+        var reviewVersion = review == null || review.getIndexVersion() == null ? "v1" : review.getIndexVersion();
+        var indexVersion = ragGovernanceService.writeIndexVersion(doc.getTenantId(), reviewVersion);
         var sourceTrustLevel = doc.getSourceTrustLevel() == null || doc.getSourceTrustLevel().isBlank()
                 ? "MEDIUM"
                 : doc.getSourceTrustLevel();

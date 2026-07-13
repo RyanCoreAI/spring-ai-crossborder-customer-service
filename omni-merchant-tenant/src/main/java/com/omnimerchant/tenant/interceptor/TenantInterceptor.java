@@ -26,7 +26,12 @@ public class TenantInterceptor implements HandlerInterceptor {
     private static final Set<String> EXCLUDE_PATHS = Set.of(
             "/api/health",
             "/api/tenants",
-            "/api/admin"
+            "/api/auth",
+            "/api/admin",
+            "/api/widget",
+            "/api/webhooks",
+            "/api/public",
+            "/api/integrations/shopify/oauth/callback"
     );
 
     @Override

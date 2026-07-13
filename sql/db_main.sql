@@ -935,19 +935,3 @@ CREATE TABLE `rate_limit_record` (
 -- 恢复外键检查
 -- ==============================================================================
 SET FOREIGN_KEY_CHECKS = 1;
-
-
--- ==============================================================================
--- 初始化数据(用于开发/测试)
--- ==============================================================================
-INSERT INTO `tenant` (
-  `tenant_code`, `store_name`, `platform`, `external_store_id`,
-  `owner_email`, `default_lang`, `support_langs`,
-  `subscription_plan`, `monthly_token_budget`, `qps_limit`,
-  `escalation_threshold`
-) VALUES (
-  'OM-DEMO001', 'OmniMerchant Demo Store', 'shopify', 'omnidemo.myshopify.com',
-  'demo@omnimerchant.com', 'en', '["en","es","ja","zh","de","fr"]',
-  'PRO', 5000000, 50,
-  0.75
-);

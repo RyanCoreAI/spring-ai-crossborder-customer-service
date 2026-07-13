@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @Data
 @TableName("ticket")
 public class Ticket {
-    @TableId(type = IdType.ASSIGN_ID)
+    @TableId(type = IdType.AUTO)
     private Long id;
     private Long tenantId;
     private String ticketNo;

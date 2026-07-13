@@ -7,6 +7,7 @@ import com.omnimerchant.knowledge.dto.KnowledgeDocVO;
 import com.omnimerchant.knowledge.service.KnowledgeDocService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -31,17 +32,20 @@ public class KnowledgeController {
     }
 
     @PostMapping("/docs")
+    @PreAuthorize("@tenantAuthorization.hasPermission('knowledge:write')")
     public R<KnowledgeDocVO> create(@Valid @RequestBody KnowledgeDocCreateDTO dto) {
         return R.ok(knowledgeDocService.create(dto));
     }
 
     @PutMapping("/docs/{docUuid}")
+    @PreAuthorize("@tenantAuthorization.hasPermission('knowledge:write')")
     public R<KnowledgeDocVO> update(@PathVariable String docUuid,
                                      @Valid @RequestBody KnowledgeDocCreateDTO dto) {
         return R.ok(knowledgeDocService.update(docUuid, dto));
     }
 
     @DeleteMapping("/docs/{docUuid}")
+    @PreAuthorize("@tenantAuthorization.hasPermission('knowledge:write')")
     public R<Void> delete(@PathVariable String docUuid) {
         knowledgeDocService.deleteByUuid(docUuid);
         return R.ok();

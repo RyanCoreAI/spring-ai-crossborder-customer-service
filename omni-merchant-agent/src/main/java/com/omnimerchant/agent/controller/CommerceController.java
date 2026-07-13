@@ -1,14 +1,19 @@
 package com.omnimerchant.agent.controller;
 
+import com.omnimerchant.agent.dto.EvalDtos;
+import com.omnimerchant.agent.dto.IntegrationDtos;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.omnimerchant.agent.dto.CommerceDtos;
 import com.omnimerchant.agent.service.AgentEvalRunnerService;
+import com.omnimerchant.agent.service.AgentEvalDatasetService;
 import com.omnimerchant.agent.service.CommercePlatformService;
 import com.omnimerchant.agent.service.ReActAgentService;
 import com.omnimerchant.agent.service.ShopifyIntegrationService;
 import com.omnimerchant.common.dto.R;
 import com.omnimerchant.common.exception.ErrorCode;
 import com.omnimerchant.common.util.JwtUtil;
+import com.omnimerchant.common.util.JwtUtil.JwtPrincipal;
 import com.omnimerchant.tenant.context.TenantContextHolder;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -17,6 +22,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -44,6 +52,7 @@ public class CommerceController {
     private final CommercePlatformService commerceService;
     private final ShopifyIntegrationService shopifyService;
     private final AgentEvalRunnerService evalRunnerService;
+    private final AgentEvalDatasetService evalDatasetService;
     private final ReActAgentService reActAgentService;
     private final ObjectMapper objectMapper;
     private final JwtUtil jwtUtil;
@@ -92,6 +101,7 @@ public class CommerceController {
     }
 
     @PostMapping("/products/reindex")
+    @PreAuthorize("@tenantAuthorization.hasPermission('knowledge:write')")
     public R<?> reindexProducts() {
         return R.ok(Map.of("queued", commerceService.markProductsForReindex()));
     }
@@ -109,11 +119,15 @@ public class CommerceController {
     }
 
     @PutMapping("/escalations/{id}/assign")
-    public R<?> assignEscalation(@PathVariable Long id, @RequestBody CommerceDtos.AssignRequest request) {
-        return R.ok(commerceService.assignEscalation(id, request.agentId()));
+    @PreAuthorize("@tenantAuthorization.hasPermission('ticket:assign')")
+    public R<?> assignEscalation(@PathVariable Long id,
+                                 @RequestBody(required = false) CommerceDtos.AssignRequest request,
+                                 @AuthenticationPrincipal JwtPrincipal principal) {
+        return R.ok(commerceService.assignEscalation(id, requireUserId(principal)));
     }
 
     @PutMapping("/escalations/{id}/resolve")
+    @PreAuthorize("@tenantAuthorization.hasPermission('ticket:resolve')")
     public R<?> resolveEscalation(@PathVariable Long id, @RequestBody CommerceDtos.ResolveRequest request) {
         return R.ok(commerceService.resolveEscalation(id, request.resolution(), request.note()));
     }
@@ -138,7 +152,8 @@ public class CommerceController {
     }
 
     @PostMapping("/evals/run")
-    public R<?> runEvals(@RequestBody(required = false) CommerceDtos.EvalRunRequest request) {
+    @PreAuthorize("@tenantAuthorization.hasPermission('eval:run')")
+    public R<?> runEvals(@RequestBody(required = false) EvalDtos.EvalRunRequest request) {
         return R.ok(evalRunnerService.runCases(request));
     }
 
@@ -153,8 +168,38 @@ public class CommerceController {
         return R.ok(evalRunnerService.getRun(runId));
     }
 
+    @GetMapping("/evals/gold/cases")
+    public R<?> goldEvalCases(@RequestParam(required = false) String datasetVersion,
+                              @RequestParam(required = false) String annotationStatus,
+                              @RequestParam(defaultValue = "1") int page,
+                              @RequestParam(defaultValue = "20") int size) {
+        return R.ok(evalDatasetService.listGoldCases(datasetVersion, annotationStatus, page, size));
+    }
+
+    @PostMapping("/evals/gold/cases")
+    @PreAuthorize("@tenantAuthorization.hasPermission('eval:gold:manage')")
+    public R<?> createGoldEvalCase(@RequestBody EvalDtos.GoldEvalCaseCreateRequest request) {
+        return R.ok(evalDatasetService.createGoldCase(request));
+    }
+
+    @PostMapping("/evals/gold/cases/{sourceCaseId}/copy")
+    @PreAuthorize("@tenantAuthorization.hasPermission('eval:gold:manage')")
+    public R<?> copyGoldEvalCase(@PathVariable Long sourceCaseId,
+                                @RequestBody EvalDtos.GoldEvalCaseCopyRequest request) {
+        return R.ok(evalDatasetService.copyAsGoldDraft(sourceCaseId, request));
+    }
+
+    @PostMapping("/evals/gold/cases/{id}/review")
+    @PreAuthorize("@tenantAuthorization.hasPermission('eval:gold:manage')")
+    public R<?> reviewGoldEvalCase(@PathVariable Long id,
+                                  @RequestBody EvalDtos.GoldEvalCaseReviewRequest request,
+                                  @AuthenticationPrincipal JwtPrincipal principal) {
+        return R.ok(evalDatasetService.reviewGoldCase(id, request, requireUserId(principal)));
+    }
+
     @PostMapping("/rag/evals/run")
-    public R<?> runRagEvals(@RequestBody(required = false) CommerceDtos.EvalRunRequest request) {
+    @PreAuthorize("@tenantAuthorization.hasPermission('eval:run')")
+    public R<?> runRagEvals(@RequestBody(required = false) EvalDtos.EvalRunRequest request) {
         return R.ok(evalRunnerService.runRagCases(request));
     }
 
@@ -210,11 +255,13 @@ public class CommerceController {
     }
 
     @PostMapping("/integrations/shopify/connect")
+    @PreAuthorize("@tenantAuthorization.hasPermission('integration:manage')")
     public R<?> connectShopify(@RequestBody CommerceDtos.ShopifyConnectRequest request) {
         return R.ok(shopifyService.connect(request));
     }
 
     @GetMapping("/integrations/shopify/install")
+    @PreAuthorize("@tenantAuthorization.hasPermission('integration:manage')")
     public R<?> installShopify(@RequestParam String shop) {
         return R.ok(shopifyService.install(shop));
     }
@@ -227,6 +274,7 @@ public class CommerceController {
     }
 
     @PostMapping("/integrations/shopify/sync")
+    @PreAuthorize("@tenantAuthorization.hasPermission('integration:manage')")
     public R<?> syncShopify() {
         return R.ok(shopifyService.sync());
     }
@@ -238,6 +286,7 @@ public class CommerceController {
     }
 
     @PostMapping("/integrations/shopify/jobs/{jobId}/retry")
+    @PreAuthorize("@tenantAuthorization.hasPermission('integration:manage')")
     public R<?> retryShopifyJob(@PathVariable Long jobId) {
         return R.ok(shopifyService.retryJob(jobId));
     }
@@ -249,20 +298,51 @@ public class CommerceController {
     }
 
     @PostMapping("/integrations/shopify/webhooks/{eventId}/replay")
+    @PreAuthorize("@tenantAuthorization.hasPermission('webhook:replay')")
     public R<?> replayShopifyWebhook(@PathVariable Long eventId) {
         return R.ok(shopifyService.replayWebhook(eventId));
     }
 
+    @GetMapping("/integrations/shopify/privacy-requests")
+    public R<?> shopifyPrivacyRequests(@RequestParam(defaultValue = "1") int page,
+                                       @RequestParam(defaultValue = "20") int size) {
+        return R.ok(shopifyService.listPrivacyRequests(page, size));
+    }
+
+    @PostMapping("/integrations/shopify/bulk")
+    @PreAuthorize("@tenantAuthorization.hasPermission('integration:manage')")
+    public R<?> startShopifyBulk(@RequestBody IntegrationDtos.ShopifyBulkStartRequest request) {
+        return R.ok(shopifyService.startBulkInitialSync(request.resource()));
+    }
+
+    @GetMapping("/integrations/shopify/bulk")
+    public R<?> shopifyBulkOperations(@RequestParam(defaultValue = "1") int page,
+                                      @RequestParam(defaultValue = "20") int size) {
+        return R.ok(shopifyService.listBulkOperations(page, size));
+    }
+
+    @PostMapping("/integrations/shopify/bulk/{id}/refresh")
+    @PreAuthorize("@tenantAuthorization.hasPermission('integration:manage')")
+    public R<?> refreshShopifyBulk(@PathVariable Long id) {
+        return R.ok(shopifyService.refreshBulkOperation(id));
+    }
+
+    @PostMapping("/integrations/shopify/bulk/{id}/import")
+    @PreAuthorize("@tenantAuthorization.hasPermission('integration:manage')")
+    public R<?> importShopifyBulk(@PathVariable Long id) {
+        return R.ok(shopifyService.importBulkResult(id));
+    }
+
     @PostMapping("/webhooks/shopify")
-    public R<?> shopifyWebhook(@RequestHeader HttpHeaders headers,
-                               @RequestBody String body,
-                               HttpServletRequest request) throws Exception {
+    public ResponseEntity<R<?>> shopifyWebhook(@RequestHeader HttpHeaders headers,
+                                                @RequestBody String body,
+                                                HttpServletRequest request) throws Exception {
         var shopDomain = first(headers, "X-Shopify-Shop-Domain");
         var topic = first(headers, "X-Shopify-Topic");
         var eventUuid = first(headers, "X-Shopify-Webhook-Id");
         var signature = first(headers, "X-Shopify-Hmac-Sha256");
         var tenant = commerceService.findTenantByShopDomain(shopDomain);
-        var webhookSecret = shopifyService.decryptWebhookSecret(tenant.getId(), shopDomain);
+        var webhookSecret = shopifyService.webhookVerificationSecret(tenant.getId(), shopDomain);
         if (webhookSecret == null || webhookSecret.isBlank()) {
             webhookSecret = tenant.getWebhookSecret();
         }
@@ -276,21 +356,22 @@ public class CommerceController {
                 body,
                 request.getRemoteAddr());
         if (!valid) {
-            return R.fail("C001", "Shopify webhook signature verification failed");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(R.fail("C001", "Shopify webhook signature verification failed"));
         }
         var processed = shopifyService.processWebhookEvent(event.getId());
-        return R.ok(Map.of("eventId", event.getId(), "status", "accepted", "processor", processed.status()));
+        return ResponseEntity.ok(R.ok(Map.of("eventId", event.getId(), "status", "accepted", "processor", processed.status())));
     }
 
     private SseEmitter streamChat(Long tenantId, String conversationUuid, String message, String intent) {
         var emitter = new SseEmitter(300_000L);
         var safeIntent = intent == null || intent.isBlank() ? "UNKNOWN" : intent;
-        reActAgentService.chat(tenantId, conversationUuid, message, safeIntent)
+        reActAgentService.chatEvents(tenantId, conversationUuid, message, safeIntent)
                 .subscribeOn(Schedulers.boundedElastic())
                 .subscribe(
-                        chunk -> {
+                        event -> {
                             try {
-                                emitter.send(SseEmitter.event().name("message").data(chunk));
+                                emitter.send(SseEmitter.event().name(event.type()).data(event.data()));
                             } catch (Exception e) {
                                 emitter.completeWithError(e);
                             }
@@ -304,11 +385,6 @@ public class CommerceController {
                             emitter.complete();
                         },
                         () -> {
-                            try {
-                                emitter.send(SseEmitter.event().name("done").data("[DONE]"));
-                            } catch (Exception ex) {
-                                log.warn("Failed to send widget done event: {}", ex.getMessage());
-                            }
                             emitter.complete();
                         }
                 );
@@ -339,5 +415,12 @@ public class CommerceController {
     private String first(HttpHeaders headers, String name) {
         var values = headers.get(name);
         return values == null || values.isEmpty() ? null : values.get(0);
+    }
+
+    private Long requireUserId(JwtPrincipal principal) {
+        if (principal == null || principal.userId() == null) {
+            throw new org.springframework.security.access.AccessDeniedException("令牌缺少用户身份");
+        }
+        return principal.userId();
     }
 }

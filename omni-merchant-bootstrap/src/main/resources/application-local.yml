@@ -1,0 +1,20 @@
+spring:
+  datasource:
+    druid:
+      stat-view-servlet:
+        enabled: ${DRUID_STAT_ENABLED:false}
+        url-pattern: /druid/*
+        login-username: ${DRUID_LOGIN_USERNAME:}
+        login-password: ${DRUID_LOGIN_PASSWORD:}
+      web-stat-filter:
+        enabled: ${DRUID_STAT_ENABLED:false}
+        url-pattern: /*
+        exclusions: "*.js,*.gif,*.jpg,*.png,*.css,*.ico,/druid/*"
+
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+
+logging:
+  level:
+    com.omnimerchant: DEBUG

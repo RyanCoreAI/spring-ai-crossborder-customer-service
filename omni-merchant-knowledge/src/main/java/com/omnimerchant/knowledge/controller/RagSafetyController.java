@@ -1,6 +1,7 @@
 package com.omnimerchant.knowledge.controller;
 
 import com.omnimerchant.common.dto.R;
+import com.omnimerchant.common.util.JwtUtil.JwtPrincipal;
 import com.omnimerchant.knowledge.service.RagSafetyReviewService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -10,6 +11,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import java.util.Map;
 
@@ -29,12 +32,25 @@ public class RagSafetyController {
     }
 
     @PostMapping("/docs/{docUuid}/approve")
-    public R<?> approve(@PathVariable String docUuid, @RequestBody(required = false) Map<String, String> body) {
-        return R.ok(service.approve(docUuid, body == null ? null : body.get("note")));
+    @PreAuthorize("@tenantAuthorization.hasPermission('knowledge:review')")
+    public R<?> approve(@PathVariable String docUuid,
+                        @RequestBody(required = false) Map<String, String> body,
+                        @AuthenticationPrincipal JwtPrincipal principal) {
+        return R.ok(service.approve(docUuid, body == null ? null : body.get("note"), requireUserId(principal)));
     }
 
     @PostMapping("/docs/{docUuid}/reject")
-    public R<?> reject(@PathVariable String docUuid, @RequestBody(required = false) Map<String, String> body) {
-        return R.ok(service.reject(docUuid, body == null ? null : body.get("note")));
+    @PreAuthorize("@tenantAuthorization.hasPermission('knowledge:review')")
+    public R<?> reject(@PathVariable String docUuid,
+                       @RequestBody(required = false) Map<String, String> body,
+                       @AuthenticationPrincipal JwtPrincipal principal) {
+        return R.ok(service.reject(docUuid, body == null ? null : body.get("note"), requireUserId(principal)));
+    }
+
+    private Long requireUserId(JwtPrincipal principal) {
+        if (principal == null || principal.userId() == null) {
+            throw new org.springframework.security.access.AccessDeniedException("令牌缺少用户身份");
+        }
+        return principal.userId();
     }
 }

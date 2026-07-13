@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 @Data
 @TableName("support_macro")
 public class SupportMacro {
-    @TableId(type = IdType.ASSIGN_ID)
+    @TableId(type = IdType.AUTO)
     private Long id;
     private Long tenantId;
     private String macroCode;

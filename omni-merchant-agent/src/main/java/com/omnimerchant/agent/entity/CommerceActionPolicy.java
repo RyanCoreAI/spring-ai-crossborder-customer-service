@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @Data
 @TableName("commerce_action_policy")
 public class CommerceActionPolicy {
-    @TableId(type = IdType.ASSIGN_ID)
+    @TableId(type = IdType.AUTO)
     private Long id;
     private Long tenantId;
     private String actionType;

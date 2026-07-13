@@ -11,6 +11,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
+import com.omnimerchant.agent.service.HelpdeskProjectionRequestedEvent;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -27,6 +30,12 @@ public class EscalationService {
 
     private final EscalationRecordMapper escalationMapper;
     private final ConversationMapper conversationMapper;
+    private ApplicationEventPublisher eventPublisher;
+
+    @Autowired(required = false)
+    void setApplicationEventPublisher(ApplicationEventPublisher eventPublisher) {
+        this.eventPublisher = eventPublisher;
+    }
 
     @Transactional
     public EscalationResult escalate(String reason, String summary, int priority) {
@@ -58,6 +67,9 @@ public class EscalationService {
         record.setEscalatedBackToAi(0);
         escalationMapper.insert(record);
         markConversationEscalated(record);
+        if (eventPublisher != null) {
+            eventPublisher.publishEvent(new HelpdeskProjectionRequestedEvent(tenantId));
+        }
         log.info("Escalation ticket created: tenant={}, ticket={}, priority={}",
                 tenantId, record.getTicketNo(), record.getPriority());
         return new EscalationResult(record.getTicketNo(), waitMinutes(record.getPriority()), "PENDING",

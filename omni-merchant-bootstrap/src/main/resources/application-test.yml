@@ -1,0 +1,27 @@
+spring:
+  flyway:
+    clean-disabled: true
+  ai:
+    model:
+      chat: none
+      embedding: none
+
+omnimerchant:
+  channels:
+    retry-scheduler-enabled: false
+  helpdesk:
+    projection-scheduler-enabled: false
+  sre:
+    scheduler-enabled: false
+  eval:
+    live-agent-enabled: false
+
+logging:
+  level:
+    com.omnimerchant: INFO
+
+management:
+  otlp:
+    metrics:
+      export:
+        enabled: false

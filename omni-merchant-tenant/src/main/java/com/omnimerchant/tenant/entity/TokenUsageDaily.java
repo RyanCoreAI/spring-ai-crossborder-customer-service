@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 @TableName("token_usage_daily")
 public class TokenUsageDaily {
 
-    @TableId(type = IdType.ASSIGN_ID)
+    @TableId(type = IdType.AUTO)
     private Long id;
 
     private Long tenantId;

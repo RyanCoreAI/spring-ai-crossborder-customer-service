@@ -30,7 +30,12 @@ import java.util.Set;
 public class MybatisPlusConfig {
 
     private static final Set<String> IGNORE_TABLES = Set.of(
-            "tenant"
+            "tenant",
+            "app_user",
+            "role_permission",
+            "refresh_token",
+            "revoked_access_token",
+            "security_audit_event"
     );
 
     /**

@@ -24,4 +24,10 @@ public class ProcessedMessage {
 
     /** 检测置信度 [0, 1]（Lingua 不直接提供，基于规则估算） */
     private double confidence;
+
+    private String translationProvider;
+    private String translationModel;
+    private String translationStatus;
+    private long translationLatencyMs;
+    private String fallbackReason;
 }

@@ -1,5 +1,7 @@
 package com.omnimerchant.agent.service;
 
+import com.omnimerchant.agent.dto.ObservabilityDtos;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -152,7 +154,7 @@ public class AgentTraceService {
         });
     }
 
-    public IPage<CommerceDtos.TraceSummaryVO> listTraces(String conversationUuid, String status, int page, int size) {
+    public IPage<ObservabilityDtos.TraceSummaryVO> listTraces(String conversationUuid, String status, int page, int size) {
         return runMapper.selectPage(new Page<>(page, Math.max(1, Math.min(size, 100))),
                 new LambdaQueryWrapper<AgentRun>()
                         .eq(conversationUuid != null && !conversationUuid.isBlank(), AgentRun::getConversationUuid, conversationUuid)
@@ -161,7 +163,7 @@ public class AgentTraceService {
                 .convert(this::toSummary);
     }
 
-    public CommerceDtos.TraceDetailVO getTrace(String traceId) {
+    public ObservabilityDtos.TraceDetailVO getTrace(String traceId) {
         var run = findRun(traceId);
         if (run == null) {
             return null;
@@ -170,7 +172,7 @@ public class AgentTraceService {
                 .eq(AgentStep::getTraceId, traceId)
                 .orderByAsc(AgentStep::getStepIndex))
                 .stream().map(this::toStep).toList();
-        return new CommerceDtos.TraceDetailVO(toSummary(run), steps);
+        return new ObservabilityDtos.TraceDetailVO(toSummary(run), steps);
     }
 
     public List<AgentRun> recentRuns(int limit) {
@@ -188,15 +190,15 @@ public class AgentTraceService {
                 .last("LIMIT 1"));
     }
 
-    private CommerceDtos.TraceSummaryVO toSummary(AgentRun run) {
-        return new CommerceDtos.TraceSummaryVO(run.getTraceId(), run.getConversationUuid(), run.getRunType(),
+    private ObservabilityDtos.TraceSummaryVO toSummary(AgentRun run) {
+        return new ObservabilityDtos.TraceSummaryVO(run.getTraceId(), run.getConversationUuid(), run.getRunType(),
                 run.getIntent(), run.getModelName(), run.getStatus(), run.getFailureCategory(),
                 run.getToolCallCount(), run.getCitationCount(), run.getFirstTokenLatencyMs(),
                 run.getTotalLatencyMs(), run.getCostUsd(), run.getStartedAt(), run.getFinishedAt());
     }
 
-    private CommerceDtos.TraceStepVO toStep(AgentStep step) {
-        return new CommerceDtos.TraceStepVO(step.getStepIndex(), step.getStepType(), step.getName(),
+    private ObservabilityDtos.TraceStepVO toStep(AgentStep step) {
+        return new ObservabilityDtos.TraceStepVO(step.getStepIndex(), step.getStepType(), step.getName(),
                 step.getStatus(), step.getInputSummary(), step.getOutputSummary(), step.getToolCallId(),
                 step.getLatencyMs(), step.getFailureCategory(), step.getFailureReason(), step.getMetadataJson(),
                 step.getCreatedAt());

@@ -79,10 +79,16 @@ public class RagSafetyReviewService {
 
     @Transactional
     public RagSafetyReviewVO approve(String docUuid, String note) {
+        return approve(docUuid, note, null);
+    }
+
+    @Transactional
+    public RagSafetyReviewVO approve(String docUuid, String note, Long reviewerId) {
         var review = requireReview(docUuid);
         review.setStatus("APPROVED");
         review.setIndexAllowed(1);
         review.setReviewNote(note);
+        review.setReviewedBy(reviewerId);
         review.setReviewedAt(LocalDateTime.now());
         review.setApprovalHistory(history("APPROVED", note));
         mapper.updateById(review);
@@ -91,10 +97,16 @@ public class RagSafetyReviewService {
 
     @Transactional
     public RagSafetyReviewVO reject(String docUuid, String note) {
+        return reject(docUuid, note, null);
+    }
+
+    @Transactional
+    public RagSafetyReviewVO reject(String docUuid, String note, Long reviewerId) {
         var review = requireReview(docUuid);
         review.setStatus("REJECTED");
         review.setIndexAllowed(0);
         review.setReviewNote(note);
+        review.setReviewedBy(reviewerId);
         review.setReviewedAt(LocalDateTime.now());
         review.setApprovalHistory(history("REJECTED", note));
         mapper.updateById(review);

@@ -1,0 +1,35 @@
+spring:
+  datasource:
+    druid:
+      url: jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT:3306}/${MYSQL_DATABASE}?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC&useSSL=true&requireSSL=true
+      username: ${MYSQL_USER}
+      password: ${MYSQL_PASSWORD}
+      stat-view-servlet:
+        enabled: false
+      web-stat-filter:
+        enabled: false
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD}
+  flyway:
+    url: ${FLYWAY_URL}
+    user: ${FLYWAY_USER}
+    password: ${FLYWAY_PASSWORD}
+
+omnimerchant:
+  pgvector:
+    url: jdbc:postgresql://${PG_HOST}:${PG_PORT:5432}/${PG_DATABASE}?sslmode=require
+    username: ${PG_USER}
+    password: ${PG_PASSWORD}
+  app-base-url: ${APP_BASE_URL}
+
+app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS}
+
+logging:
+  level:
+    root: INFO
+    com.omnimerchant: INFO

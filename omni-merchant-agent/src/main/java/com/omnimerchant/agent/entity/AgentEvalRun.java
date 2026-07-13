@@ -13,11 +13,18 @@ import java.time.LocalDateTime;
 @Data
 @TableName("agent_eval_run")
 public class AgentEvalRun {
-    @TableId(type = IdType.ASSIGN_ID)
+    @TableId(type = IdType.AUTO)
     private Long id;
     private Long tenantId;
     private String runUuid;
     private String runMode;
+    private String datasetKind;
+    private String datasetVersion;
+    private String indexVersion;
+    private String embeddingModel;
+    private String queryPlannerVersion;
+    private String promptVersion;
+    private String retrievalMode;
     private String gitCommit;
     private String modelConfig;
     private String status;

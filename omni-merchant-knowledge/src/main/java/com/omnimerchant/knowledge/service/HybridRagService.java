@@ -8,6 +8,8 @@ import com.omnimerchant.knowledge.mapper.KnowledgeDocMapper;
 import com.omnimerchant.knowledge.util.RrfFusion;
 import com.omnimerchant.tenant.context.TenantContextHolder;
 import com.pgvector.PGvector;
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +25,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
@@ -37,12 +40,19 @@ public class HybridRagService {
     private final CrossEncoderReranker reranker;
     private final RagQueryPlanningService queryPlanningService;
     private final RagContextPacker contextPacker;
+    private final RagGovernanceService ragGovernanceService;
     private final KnowledgeDocMapper knowledgeDocMapper;
     private final OmniMerchantProperties props;
+    private ObservationRegistry observationRegistry = ObservationRegistry.NOOP;
 
     @Autowired
     @Qualifier("pgVectorJdbcTemplate")
     private JdbcTemplate pgVectorJdbcTemplate;
+
+    @Autowired(required = false)
+    void setObservationRegistry(ObservationRegistry observationRegistry) {
+        this.observationRegistry = observationRegistry == null ? ObservationRegistry.NOOP : observationRegistry;
+    }
 
     public PolicyAnswer retrieve(String question) {
         return retrieve(new RagDtos.DebugRequest(question, null, null, null, null)).answer();
@@ -59,31 +69,46 @@ public class HybridRagService {
                     answer, 0);
         }
         var start = System.currentTimeMillis();
+        var observation = Observation.createNotStarted("gen_ai.retrieval", observationRegistry)
+                .lowCardinalityKeyValue("gen_ai.operation.name", "retrieve")
+                .lowCardinalityKeyValue("omnimerchant.doc_type",
+                        request == null || request.docType() == null ? "ANY" : request.docType())
+                .start();
 
         try {
             var plan = queryPlanningService.plan(request);
             var topKOverride = request == null ? null : request.topK();
+            var retrievalMode = retrievalMode(request == null ? null : request.retrievalMode());
+            var activeIndexVersion = ragGovernanceService.activeIndexVersion(tenantId);
 
             // 1. Candidate generation: vector + BM25 with tenant and metadata filters.
             // Vector retrieval may be unavailable in a fresh local demo without embedding keys.
             // Keep the RAG workbench useful by falling back to lexical BM25 instead of failing the whole path.
             var vectorTopK = positiveOr(topKOverride, props.getKnowledge().getRetrieval().getVectorTopK());
-            var vectorResults = safeVectorSearch(plan.rewrittenQuery(), tenantId, vectorTopK,
+            var vectorResults = "BM25_ONLY".equals(retrievalMode)
+                    ? List.<ChunkVectorRecord>of()
+                    : safeVectorSearch(plan.rewrittenQuery(), tenantId, vectorTopK,
                     request == null ? null : request.docType(),
-                    request == null ? null : request.language());
+                    request == null ? null : request.language(), activeIndexVersion);
 
             var bm25TopK = positiveOr(topKOverride, props.getKnowledge().getRetrieval().getBm25TopK());
-            var bm25Results = safeBm25Search(plan.rewrittenQuery(), tenantId, bm25TopK,
+            var bm25Results = "VECTOR_ONLY".equals(retrievalMode)
+                    ? List.<ChunkVectorRecord>of()
+                    : safeBm25Search(plan.rewrittenQuery(), tenantId, bm25TopK,
                     request == null ? null : request.docType(),
-                    request == null ? null : request.language());
+                    request == null ? null : request.language(), activeIndexVersion);
 
             // 3. Fusion.
             var rrfK = props.getKnowledge().getRetrieval().getRrfK();
             var fused = RrfFusion.fuse(vectorResults, bm25Results, rrfK);
 
-            // 4. Rerank with lexical fallback inside CrossEncoderReranker.
+            // 4. Rerank with an explicit fallback mode in the debug response.
             var rerankTopN = props.getKnowledge().getRetrieval().getRerankTopN();
-            var reranked = reranker.rerank(plan.rewrittenQuery(), fused, rerankTopN);
+            var rerankOutcome = "HYBRID_RERANK".equals(retrievalMode)
+                    ? reranker.rerankWithEvidence(plan.rewrittenQuery(), fused, rerankTopN)
+                    : new CrossEncoderReranker.RerankOutcome(
+                    fused.subList(0, Math.min(rerankTopN, fused.size())), "disabled-by-mode");
+            var reranked = rerankOutcome.results();
 
             // 5. Context expansion and packing.
             var expanded = expandContext(reranked, tenantId);
@@ -93,6 +118,7 @@ public class HybridRagService {
             log.info("RAG retrieved {} chunks in {}ms for tenantId={}",
                     expanded.size(), elapsed, tenantId);
 
+            observation.lowCardinalityKeyValue("omnimerchant.evidence_level", pack.evidenceLevel());
             return new RagDtos.DebugResponse(plan.originalQuery(), plan,
                     toCandidates(vectorResults),
                     toCandidates(bm25Results),
@@ -100,14 +126,20 @@ public class HybridRagService {
                     toCandidates(expanded),
                     pack,
                     answer,
-                    elapsed);
+                    elapsed,
+                    activeIndexVersion,
+                    retrievalMode,
+                    rerankOutcome.mode());
         } catch (Exception e) {
+            observation.error(e);
             var question = request == null ? null : request.question();
             log.error("RAG retrieval failed for question: {}", question, e);
             var answer = PolicyAnswer.error("RAG retrieval failed: " + e.getMessage());
             return new RagDtos.DebugResponse(question, null, List.of(), List.of(), List.of(), List.of(),
                     new RagDtos.ContextPack(null, List.of(), "NONE", answer.error(), 0, 0),
                     answer, System.currentTimeMillis() - start);
+        } finally {
+            observation.stop();
         }
     }
 
@@ -156,13 +188,15 @@ public class HybridRagService {
                        1.0 AS similarity
                 FROM policy_vectors
                 WHERE tenant_id = ? AND doc_uuid = ?
+                  AND index_version = ?
                   AND chunk_index BETWEEN ? AND ?
                 ORDER BY chunk_index ASC
                 """, ps -> {
             ps.setLong(1, tenantId);
             ps.setString(2, record.docUuid());
-            ps.setInt(3, Math.max(0, record.chunkIndex() - 1));
-            ps.setInt(4, record.chunkIndex() + 1);
+            ps.setString(3, record.indexVersion());
+            ps.setInt(4, Math.max(0, record.chunkIndex() - 1));
+            ps.setInt(5, record.chunkIndex() + 1);
         }, this::mapVectorRow);
         return new RagDtos.NeighborResponse(chunkUuid, rows.stream()
                 .map(r -> toCandidate(new HybridSearchResult(r, 0, 0, r.chunkIndex()), !r.chunkUuid().equals(chunkUuid)))
@@ -170,7 +204,7 @@ public class HybridRagService {
     }
 
     private List<ChunkVectorRecord> vectorSearch(float[] queryEmbedding, Long tenantId, int topK,
-                                                 String docType, String language) {
+                                                 String docType, String language, String indexVersion) {
         // pgvector requires setting ef_search for HNSW quality
         pgVectorJdbcTemplate.execute("SET hnsw.ef_search = 40");
 
@@ -185,6 +219,7 @@ public class HybridRagService {
                 WHERE tenant_id = ?
                   AND (? IS NULL OR doc_type = ?)
                   AND (? IS NULL OR language = ?)
+                  AND (? IS NULL OR index_version = ?)
                   AND COALESCE(risk_level, 'LOW') <> 'HIGH'
                   AND COALESCE(source_trust_level, 'MEDIUM') <> 'UNTRUSTED'
                 ORDER BY embedding <=> ?::vector
@@ -198,22 +233,26 @@ public class HybridRagService {
                     ps.setString(4, blankToNull(docType));
                     ps.setString(5, blankToNull(language));
                     ps.setString(6, blankToNull(language));
-                    ps.setObject(7, new PGvector(queryEmbedding));
-                    ps.setInt(8, topK);
+                    ps.setString(7, blankToNull(indexVersion));
+                    ps.setString(8, blankToNull(indexVersion));
+                    ps.setObject(9, new PGvector(queryEmbedding));
+                    ps.setInt(10, topK);
                 },
                 this::mapVectorRow);
     }
 
-    private List<ChunkVectorRecord> safeVectorSearch(String query, Long tenantId, int topK, String docType, String language) {
+    private List<ChunkVectorRecord> safeVectorSearch(String query, Long tenantId, int topK, String docType,
+                                                     String language, String indexVersion) {
         try {
-            return vectorSearch(embeddingService.embed(query), tenantId, topK, docType, language);
+            return vectorSearch(embeddingService.embed(query), tenantId, topK, docType, language, indexVersion);
         } catch (Exception e) {
             log.warn("RAG vector retrieval skipped, falling back to BM25: {}", e.getMessage());
             return List.of();
         }
     }
 
-    private List<ChunkVectorRecord> bm25Search(String query, Long tenantId, int topK, String docType, String language) {
+    private List<ChunkVectorRecord> bm25Search(String query, Long tenantId, int topK, String docType,
+                                               String language, String indexVersion) {
         var sql = """
                 SELECT id, chunk_uuid, doc_id, doc_uuid, doc_type, doc_version,
                        chunk_index, chunk_text, chunk_text_en, section, section_path,
@@ -225,6 +264,7 @@ public class HybridRagService {
                 WHERE tenant_id = ?
                   AND (? IS NULL OR doc_type = ?)
                   AND (? IS NULL OR language = ?)
+                  AND (? IS NULL OR index_version = ?)
                   AND COALESCE(risk_level, 'LOW') <> 'HIGH'
                   AND COALESCE(source_trust_level, 'MEDIUM') <> 'UNTRUSTED'
                   AND chunk_tsv @@ plainto_tsquery('english', ?)
@@ -239,23 +279,32 @@ public class HybridRagService {
                     ps.setString(4, blankToNull(docType));
                     ps.setString(5, blankToNull(language));
                     ps.setString(6, blankToNull(language));
-                    ps.setString(7, query);
-                    ps.setString(8, query);
-                    ps.setInt(9, topK);
+                    ps.setString(7, blankToNull(indexVersion));
+                    ps.setString(8, blankToNull(indexVersion));
+                    ps.setString(9, query);
+                    ps.setString(10, query);
+                    ps.setInt(11, topK);
                 },
                 this::mapVectorRow);
     }
 
-    private List<ChunkVectorRecord> safeBm25Search(String query, Long tenantId, int topK, String docType, String language) {
+    private List<ChunkVectorRecord> safeBm25Search(String query, Long tenantId, int topK, String docType,
+                                                   String language, String indexVersion) {
         try {
-            var results = bm25Search(query, tenantId, topK, docType, language);
+            var results = bm25Search(query, tenantId, topK, docType, language, indexVersion);
             if (!results.isEmpty()) {
                 return results;
+            }
+            if (indexVersion != null) {
+                return List.of();
             }
             log.info("RAG BM25 returned no rows, falling back to tenant knowledge_doc lexical search");
             return knowledgeDocLexicalSearch(query, tenantId, topK, docType, language);
         } catch (Exception e) {
             log.warn("RAG BM25 retrieval skipped, falling back to tenant knowledge_doc lexical search: {}", e.getMessage());
+            if (indexVersion != null) {
+                return List.of();
+            }
             return knowledgeDocLexicalSearch(query, tenantId, topK, docType, language);
         }
     }
@@ -387,13 +436,15 @@ public class HybridRagService {
                            1.0 AS similarity
                     FROM policy_vectors
                     WHERE tenant_id = ? AND doc_uuid = ?
+                      AND index_version = ?
                       AND chunk_index IN (?, ?)
                     ORDER BY chunk_index ASC
                     """, ps -> {
                 ps.setLong(1, tenantId);
                 ps.setString(2, record.docUuid());
-                ps.setInt(3, Math.max(0, record.chunkIndex() - 1));
-                ps.setInt(4, record.chunkIndex() + 1);
+                ps.setString(3, record.indexVersion());
+                ps.setInt(4, Math.max(0, record.chunkIndex() - 1));
+                ps.setInt(5, record.chunkIndex() + 1);
             }, this::mapVectorRow);
         } catch (Exception e) {
             log.debug("RAG context neighbor lookup skipped: {}", e.getMessage());
@@ -484,6 +535,14 @@ public class HybridRagService {
 
     private String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value;
+    }
+
+    private String retrievalMode(String value) {
+        var mode = value == null || value.isBlank() ? "HYBRID_RERANK" : value.trim().toUpperCase(Locale.ROOT);
+        if (!Set.of("VECTOR_ONLY", "BM25_ONLY", "HYBRID", "HYBRID_RERANK").contains(mode)) {
+            throw new IllegalArgumentException("Unsupported retrieval mode: " + value);
+        }
+        return mode;
     }
 
     private String valueOr(String value, String fallback) {

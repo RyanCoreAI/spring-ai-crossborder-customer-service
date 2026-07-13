@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @TableName("webhook_event")
 public class WebhookEvent {
 
-    @TableId(type = IdType.ASSIGN_ID)
+    @TableId(type = IdType.AUTO)
     private Long id;
 
     private String eventUuid;
@@ -25,6 +25,8 @@ public class WebhookEvent {
     private String topic;
     private String resourceType;
     private String resourceId;
+    private String resourceVersion;
+    private LocalDateTime occurredAt;
     private String requestHeaders;
     private String signature;
     private Integer signatureValid;

@@ -1,0 +1,146 @@
+name: omnimerchant-demo
+
+services:
+  mysql:
+    image: mysql:8.0.42
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is required}
+      MYSQL_ROOT_HOST: "%"
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-omni_merchant}
+      MYSQL_USER: ${MYSQL_USER:-omnimerchant}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD is required}
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql-demo-data:/var/lib/mysql
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7.4.5-alpine
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-demo-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${PG_DATABASE:-omni_merchant}
+      POSTGRES_USER: ${PG_USER:-omnimerchant}
+      POSTGRES_PASSWORD: ${PG_PASSWORD:?PG_PASSWORD is required}
+    ports:
+      - "${PG_PORT:-5432}:5432"
+    volumes:
+      - pg-demo-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER:-omnimerchant} -d ${PG_DATABASE:-omni_merchant}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  rocketmq-namesrv:
+    image: apache/rocketmq:5.1.4
+    restart: unless-stopped
+    command: sh mqnamesrv
+    ports:
+      - "${ROCKETMQ_NAMESRV_PORT:-9876}:9876"
+    environment:
+      JAVA_OPT_EXT: "-Xms256m -Xmx256m"
+
+  rocketmq-broker:
+    image: apache/rocketmq:5.1.4
+    restart: unless-stopped
+    command: sh mqbroker -n rocketmq-namesrv:9876
+    ports:
+      - "${ROCKETMQ_BROKER_FAST_PORT:-10909}:10909"
+      - "${ROCKETMQ_BROKER_PORT:-10911}:10911"
+    environment:
+      JAVA_OPT_EXT: "-Xms256m -Xmx256m"
+      NAMESRV_ADDR: rocketmq-namesrv:9876
+    depends_on:
+      - rocketmq-namesrv
+
+  rocketmq-dashboard:
+    image: apacherocketmq/rocketmq-dashboard:2.0.1
+    restart: unless-stopped
+    ports:
+      - "${ROCKETMQ_DASHBOARD_PORT:-18080}:8080"
+    environment:
+      JAVA_OPTS: "-Drocketmq.namesrv.addr=rocketmq-namesrv:9876"
+    depends_on:
+      - rocketmq-namesrv
+
+  app:
+    build:
+      context: .
+      args:
+        MAVEN_REPOSITORY_URL: ${MAVEN_REPOSITORY_URL:-https://repo.maven.apache.org/maven2}
+    restart: unless-stopped
+    ports:
+      - "8090:8090"
+    environment:
+      SPRING_PROFILES_ACTIVE: demo
+      MYSQL_HOST: mysql
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-omni_merchant}
+      MYSQL_USER: ${MYSQL_USER:-omnimerchant}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD is required}
+      FLYWAY_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-omni_merchant}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
+      FLYWAY_USER: root
+      FLYWAY_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is required}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      PG_HOST: postgres
+      PG_DATABASE: ${PG_DATABASE:-omni_merchant}
+      PG_USER: ${PG_USER:-omnimerchant}
+      PG_PASSWORD: ${PG_PASSWORD:?PG_PASSWORD is required}
+      ROCKETMQ_NAME_SERVER: rocketmq-namesrv:9876
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?ADMIN_EMAIL is required}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      INTEGRATION_ENCRYPTION_KEY: ${INTEGRATION_ENCRYPTION_KEY:?INTEGRATION_ENCRYPTION_KEY is required}
+      APP_BASE_URL: ${APP_BASE_URL:-http://localhost:8090}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5188,http://127.0.0.1:5188}
+      SPRING_AI_MODEL_CHAT: ${SPRING_AI_MODEL_CHAT:-none}
+      SPRING_AI_MODEL_EMBEDDING: ${SPRING_AI_MODEL_EMBEDDING:-none}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8090/actuator/health >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  web:
+    build: ./omnimerchant-web
+    restart: unless-stopped
+    ports:
+      - "5188:80"
+    depends_on:
+      app:
+        condition: service_healthy
+
+volumes:
+  mysql-demo-data:
+  redis-demo-data:
+  pg-demo-data:

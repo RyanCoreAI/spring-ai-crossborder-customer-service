@@ -17,7 +17,12 @@ public final class RagDtos {
             @JsonInclude(NON_NULL) String intent,
             @JsonInclude(NON_NULL) String docType,
             @JsonInclude(NON_NULL) String language,
-            @JsonInclude(NON_NULL) Integer topK) {
+            @JsonInclude(NON_NULL) Integer topK,
+            @JsonInclude(NON_NULL) String retrievalMode) {
+
+        public DebugRequest(String question, String intent, String docType, String language, Integer topK) {
+            this(question, intent, docType, language, topK, null);
+        }
     }
 
     public record QueryPlan(
@@ -69,7 +74,18 @@ public final class RagDtos {
             List<Candidate> expandedContext,
             ContextPack contextPack,
             PolicyAnswer answer,
-            long latencyMs) {
+            long latencyMs,
+            String activeIndexVersion,
+            String retrievalMode,
+            String rerankerMode) {
+
+        public DebugResponse(String question, QueryPlan queryPlan, List<Candidate> vectorCandidates,
+                             List<Candidate> bm25Candidates, List<Candidate> fusedCandidates,
+                             List<Candidate> expandedContext, ContextPack contextPack,
+                             PolicyAnswer answer, long latencyMs) {
+            this(question, queryPlan, vectorCandidates, bm25Candidates, fusedCandidates, expandedContext,
+                    contextPack, answer, latencyMs, null, "HYBRID_RERANK", "unknown");
+        }
     }
 
     public record NeighborResponse(
@@ -87,6 +103,9 @@ public final class RagDtos {
             long indexFailedDocs,
             long lowEvidenceRuns,
             long noCitationRuns,
-            List<Map<String, Object>> topFailedQueries) {
+            List<Map<String, Object>> topFailedQueries,
+            boolean embeddingConfigured,
+            long vectorChunkCount,
+            String vectorStatus) {
     }
 }

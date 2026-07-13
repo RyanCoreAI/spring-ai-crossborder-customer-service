@@ -1,8 +1,203 @@
 server:
-  port: 8090
+  port: ${SERVER_PORT:8090}
 
 spring:
   application:
     name: omni-merchant
-  profiles:
-    active: dev
+  autoconfigure:
+    exclude: org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration
+  jpa:
+    open-in-view: false
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    druid:
+      url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:omni_merchant}?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
+      username: ${MYSQL_USER:omnimerchant}
+      password: ${MYSQL_PASSWORD}
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      initial-size: 2
+      min-idle: 2
+      max-active: 20
+      max-wait: 60000
+      time-between-eviction-runs-millis: 60000
+      min-evictable-idle-time-millis: 300000
+      validation-query: SELECT 1
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+      filters: stat,wall
+      stat-view-servlet:
+        enabled: false
+      web-stat-filter:
+        enabled: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration/mysql
+    url: ${FLYWAY_URL:}
+    user: ${FLYWAY_USER:}
+    password: ${FLYWAY_PASSWORD:}
+    baseline-on-migrate: false
+    clean-disabled: true
+    validate-on-migrate: true
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 3000ms
+  ai:
+    model:
+      chat: ${SPRING_AI_MODEL_CHAT:none}
+      embedding: ${SPRING_AI_MODEL_EMBEDDING:none}
+      audio:
+        speech: none
+        transcription: none
+      image: none
+      moderation: none
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+      chat:
+        options:
+          model: ${OPENAI_CHAT_MODEL:gpt-4o-mini}
+          temperature: 0.3
+          maxTokens: 4096
+        connect-timeout: 30s
+        read-timeout: 60s
+      embedding:
+        options:
+          model: ${OPENAI_EMBEDDING_MODEL:text-embedding-3-small}
+        connect-timeout: 30s
+        read-timeout: 30s
+    anthropic:
+      api-key: ${ANTHROPIC_API_KEY:}
+      chat:
+        options:
+          model: ${ANTHROPIC_CHAT_MODEL:claude-haiku-4-5-20251001}
+          temperature: 0.3
+          maxTokens: 4096
+        connect-timeout: 30s
+        read-timeout: 60s
+
+omnimerchant:
+  pgvector:
+    url: jdbc:postgresql://${PG_HOST:localhost}:${PG_PORT:5432}/${PG_DATABASE:omni_merchant}
+    username: ${PG_USER:omnimerchant}
+    password: ${PG_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    migration-enabled: ${PG_FLYWAY_ENABLED:true}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 5000
+  llm:
+    deepseek:
+      api-key: ${DEEPSEEK_API_KEY:}
+      base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
+      model: ${DEEPSEEK_MODEL:deepseek-chat}
+  knowledge:
+    embedding:
+      cache-ttl-hours: 1
+      batch-size: 20
+    chunking:
+      default-size: 500
+      default-overlap: 50
+    retrieval:
+      vector-top-k: 20
+      bm25-top-k: 20
+      rrf-k: 60
+      rerank-top-n: 10
+    reranker:
+      url: ${RERANKER_URL:http://localhost:8001/rerank}
+      timeout-seconds: 5
+  integrations:
+    encryption-key: ${INTEGRATION_ENCRYPTION_KEY}
+  app-base-url: ${APP_BASE_URL:http://localhost:8090}
+  eval:
+    live-agent-enabled: ${EVAL_LIVE_AGENT_ENABLED:false}
+  rag-safety:
+    strict: ${RAG_SAFETY_STRICT:true}
+  shopify:
+    client-id: ${SHOPIFY_CLIENT_ID:}
+    client-secret: ${SHOPIFY_CLIENT_SECRET:}
+    scopes: ${SHOPIFY_SCOPES:read_products,read_customers,read_orders,read_fulfillments}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      show-details: when_authorized
+  metrics:
+    tags:
+      application: omni-merchant
+  tracing:
+    sampling:
+      probability: ${OTEL_TRACING_SAMPLE_RATE:0.0}
+  opentelemetry:
+    tracing:
+      sampler: ${OTEL_TRACING_SAMPLER:always-off}
+      limits:
+        max-attributes: 64
+        max-attribute-value-length: 256
+      export:
+        otlp:
+          endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:http://localhost:4318/v1/traces}
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: assign_id
+      logic-delete-field: isDeleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+  mapper-locations: classpath*:mapper/**/*.xml
+  type-aliases-package: com.omnimerchant.**.entity
+
+rocketmq:
+  name-server: ${ROCKETMQ_NAME_SERVER:localhost:9876}
+  producer:
+    group: omni-producer-group
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 3
+        slow-call-duration-threshold: 10s
+        slow-call-rate-threshold: 50
+    instances:
+      llm:
+        base-config: default
+        sliding-window-size: 10
+        wait-duration-in-open-state: 20s
+        failure-rate-threshold: 50
+
+admin:
+  email: ${ADMIN_EMAIL}
+  password: ${ADMIN_PASSWORD}
+  jwt-secret: ${JWT_SECRET}
+  jwt-previous-secret: ${JWT_PREVIOUS_SECRET:}
+  jwt-expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+  refresh-expiration-ms: ${REFRESH_TOKEN_EXPIRATION_MS:2592000000}
+  issuer: ${ADMIN_JWT_ISSUER:omnimerchant-admin}
+  audience: ${ADMIN_JWT_AUDIENCE:omnimerchant-admin-api}
+  widget-issuer: ${WIDGET_JWT_ISSUER:omnimerchant-widget}
+  widget-audience: ${WIDGET_JWT_AUDIENCE:omnimerchant-widget-api}
+
+app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173,http://localhost:5188,http://127.0.0.1:5188}
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%X{traceId}] [%thread] %-5level %logger{36} - %msg%n"
+  level:
+    root: INFO
+    com.omnimerchant: INFO

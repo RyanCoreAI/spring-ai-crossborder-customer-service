@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 @Data
 @TableName("agent_idempotency_guard")
 public class AgentIdempotencyGuard {
-    @TableId(type = IdType.ASSIGN_ID)
+    @TableId(type = IdType.AUTO)
     private Long id;
     private Long tenantId;
     private String conversationUuid;

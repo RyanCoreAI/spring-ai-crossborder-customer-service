@@ -5,6 +5,7 @@ import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
@@ -20,17 +21,23 @@ import java.util.Map;
  */
 @Slf4j
 @Service
-public class TranslationService {
+public class TranslationService implements TranslationProvider {
 
     private final ObjectProvider<OpenAiChatModel> chatModel;
     private final ResourceLoader resourceLoader;
+    private final TranslationTokenProtector tokenProtector;
+    private final String modelName;
 
     private volatile String translationPromptTemplate;
 
     public TranslationService(@Qualifier("openAiChatModel") ObjectProvider<OpenAiChatModel> chatModel,
-                              ResourceLoader resourceLoader) {
+                              ResourceLoader resourceLoader,
+                              TranslationTokenProtector tokenProtector,
+                              @Value("${spring.ai.openai.chat.options.model:gpt-4o-mini}") String modelName) {
         this.chatModel = chatModel;
         this.resourceLoader = resourceLoader;
+        this.tokenProtector = tokenProtector;
+        this.modelName = modelName;
     }
 
     /**
@@ -42,26 +49,42 @@ public class TranslationService {
      * @return 翻译后文本，失败返回原文
      */
     public String translate(String text, String sourceLang, String targetLang) {
-        if (sourceLang.equals(targetLang) || text == null || text.isBlank()) {
-            return text;
-        }
+        return translateDetailed(text, sourceLang, targetLang).translatedText();
+    }
+
+    @Override
+    public TranslationResult translateDetailed(String text, String sourceLang, String targetLang) {
         var start = System.currentTimeMillis();
+        if (text == null || text.isBlank() || java.util.Objects.equals(sourceLang, targetLang)) {
+            return new TranslationResult(text, text, sourceLang, targetLang,
+                    "LOCAL", "none", "SKIPPED", 0, null);
+        }
         try {
             var model = chatModel.getIfAvailable();
             if (model == null) {
                 log.debug("Translation skipped {}->{}: OpenAI chat model is not configured", sourceLang, targetLang);
-                return text;
+                return new TranslationResult(text, text, sourceLang, targetLang,
+                        "OPENAI", modelName, "FALLBACK", System.currentTimeMillis() - start,
+                        "MODEL_NOT_CONFIGURED");
             }
-            var prompt = buildTranslationPrompt(text, sourceLang, targetLang);
+            var protectedText = tokenProtector.protect(text);
+            var prompt = buildTranslationPrompt(protectedText.text(), sourceLang, targetLang);
             var response = model.call(prompt);
             var result = response.getResult().getOutput().getText();
             var elapsed = System.currentTimeMillis() - start;
             log.debug("Translation {}->{}: {}ms, {} chars",
                     sourceLang, targetLang, elapsed, text.length());
-            return result != null ? result.trim() : text;
+            if (result == null || result.isBlank()) {
+                return new TranslationResult(text, text, sourceLang, targetLang,
+                        "OPENAI", modelName, "FALLBACK", elapsed, "EMPTY_PROVIDER_RESPONSE");
+            }
+            return new TranslationResult(text, protectedText.restore(result.trim()), sourceLang, targetLang,
+                    "OPENAI", modelName, "SUCCESS", elapsed, null);
         } catch (Exception e) {
             log.error("Translation failed {}->{}: {}", sourceLang, targetLang, e.getMessage());
-            return text; // 降级：返回原文
+            return new TranslationResult(text, text, sourceLang, targetLang,
+                    "OPENAI", modelName, "FALLBACK", System.currentTimeMillis() - start,
+                    "PROVIDER_ERROR");
         }
     }
 

@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @TableName("tool_call_log")
 public class ToolCallLog {
 
-    @TableId(type = IdType.ASSIGN_ID)
+    @TableId(type = IdType.AUTO)
     private Long id;
 
     private String traceId;

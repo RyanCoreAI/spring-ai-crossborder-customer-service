@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 @TableName("return_request")
 public class ReturnRequest {
 
-    @TableId(type = IdType.ASSIGN_ID)
+    @TableId(type = IdType.AUTO)
     private Long id;
 
     private String requestNo;

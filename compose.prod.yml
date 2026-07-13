@@ -1,0 +1,52 @@
+name: omnimerchant-prod
+
+services:
+  app:
+    image: ${OMNIMERCHANT_APP_IMAGE:?OMNIMERCHANT_APP_IMAGE is required}
+    restart: unless-stopped
+    expose:
+      - "8090"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      MYSQL_HOST: ${MYSQL_HOST:?MYSQL_HOST is required}
+      MYSQL_PORT: ${MYSQL_PORT:-3306}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:?MYSQL_DATABASE is required}
+      MYSQL_USER: ${MYSQL_USER:?MYSQL_USER is required}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?MYSQL_PASSWORD is required}
+      FLYWAY_URL: ${FLYWAY_URL:?FLYWAY_URL is required}
+      FLYWAY_USER: ${FLYWAY_USER:?FLYWAY_USER is required}
+      FLYWAY_PASSWORD: ${FLYWAY_PASSWORD:?FLYWAY_PASSWORD is required}
+      REDIS_HOST: ${REDIS_HOST:?REDIS_HOST is required}
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+      PG_HOST: ${PG_HOST:?PG_HOST is required}
+      PG_PORT: ${PG_PORT:-5432}
+      PG_DATABASE: ${PG_DATABASE:?PG_DATABASE is required}
+      PG_USER: ${PG_USER:?PG_USER is required}
+      PG_PASSWORD: ${PG_PASSWORD:?PG_PASSWORD is required}
+      ROCKETMQ_NAME_SERVER: ${ROCKETMQ_NAME_SERVER:?ROCKETMQ_NAME_SERVER is required}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?ADMIN_EMAIL is required}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      INTEGRATION_ENCRYPTION_KEY: ${INTEGRATION_ENCRYPTION_KEY:?INTEGRATION_ENCRYPTION_KEY is required}
+      APP_BASE_URL: ${APP_BASE_URL:?APP_BASE_URL is required}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?CORS_ALLOWED_ORIGINS is required}
+      SPRING_AI_MODEL_CHAT: ${SPRING_AI_MODEL_CHAT:-none}
+      SPRING_AI_MODEL_EMBEDDING: ${SPRING_AI_MODEL_EMBEDDING:-none}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8090/actuator/health >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  web:
+    image: ${OMNIMERCHANT_WEB_IMAGE:?OMNIMERCHANT_WEB_IMAGE is required}
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    depends_on:
+      app:
+        condition: service_healthy

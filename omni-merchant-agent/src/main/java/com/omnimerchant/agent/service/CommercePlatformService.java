@@ -1,5 +1,7 @@
 package com.omnimerchant.agent.service;
 
+import com.omnimerchant.agent.dto.EvalDtos;
+
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -34,6 +36,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -55,6 +59,13 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class CommercePlatformService {
+
+    private ApplicationEventPublisher eventPublisher;
+
+    @Autowired(required = false)
+    void setApplicationEventPublisher(ApplicationEventPublisher eventPublisher) {
+        this.eventPublisher = eventPublisher;
+    }
 
     private final CustomerMapper customerMapper;
     private final OrderInfoMapper orderMapper;
@@ -182,9 +193,11 @@ public class CommercePlatformService {
         record.setEscalatedBackToAi(0);
         escalationMapper.insert(record);
         markConversationEscalated(record);
+        publishHelpdeskProjection(record.getTenantId());
         return toEscalationVO(record);
     }
 
+    @Transactional
     public CommerceDtos.EscalationVO assignEscalation(Long id, Long agentId) {
         var record = requireEscalation(id);
         record.setAssignedAgentId(agentId);
@@ -192,9 +205,11 @@ public class CommercePlatformService {
         record.setAssignmentStrategy(agentId == null ? "AUTO_LEAST_BUSY" : "MANUAL");
         record.setStatus(2);
         escalationMapper.updateById(record);
+        publishHelpdeskProjection(record.getTenantId());
         return toEscalationVO(record);
     }
 
+    @Transactional
     public CommerceDtos.EscalationVO resolveEscalation(Long id, String resolution, String note) {
         var record = requireEscalation(id);
         record.setStatus(4);
@@ -203,7 +218,14 @@ public class CommercePlatformService {
         record.setResolution(resolution == null || resolution.isBlank() ? "RESOLVED" : resolution);
         record.setResolutionNote(note);
         escalationMapper.updateById(record);
+        publishHelpdeskProjection(record.getTenantId());
         return toEscalationVO(record);
+    }
+
+    private void publishHelpdeskProjection(Long tenantId) {
+        if (eventPublisher != null && tenantId != null) {
+            eventPublisher.publishEvent(new HelpdeskProjectionRequestedEvent(tenantId));
+        }
     }
 
     public IPage<CommerceDtos.ToolCallVO> listToolCalls(String toolName, Integer success, int page, int size) {
@@ -451,13 +473,13 @@ public class CommercePlatformService {
         return ReturnActionResult.created(request);
     }
 
-    public CommerceDtos.EvalSummary evalSummary(int page, int size) {
+    public EvalDtos.EvalSummary evalSummary(int page, int size) {
         var all = evalCaseMapper.selectList(new LambdaQueryWrapper<>());
         var enabled = all.stream().filter(c -> Integer.valueOf(1).equals(c.getEnabled())).count();
         var byIntent = all.stream().collect(Collectors.groupingBy(AgentEvalCase::getIntent, Collectors.counting()));
         var pageData = evalCaseMapper.selectPage(new Page<>(page, clampSize(size)),
                 new LambdaQueryWrapper<AgentEvalCase>().orderByAsc(AgentEvalCase::getCaseCode));
-        return new CommerceDtos.EvalSummary(all.size(), enabled, byIntent, pageData.convert(this::toEvalCaseVO));
+        return new EvalDtos.EvalSummary(all.size(), enabled, byIntent, pageData.convert(this::toEvalCaseVO));
     }
 
     @Transactional
@@ -673,9 +695,10 @@ public class CommercePlatformService {
                 t.getErrorMessage(), t.getLatencyMs(), t.getTriggeredByModel(), t.getCreatedAt());
     }
 
-    private CommerceDtos.EvalCaseVO toEvalCaseVO(AgentEvalCase c) {
-        return new CommerceDtos.EvalCaseVO(c.getId(), c.getCaseCode(), c.getIntent(), c.getUserMessage(),
-                c.getExpectedTools(), c.getExpectedOutcome(), c.getAttackType(), c.getEnabled());
+    private EvalDtos.EvalCaseVO toEvalCaseVO(AgentEvalCase c) {
+        return new EvalDtos.EvalCaseVO(c.getId(), c.getCaseCode(), c.getIntent(), c.getUserMessage(),
+                c.getExpectedTools(), c.getExpectedOutcome(), c.getAttackType(), c.getDatasetKind(),
+                c.getDatasetVersion(), c.getAnnotationStatus(), c.getEnabled());
     }
 
     public record OrderLookup(

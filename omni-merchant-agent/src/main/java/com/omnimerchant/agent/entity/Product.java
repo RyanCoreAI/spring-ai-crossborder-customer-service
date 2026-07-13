@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 @TableName("product")
 public class Product {
 
-    @TableId(type = IdType.ASSIGN_ID)
+    @TableId(type = IdType.AUTO)
     private Long id;
 
     private Long tenantId;

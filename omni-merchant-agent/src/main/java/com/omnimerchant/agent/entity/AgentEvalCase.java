@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @TableName("agent_eval_case")
 public class AgentEvalCase {
 
-    @TableId(type = IdType.ASSIGN_ID)
+    @TableId(type = IdType.AUTO)
     private Long id;
 
     private Long tenantId;
@@ -23,6 +23,12 @@ public class AgentEvalCase {
     private String expectedTools;
     private String expectedOutcome;
     private String attackType;
+    private String datasetKind;
+    private String datasetVersion;
+    private String annotationStatus;
+    private Long annotatedBy;
+    private LocalDateTime annotatedAt;
+    private String annotationNote;
     private Integer enabled;
 
     @TableField(fill = FieldFill.INSERT)

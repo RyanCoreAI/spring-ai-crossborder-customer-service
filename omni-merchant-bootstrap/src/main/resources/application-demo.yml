@@ -1,0 +1,8 @@
+spring:
+  flyway:
+    locations: classpath:db/migration/mysql,classpath:db/demo/mysql
+
+omnimerchant:
+  demo:
+    enabled: true
+    seed-version: v4-ui-2026.07
