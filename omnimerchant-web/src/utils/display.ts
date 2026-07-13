@@ -51,7 +51,20 @@ const failureMap: Record<string, string> = {
   UNKNOWN: '未知失败',
 }
 
+const channelMap: Record<string, string> = {
+  WEB: '买家咨询组件',
+  WEB_WIDGET: '买家咨询组件',
+  WECHAT_KF: '企业微信客服',
+  EMAIL: '邮件',
+}
+
 const statusMap: Record<string, string> = {
+  LIVE: '真实连接',
+  FIXTURE: 'Fixture 演示',
+  WAITING_CREDENTIALS: '等待凭据',
+  DEGRADED: '降级运行',
+  ERROR: '异常',
+  DISABLED: '已停用',
   PASS: '通过',
   SUCCESS: '成功',
   FAIL: '失败',
@@ -94,6 +107,7 @@ const runModeMap: Record<string, string> = {
 
 const rerankerModeMap: Record<string, string> = {
   'lexical-fallback': '词法兜底',
+  'fallback-rrf': 'RRF 兜底重排',
   fallback: '兜底重排',
   'cross-encoder': '交叉编码器',
 }
@@ -117,12 +131,14 @@ const docTypeMap: Record<string, string> = {
   TERMS_OF_SERVICE: '服务条款',
 }
 
-export function tenantDisplayName(tenant: any) {
+type TenantDisplaySource = { storeName?: string; tenantCode?: string; id?: string | number }
+
+export function tenantDisplayName(tenant: TenantDisplaySource | null | undefined) {
   const raw = tenant?.storeName || tenant?.tenantCode || tenant?.id || '—'
   return String(raw)
 }
 
-export function tenantOptionLabel(tenant: any) {
+export function tenantOptionLabel(tenant: TenantDisplaySource | null | undefined) {
   const name = tenantDisplayName(tenant)
   return tenant?.tenantCode ? `${name}（${tenant.tenantCode}）` : name
 }
@@ -135,9 +151,9 @@ export function toolLabel(value?: string) {
   return toolMap[value || ''] || value || '—'
 }
 
-export function toolsLabel(value: any) {
+export function toolsLabel(value: unknown) {
   if (!value) return '—'
-  const list = Array.isArray(value) ? value : parseJsonArray(value)
+  const list = Array.isArray(value) ? value : parseJsonArray(String(value))
   return list.length ? list.map((item) => toolLabel(String(item))).join('、') : '无'
 }
 
@@ -147,6 +163,15 @@ export function attackTypeLabel(value?: string) {
 
 export function failureCategoryLabel(value?: string) {
   return failureMap[value || ''] || value || '无'
+}
+
+export function channelLabel(value?: string) {
+  return channelMap[value || ''] || value || '—'
+}
+
+export function dimensionLabel(value?: string) {
+  const key = value || ''
+  return intentMap[key] || channelMap[key] || failureMap[key] || value || '—'
 }
 
 export function statusLabel(value?: string) {
@@ -169,7 +194,7 @@ export function docTypeLabel(value?: string) {
   return docTypeMap[value || ''] || value || '—'
 }
 
-export function displayBusinessValue(value: any, prop?: string) {
+export function displayBusinessValue(value: unknown, prop?: string) {
   if (value === null || value === undefined || value === '') return '—'
   if (typeof value === 'boolean') return value ? '是' : '否'
   if (typeof value === 'number') return String(value)

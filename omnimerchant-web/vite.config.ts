@@ -24,11 +24,12 @@ export default defineConfig({
     chunkSizeWarningLimit: 1200,
     rollupOptions: {
       output: {
-        manualChunks: {
-          vue: ['vue', 'vue-router', 'pinia'],
-          antd: ['ant-design-vue', '@ant-design/icons-vue'],
-          markdown: ['marked', 'dompurify'],
-          axios: ['axios'],
+        manualChunks(id) {
+          if (id.includes('/node_modules/echarts/') || id.includes('/node_modules/zrender/')) return 'charts'
+          if (id.includes('/node_modules/ant-design-vue/') || id.includes('/node_modules/@ant-design/icons-vue/')) return 'antd'
+          if (id.includes('/node_modules/vue/') || id.includes('/node_modules/vue-router/') || id.includes('/node_modules/pinia/')) return 'vue'
+          if (id.includes('/node_modules/marked/') || id.includes('/node_modules/dompurify/')) return 'markdown'
+          if (id.includes('/node_modules/axios/')) return 'axios'
         },
       },
     },

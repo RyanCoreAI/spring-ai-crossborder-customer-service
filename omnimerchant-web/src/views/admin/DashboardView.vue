@@ -1,46 +1,95 @@
 <template>
-  <div>
-    <div class="page-head">
-      <div>
-        <h2 class="page-title">数据概览</h2>
-        <p class="page-subtitle">查看租户内客户、订单、会话、商品和客服质量状态。</p>
-      </div>
-      <a-button @click="load">
-        <template #icon><ReloadOutlined /></template>
-        刷新
-      </a-button>
+  <div class="dashboard-view">
+    <div class="dashboard-actions">
+      <a-button :loading="loading" @click="load"
+        ><template #icon><ReloadOutlined /></template>刷新</a-button
+      >
     </div>
+    <MetricStrip :items="metrics" />
 
-    <a-row :gutter="[16, 16]">
-      <a-col v-for="stat in stats" :key="stat.label" :xs="24" :sm="12" :lg="6">
-        <a-card :bordered="false">
-          <a-statistic :title="stat.label" :value="stat.value" />
+    <a-row :gutter="[14, 14]" class="analytics-row">
+      <a-col :xs="24" :xl="12">
+        <a-card title="咨询意图分布" class="analytics-card">
+          <template #extra>
+            <span class="chart-source">{{ operations?.conversations ?? "—" }} 条会话</span>
+          </template>
+          <DonutChart
+            :data="intentChartData"
+            ariaLabel="当前租户咨询意图分布"
+            empty-text="暂无已分类会话"
+          />
+        </a-card>
+      </a-col>
+      <a-col :xs="24" :xl="12">
+        <a-card title="接入渠道分布" class="analytics-card">
+          <template #extra>
+            <span class="chart-source">数据来自会话表</span>
+          </template>
+          <DonutChart
+            :data="channelChartData"
+            ariaLabel="当前租户接入渠道分布"
+            empty-text="暂无渠道会话"
+          />
         </a-card>
       </a-col>
     </a-row>
 
-    <a-row :gutter="[16, 16]" class="section-row">
-      <a-col :xs="24" :lg="12">
-        <a-card title="客服质量指标" :bordered="false">
-          <a-table
-            size="small"
-            :columns="qualityColumns"
-            :data-source="qualityData"
-            :pagination="false"
-            row-key="label"
-          />
+    <a-row :gutter="[14, 14]" class="dashboard-body">
+      <a-col :xs="24" :xl="15">
+        <a-card title="当前待处理">
+          <a-empty v-if="!queueItems.length" description="当前没有待处理事项" />
+          <button
+            v-for="item in queueItems"
+            :key="item.key"
+            class="work-row"
+            type="button"
+            @click="router.push(item.path)"
+          >
+            <span class="work-indicator" :class="item.tone"></span>
+            <span class="work-copy"
+              ><strong>{{ item.label }}</strong
+              ><small>{{ item.description }}</small></span
+            >
+            <span class="work-count">{{ item.count }}</span>
+            <RightOutlined />
+          </button>
         </a-card>
       </a-col>
-      <a-col :xs="24" :lg="12">
-        <a-card title="系统状态" :bordered="false">
-          <a-descriptions bordered :column="1" size="small">
-            <a-descriptions-item label="API 状态">
-              <a-tag :color="healthStatus === 'UP' ? 'success' : 'error'">{{ healthStatus }}</a-tag>
-            </a-descriptions-item>
-            <a-descriptions-item label="租户数量">{{ tenantCount }}</a-descriptions-item>
-            <a-descriptions-item label="知识文档">{{ knowledgeCount }}</a-descriptions-item>
-            <a-descriptions-item label="今日会话">{{ todayConversations }}</a-descriptions-item>
-          </a-descriptions>
+      <a-col :xs="24" :xl="9">
+        <a-card title="系统健康">
+          <a-empty v-if="!sloItems.length" description="尚无 SLO 采样" />
+          <div v-for="item in sloItems" :key="item.key" class="health-row">
+            <div>
+              <strong>{{ item.label }}</strong
+              ><small>目标 {{ formatSlo(item.target, item.unit) }}</small>
+            </div>
+            <div class="health-value">
+              <span>{{ formatSlo(item.actual, item.unit) }}</span
+              ><a-tag :color="statusColor(item.status)">{{
+                statusText(item.status)
+              }}</a-tag>
+            </div>
+          </div>
+          <template #extra
+            ><a-button
+              type="link"
+              size="small"
+              @click="router.push('/admin/sre')"
+              >查看详情</a-button
+            ></template
+          >
+        </a-card>
+        <a-card v-if="alerts.length" title="活动告警" class="alert-panel">
+          <div
+            v-for="(alert, index) in alerts.slice(0, 3)"
+            :key="`${alert.category}-${index}`"
+            class="alert-row"
+          >
+            <a-tag :color="alert.severity === 'WARN' ? 'orange' : 'blue'">{{
+              alert.severity
+            }}</a-tag>
+            <span>{{ alert.message }}</span>
+          </div>
         </a-card>
       </a-col>
     </a-row>
@@ -48,92 +97,256 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { ReloadOutlined } from '@ant-design/icons-vue'
-import api from '@/api'
-import { selectDefaultTenantId, setStoredTenantId } from '@/utils/tenant'
+import { computed, onMounted, ref } from "vue";
+import { useRouter } from "vue-router";
+import { ReloadOutlined, RightOutlined } from "@ant-design/icons-vue";
+import api from "@/api";
+import MetricStrip from "@/components/admin/MetricStrip.vue";
+import DonutChart from "@/components/admin/DonutChart.vue";
+import { dimensionLabel } from "@/utils/display";
+import type {
+  DashboardSummary,
+  OperationsSummary,
+  QueueBucket,
+  SlaSummary,
+  SreSummary,
+} from "@/types/operations";
 
-const healthStatus = ref('...')
-const tenantCount = ref<string | number>('—')
-const knowledgeCount = ref<string | number>('—')
-const todayConversations = ref<string | number>('—')
-const qualityData = ref<any[]>([])
-const stats = ref<{ label: string; value: string | number }[]>([
-  { label: '客户数', value: '—' },
-  { label: '订单数', value: '—' },
-  { label: '会话数', value: '—' },
-  { label: '商品数', value: '—' },
-])
+const router = useRouter();
+const loading = ref(false);
+const dashboard = ref<DashboardSummary | null>(null);
+const queues = ref<QueueBucket[]>([]);
+const sre = ref<SreSummary | null>(null);
+const sla = ref<SlaSummary | null>(null);
+const operations = ref<OperationsSummary | null>(null);
 
-const qualityColumns = [
-  { title: '指标', dataIndex: 'label' },
-  { title: '当前值', dataIndex: 'value' },
-]
+const metrics = computed(() => [
+  {
+    key: "open",
+    label: "待处理工单",
+    value: sla.value?.openTickets,
+    note: "当前租户",
+  },
+  {
+    key: "approval",
+    label: "待审批动作",
+    value: dashboard.value?.pendingReturns,
+    note: "不会自动执行外部写操作",
+  },
+  {
+    key: "resolution",
+    label: "AI 解决率",
+    value: dashboard.value?.aiResolutionRate,
+    suffix: "%",
+    note: "已解决且未升级人工",
+  },
+  {
+    key: "tool",
+    label: "工具成功率",
+    value: dashboard.value?.toolSuccessRate,
+    suffix: "%",
+    note: "基于真实工具调用日志",
+  },
+]);
+
+const queueRoutes: Record<string, string> = {
+  unassigned: "/admin/inbox",
+  approval: "/admin/actions",
+  sla_risk: "/admin/sla",
+  mine: "/admin/inbox",
+};
+const queueItems = computed(() =>
+  queues.value
+    .filter((item) => Number(item.count) > 0 && queueRoutes[item.queueKey])
+    .slice(0, 6)
+    .map((item) => ({
+      ...item,
+      key: item.queueKey,
+      label: item.queueLabel,
+      path: queueRoutes[item.queueKey],
+      tone:
+        item.queueKey === "sla_risk"
+          ? "danger"
+          : item.queueKey === "approval"
+            ? "warning"
+            : "primary",
+    })),
+);
+const sloItems = computed(() => (sre.value?.slos || []).slice(0, 4));
+const alerts = computed(() => sre.value?.alerts || []);
+const intentChartData = computed(() =>
+  (operations.value?.intents || []).map((item) => ({
+    name: dimensionLabel(item.name),
+    value: Number(item.count),
+  })),
+);
+const channelChartData = computed(() =>
+  (operations.value?.channels || []).map((item) => ({
+    name: dimensionLabel(item.name),
+    value: Number(item.count),
+  })),
+);
 
 async function load() {
-  try {
-    const h = await api.get('/health')
-    healthStatus.value = h.data?.status || 'UP'
-  } catch {
-    healthStatus.value = 'DOWN'
-  }
-
-  try {
-    const t = await api.get('/tenants', { params: { page: 1, size: 100 } })
-    tenantCount.value = formatBackendValue(t.data?.total)
-    const defaultTenantId = selectDefaultTenantId(t.data?.records || [])
-    if (defaultTenantId) setStoredTenantId(defaultTenantId)
-  } catch { /* optional */ }
-
-  try {
-    const k = await api.get('/knowledge/docs', { params: { page: 1, size: 1 } })
-    knowledgeCount.value = formatBackendValue(k.data?.total)
-  } catch { /* optional */ }
-
-  try {
-    const c = await api.get('/conversations', { params: { page: 1, size: 1 } })
-    todayConversations.value = formatBackendValue(c.data?.total)
-  } catch { /* optional */ }
-
-  try {
-    const d = await api.get('/dashboard/commerce')
-    const data = d.data || {}
-    stats.value = [
-      { label: '客户数', value: formatBackendValue(data.customers) },
-      { label: '订单数', value: formatBackendValue(data.orders) },
-      { label: '会话数', value: formatBackendValue(data.conversations) },
-      { label: '商品数', value: formatBackendValue(data.products) },
-    ]
-    qualityData.value = [
-      { label: 'AI 解决率', value: formatPercent(data.aiResolutionRate) },
-      { label: '升级率', value: formatPercent(data.escalationRate) },
-      { label: '工具成功率', value: formatPercent(data.toolSuccessRate) },
-      { label: '待处理工单', value: formatBackendValue(data.openTickets) },
-      { label: '待审批退货/动作', value: formatBackendValue(data.pendingReturns) },
-    ]
-  } catch {
-    stats.value = stats.value.map((item) => ({ ...item, value: '—' }))
-    qualityData.value = []
-  }
+  loading.value = true;
+  const [dashboardResult, queuesResult, sreResult, slaResult, operationsResult] =
+    await Promise.allSettled([
+      api.get("/dashboard/commerce"),
+      api.get("/inbox/queues"),
+      api.get("/sre/summary"),
+      api.get("/sla/summary"),
+      api.get("/operations/summary"),
+    ]);
+  dashboard.value =
+    dashboardResult.status === "fulfilled" ? dashboardResult.value.data : null;
+  queues.value =
+    queuesResult.status === "fulfilled" ? queuesResult.value.data || [] : [];
+  sre.value = sreResult.status === "fulfilled" ? sreResult.value.data : null;
+  sla.value = slaResult.status === "fulfilled" ? slaResult.value.data : null;
+  operations.value =
+    operationsResult.status === "fulfilled" ? operationsResult.value.data : null;
+  loading.value = false;
 }
 
-function hasValue(value: any) {
-  return value !== null && value !== undefined && value !== ''
+function formatSlo(value: number | null | undefined, unit: string) {
+  return value === null || value === undefined
+    ? "—"
+    : `${value}${unit === "%" ? "%" : ` ${unit || ""}`}`;
+}
+function statusColor(status: string) {
+  return status === "OK" ? "green" : status === "BREACH" ? "red" : "orange";
+}
+function statusText(status: string) {
+  return status === "OK" ? "正常" : status === "BREACH" ? "超出目标" : "需关注";
 }
 
-function formatBackendValue(value: any) {
-  return hasValue(value) ? value : '—'
-}
-
-function formatPercent(value: any) {
-  return hasValue(value) ? `${value}%` : '—'
-}
-
-onMounted(load)
+onMounted(load);
 </script>
 
 <style scoped>
-.section-row {
-  margin-top: 16px;
+.dashboard-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+.dashboard-body {
+  margin-top: 14px;
+}
+.analytics-row {
+  margin-top: 14px;
+}
+.analytics-card {
+  height: 100%;
+}
+.chart-source {
+  color: #98a2b3;
+  font-size: 11px;
+}
+.work-row {
+  width: 100%;
+  min-height: 62px;
+  display: grid;
+  grid-template-columns: 3px 1fr auto 16px;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 4px;
+  border: 0;
+  border-bottom: 1px solid #edf0f4;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.work-row:last-child {
+  border-bottom: 0;
+}
+.work-row:hover {
+  background: #f8fafc;
+}
+.work-indicator {
+  width: 3px;
+  height: 34px;
+  border-radius: 2px;
+  background: #1677ff;
+}
+.work-indicator.warning {
+  background: #f79009;
+}
+.work-indicator.danger {
+  background: #d92d20;
+}
+.work-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.work-copy strong {
+  color: #182230;
+  font-size: 13px;
+}
+.work-copy small {
+  margin-top: 3px;
+  color: #667085;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.work-count {
+  min-width: 32px;
+  color: #111827;
+  font-size: 17px;
+  font-weight: 700;
+  text-align: right;
+}
+.health-row {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border-bottom: 1px solid #edf0f4;
+}
+.health-row:last-child {
+  border-bottom: 0;
+}
+.health-row > div:first-child {
+  display: flex;
+  flex-direction: column;
+}
+.health-row strong {
+  color: #344054;
+  font-size: 12px;
+}
+.health-row small {
+  margin-top: 3px;
+  color: #98a2b3;
+  font-size: 10px;
+}
+.health-value {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.health-value span {
+  color: #111827;
+  font-size: 12px;
+  font-weight: 650;
+}
+.alert-panel {
+  margin-top: 14px;
+}
+.alert-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 7px 0;
+  color: #475467;
+  font-size: 12px;
+  line-height: 20px;
+}
+@media (max-width: 560px) {
+  .work-copy small {
+    white-space: normal;
+  }
 }
 </style>

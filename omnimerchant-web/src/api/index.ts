@@ -1,4 +1,5 @@
 import axios from 'axios'
+import type { AxiosError, InternalAxiosRequestConfig } from 'axios'
 import { message } from 'ant-design-vue'
 import { useAuthStore } from '@/stores/auth'
 import router from '@/router'
@@ -39,6 +40,8 @@ const TENANT_SCOPED_PATHS = [
   '/sre',
   '/agent',
   '/security',
+  '/multilingual',
+  '/system',
 ]
 
 function isTenantScoped(url?: string) {
@@ -46,7 +49,9 @@ function isTenantScoped(url?: string) {
   return TENANT_SCOPED_PATHS.some((path) => url.startsWith(path) || url.startsWith(`/api${path}`))
 }
 
-function resolveTenantId(config: any) {
+type RetryableRequestConfig = InternalAxiosRequestConfig & { _retry?: boolean }
+
+function resolveTenantId(config: InternalAxiosRequestConfig) {
   const existing = config.headers?.[TENANT_HEADER]
   if (existing) return existing
   const paramsTenant = config.params?.tenantId
@@ -58,7 +63,7 @@ function resolveTenantId(config: any) {
 
 function redirectToLogin(text: string) {
   const authStore = useAuthStore()
-  authStore.logout()
+  void authStore.logout(false)
   message.error(text)
   if (router.currentRoute.value.path !== '/login') {
     router.push('/login')
@@ -102,7 +107,7 @@ api.interceptors.response.use(
       if (data.code === '401') {
         redirectToLogin(data.message || '登录已过期，请重新登录')
       } else if (data.code === '403' && isAdminRoute()) {
-        redirectToLogin('当前登录权限已失效，请重新登录')
+        message.error(data.message || '当前角色没有执行此操作的权限')
       } else {
         message.error(data.message || '请求失败')
       }
@@ -110,13 +115,27 @@ api.interceptors.response.use(
     }
     return data
   },
-  (err) => {
+  (err: AxiosError<{ message?: string }>) => {
+    const authStore = useAuthStore()
     const status = err.response?.status
     const text = friendlyHttpMessage(status, err.response?.data?.message || err.message)
+    const config = err.config as RetryableRequestConfig | undefined
+    const authPath = config?.url?.includes('/auth/login') || config?.url?.includes('/auth/refresh')
+    if (status === 401 && !authPath && !config?._retry && authStore.refreshToken) {
+      config._retry = true
+      return authStore.refreshAccessToken().then((refreshed) => {
+        if (!refreshed) {
+          redirectToLogin(text || '登录已过期，请重新登录')
+          return Promise.reject(err)
+        }
+        config.headers.Authorization = `Bearer ${authStore.token}`
+        return api.request(config)
+      })
+    }
     if (status === 401) {
       redirectToLogin(text || '登录已过期，请重新登录')
     } else if (status === 403 && isAdminRoute()) {
-      redirectToLogin('当前登录权限已失效，请重新登录')
+      message.error(text || '当前角色没有执行此操作的权限')
     } else {
       message.error(text)
     }

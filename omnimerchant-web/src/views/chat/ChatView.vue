@@ -100,21 +100,24 @@
 import { nextTick, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
+import { consumeSse } from '@/utils/sse'
 import { LogoutOutlined, PlusOutlined, SettingOutlined } from '@ant-design/icons-vue'
 import api from '@/api'
 import MessageBubble from '@/components/MessageBubble.vue'
 import { useAuthStore } from '@/stores/auth'
 import { selectDefaultTenantId, setStoredTenantId } from '@/utils/tenant'
 import { tenantOptionLabel } from '@/utils/display'
+import type { ChatMessage, ChatTenant } from '@/types/contracts'
+import { httpErrorMessage } from '@/utils/httpError'
 
 const router = useRouter()
 const authStore = useAuthStore()
 
 const selectedTenantId = ref<number | null>(null)
-const tenants = ref<any[]>([])
+const tenants = ref<ChatTenant[]>([])
 const conversations = ref<{ uuid: string; title: string; time: string }[]>([])
 const currentConvId = ref('')
-const messages = ref<{ role: string; text: string; toolCalls?: any[] }[]>([])
+const messages = ref<ChatMessage[]>([])
 const inputText = ref('')
 const streaming = ref(false)
 const streamText = ref('')
@@ -199,39 +202,12 @@ async function sendMessage(text?: string) {
       throw new Error(`HTTP ${resp.status}`)
     }
 
-    const reader = resp.body?.getReader()
-    if (!reader) throw new Error('响应流为空')
-
-    const decoder = new TextDecoder()
-    let buffer = ''
-    let currentEvent = ''
-
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-
-      buffer += decoder.decode(value, { stream: true })
-      const lines = buffer.split('\n')
-      buffer = lines.pop() || ''
-
-      for (const line of lines) {
-        if (line.startsWith('event:')) {
-          currentEvent = line.slice(6).trim()
-        } else if (line.startsWith('data:')) {
-          const data = line.slice(5).replace(/^ /, '')
-          if (currentEvent === 'done' || data === '[DONE]') {
-            if (streamText.value) {
-              messages.value.push({ role: 'assistant', text: streamText.value })
-              streamText.value = ''
-            }
-          } else if (currentEvent === 'error') {
-            message.error(`智能客服回复出错：${data}`)
-          } else {
-            streamText.value += data
-          }
-        }
-      }
-    }
+    await consumeSse(resp, ({ event, data }) => {
+      if (event === 'status' || event === 'done' || data === '[DONE]') return
+      if (event === 'error') throw new Error(data)
+      if (event === 'final') streamText.value = data
+      else if (event === 'translated_delta' || event === 'message') streamText.value += data
+    })
 
     if (streamText.value) {
       messages.value.push({ role: 'assistant', text: streamText.value })
@@ -244,8 +220,8 @@ async function sendMessage(text?: string) {
     if (conversation && messages.value.length >= 2) {
       conversation.title = userText.slice(0, 30) + (userText.length > 30 ? '...' : '')
     }
-  } catch (error: any) {
-    message.error(`智能客服请求失败：${error.message || '网络错误'}`)
+  } catch (error: unknown) {
+    message.error(`智能客服请求失败：${httpErrorMessage(error, '网络错误')}`)
     streamText.value = ''
   } finally {
     streaming.value = false
