@@ -3,23 +3,51 @@ param(
     [string]$Output = "docs/assets/demo/omnimerchant-demo-preview.gif",
     [int]$Width = 960,
     [int]$Height = 667,
-    [int]$SecondsPerFrame = 2,
-    [int]$Fps = 8,
+    [int]$SecondsPerFrame = 1,
+    [int]$Fps = 6,
     [string]$Ffmpeg = "ffmpeg"
 )
 
 $ErrorActionPreference = "Stop"
 
 $frames = @(
+    "login.png",
     "widget.png",
+    "dashboard.png",
+    "inbox.png",
+    "conversations.png",
+    "tickets.png",
+    "actions.png",
+    "sla.png",
+    "qa.png",
+    "customers.png",
+    "orders.png",
+    "products.png",
     "knowledge-chat.png",
+    "knowledge.png",
     "rag-workbench.png",
+    "rag-safety.png",
+    "agent-workflow.png",
     "traces.png",
     "evals.png",
-    "observability.png",
     "tool-calls.png",
-    "integrations.png"
+    "observability.png",
+    "multilingual.png",
+    "channels.png",
+    "integrations.png",
+    "operations.png",
+    "sre.png",
+    "security.png",
+    "audit.png",
+    "usage.png",
+    "macros.png",
+    "tenants.png",
+    "users.png"
 )
+
+if ($frames.Count -lt 30) {
+    throw "The public demo GIF must include at least 30 current runtime screenshots."
+}
 
 function Resolve-RepoPath {
     param([string]$Path)

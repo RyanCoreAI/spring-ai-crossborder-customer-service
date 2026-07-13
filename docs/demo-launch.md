@@ -55,7 +55,7 @@ Required screenshots for launch:
 
 ## Demo GIF
 
-The repository includes a short preview GIF generated from committed runtime screenshots:
+The repository includes a 32-page preview GIF generated from the latest committed desktop runtime screenshots backed by the deterministic local database:
 
 ```text
 docs/assets/demo/omnimerchant-demo-preview.gif
@@ -68,7 +68,7 @@ Rebuild it after refreshing screenshots:
 .\scripts\create-demo-gif.ps1
 ```
 
-This GIF is a compact GitHub README preview. The full 90-second recording flow remains in `scripts/demo-recording.md`.
+The GIF covers public entry points, helpdesk workflows, commerce data, RAG/Agent evidence, channels, operations, security, and administration. The full 90-second recording flow remains in `scripts/demo-recording.md`.
 
 ## Launch Positioning
 
