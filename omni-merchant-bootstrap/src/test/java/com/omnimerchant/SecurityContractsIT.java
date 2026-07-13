@@ -44,7 +44,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "omnimerchant.integrations.encryption-key=01234567890123456789012345678901",
         "spring.ai.openai.api-key=ci-placeholder",
         "spring.ai.anthropic.api-key=ci-placeholder",
-        "rocketmq.name-server=127.0.0.1:9876"
+        "rocketmq.name-server=127.0.0.1:9876",
+        "omnimerchant.message.enabled=false"
 })
 @AutoConfigureMockMvc
 class SecurityContractsIT {
