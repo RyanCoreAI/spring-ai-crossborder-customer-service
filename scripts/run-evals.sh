@@ -4,7 +4,31 @@ set -euo pipefail
 API_BASE="${API_BASE:-http://localhost:8090}"
 OUTPUT_DIR="${OUTPUT_DIR:-reports}"
 MODE="${MODE:-DETERMINISTIC}"
+DATASET_KIND="${DATASET_KIND:-CONTRACT}"
+DATASET_VERSION="${DATASET_VERSION:-contract-v1}"
+REPORT_PREFIX="${REPORT_PREFIX:-}"
 SKIP_THRESHOLD="${SKIP_THRESHOLD:-false}"
+
+DATASET_KIND="$(printf '%s' "$DATASET_KIND" | tr '[:lower:]' '[:upper:]')"
+if [[ "$DATASET_KIND" != "CONTRACT" && "$DATASET_KIND" != "GOLD" ]]; then
+  echo "DATASET_KIND must be CONTRACT or GOLD." >&2
+  exit 1
+fi
+if [[ ! "$DATASET_VERSION" =~ ^[A-Za-z0-9._-]{1,64}$ ]]; then
+  echo "DATASET_VERSION contains unsupported characters." >&2
+  exit 1
+fi
+if [[ -z "$REPORT_PREFIX" ]]; then
+  if [[ "$DATASET_KIND" == "CONTRACT" && "$DATASET_VERSION" == "contract-v1" ]]; then
+    REPORT_PREFIX="agent-eval"
+  else
+    REPORT_PREFIX="agent-eval-$(printf '%s' "$DATASET_KIND" | tr '[:upper:]' '[:lower:]')-$(printf '%s' "$DATASET_VERSION" | tr '[:upper:]' '[:lower:]')"
+  fi
+fi
+if [[ ! "$REPORT_PREFIX" =~ ^[A-Za-z0-9._-]{1,96}$ ]]; then
+  echo "REPORT_PREFIX contains unsupported characters." >&2
+  exit 1
+fi
 
 if [[ -z "${ADMIN_EMAIL:-}" || -z "${ADMIN_PASSWORD:-}" ]]; then
   echo "ADMIN_EMAIL and ADMIN_PASSWORD must be set." >&2
@@ -18,9 +42,9 @@ TOKEN=$(curl -fsS -X POST "$API_BASE/api/admin/login" \
   -H "Content-Type: application/json" \
   -d "$LOGIN_JSON" | node -e 'let s="";process.stdin.on("data",d=>s+=d);process.stdin.on("end",()=>console.log(JSON.parse(s).data.token))')
 
-JSON_PATH="$OUTPUT_DIR/agent-eval-report.json"
-MD_PATH="$OUTPUT_DIR/agent-eval-report.md"
-JUNIT_PATH="$OUTPUT_DIR/agent-eval-junit.xml"
+JSON_PATH="$OUTPUT_DIR/$REPORT_PREFIX-report.json"
+MD_PATH="$OUTPUT_DIR/$REPORT_PREFIX-report.md"
+JUNIT_PATH="$OUTPUT_DIR/$REPORT_PREFIX-junit.xml"
 TMP_JSON="$OUTPUT_DIR/.agent-eval.tmp.json"
 TMP_RUNS="$OUTPUT_DIR/.agent-eval-runs.tmp.json"
 : > "$TMP_JSON"
@@ -28,12 +52,12 @@ TMP_RUNS="$OUTPUT_DIR/.agent-eval-runs.tmp.json"
 export SKIP_THRESHOLD
 
 for tenant_id in 1001 1002; do
-  echo "Running evals for tenant $tenant_id ($MODE)"
+  echo "Running $DATASET_KIND/$DATASET_VERSION evals for tenant $tenant_id ($MODE)"
   curl -fsS -X POST "$API_BASE/api/evals/run" \
     -H "Authorization: Bearer $TOKEN" \
     -H "X-Tenant-Id: $tenant_id" \
     -H "Content-Type: application/json" \
-    -d "{\"mode\":\"$MODE\",\"failOnThreshold\":false}" >> "$TMP_JSON"
+    -d "{\"mode\":\"$MODE\",\"failOnThreshold\":false,\"datasetKind\":\"$DATASET_KIND\",\"datasetVersion\":\"$DATASET_VERSION\"}" >> "$TMP_JSON"
   echo >> "$TMP_JSON"
   curl -fsS "$API_BASE/api/evals/runs?page=1&size=1" \
     -H "Authorization: Bearer $TOKEN" \
@@ -41,15 +65,17 @@ for tenant_id in 1001 1002; do
   echo >> "$TMP_RUNS"
 done
 
-node - "$TMP_JSON" "$TMP_RUNS" "$JSON_PATH" "$MD_PATH" "$JUNIT_PATH" "$MODE" <<'NODE'
+node - "$TMP_JSON" "$TMP_RUNS" "$JSON_PATH" "$MD_PATH" "$JUNIT_PATH" "$MODE" "$DATASET_KIND" "$DATASET_VERSION" <<'NODE'
 const fs = require('fs');
-const [tmp, runsTmp, jsonPath, mdPath, junitPath, mode] = process.argv.slice(2);
+const [tmp, runsTmp, jsonPath, mdPath, junitPath, mode, datasetKind, datasetVersion] = process.argv.slice(2);
 const reports = fs.readFileSync(tmp, 'utf8').trim().split(/\n+/).map(line => JSON.parse(line).data);
 const runSummaries = fs.readFileSync(runsTmp, 'utf8').trim().split(/\n+/).filter(Boolean)
   .map(line => JSON.parse(line).data.records?.[0]).filter(Boolean);
 fs.writeFileSync(jsonPath, JSON.stringify({
   generatedAt: new Date().toISOString(),
   mode,
+  datasetKind,
+  datasetVersion,
   reports,
   runSummaries
 }, null, 2));
@@ -57,6 +83,7 @@ const lines = [
   '# OmniMerchant Agent Eval Report',
   '',
   `Mode: \`${mode}\``,
+  `Dataset: \`${datasetKind}/${datasetVersion}\``,
   '',
   '| Tenant | Total | Passed | Failed | Pass Rate | Tool Precision | Tool Recall | Citation Coverage | Retrieval Precision@K | Unsupported Claim Rate | Poisoning Block |',
   '|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|'

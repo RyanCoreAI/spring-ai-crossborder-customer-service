@@ -56,7 +56,7 @@ class AdminAuthFilterTest {
     }
 
     @Test
-    void shouldTreatTenantUserFromPlatformAdminPathAsExpiredAdminSession() throws Exception {
+    void shouldForbidTenantUserFromPlatformAdminPath() throws Exception {
         var request = new MockHttpServletRequest("GET", "/api/tenants");
         request.addHeader("Authorization", "Bearer " +
                 jwtUtil.generateToken("owner@example.com", "TENANT_USER", List.of(7L), false));
@@ -64,11 +64,11 @@ class AdminAuthFilterTest {
 
         filter.doFilter(request, response, new MockFilterChain());
 
-        assertThat(response.getStatus()).isEqualTo(401);
+        assertThat(response.getStatus()).isEqualTo(403);
     }
 
     @Test
-    void shouldTreatLegacyAdminTokenWithoutPlatformClaimAsExpired() throws Exception {
+    void shouldForbidLegacyAdminTokenWithoutPlatformClaim() throws Exception {
         var request = new MockHttpServletRequest("GET", "/api/tenants");
         request.addHeader("Authorization", "Bearer " +
                 jwtUtil.generateToken("admin@example.com", "ADMIN", List.of(), false));
@@ -76,7 +76,7 @@ class AdminAuthFilterTest {
 
         filter.doFilter(request, response, new MockFilterChain());
 
-        assertThat(response.getStatus()).isEqualTo(401);
+        assertThat(response.getStatus()).isEqualTo(403);
     }
 
     @Test

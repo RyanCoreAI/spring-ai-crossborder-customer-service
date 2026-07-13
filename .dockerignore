@@ -1,0 +1,14 @@
+.git
+.github
+.codex
+.codex-logs
+.env
+backups
+docs/assets/screenshots
+docs/assets/demo
+reports
+**/target
+omnimerchant-web/node_modules
+omnimerchant-web/dist
+omnimerchant-web/test-results
+omnimerchant-web/playwright-report

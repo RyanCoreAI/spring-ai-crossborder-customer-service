@@ -132,6 +132,10 @@ management:
   metrics:
     tags:
       application: omni-merchant
+  otlp:
+    metrics:
+      export:
+        enabled: ${OTEL_METRICS_EXPORT_ENABLED:false}
   tracing:
     sampling:
       probability: ${OTEL_TRACING_SAMPLE_RATE:0.0}

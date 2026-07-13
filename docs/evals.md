@@ -44,11 +44,13 @@ Current deterministic scoring uses structured rule checks, tool contract metadat
 ```powershell
 .\scripts\run-evals.ps1
 .\scripts\run-evals.ps1 -Mode LIVE_AGENT
+.\scripts\run-evals.ps1 -DatasetKind GOLD -DatasetVersion gold-v1
 ```
 
 ```bash
 ./scripts/run-evals.sh
 MODE=LIVE_AGENT ./scripts/run-evals.sh
+DATASET_KIND=GOLD DATASET_VERSION=gold-v1 ./scripts/run-evals.sh
 ```
 
 Outputs:
@@ -56,6 +58,20 @@ Outputs:
 - `reports/agent-eval-report.json`
 - `reports/agent-eval-report.md`
 - `reports/agent-eval-junit.xml`
+
+The default files are always the `CONTRACT/contract-v1` baseline. A GOLD run uses a separate prefix such as `agent-eval-gold-gold-v1-report.json`, so it cannot overwrite or be confused with generated contract evidence.
+
+## Human-reviewed GOLD workflow
+
+1. Create a `GOLD` dataset version in **智能体评测**. It starts in `DRAFT`.
+2. Copy a relevant CONTRACT case or create a new case as a GOLD draft.
+3. A reviewer checks the customer wording, expected tools, expected outcome, identity requirement, tenant boundary, and refusal/approval expectation.
+4. Record `APPROVED` or `REJECTED` with a review note. The backend derives the reviewer from the authenticated principal and writes an audit event.
+5. Publish the dataset only after the intended cases are approved. Rejected and draft cases remain disabled.
+6. Run the exact published dataset with `-DatasetKind GOLD -DatasetVersion <version>` and keep its report separate from CONTRACT.
+7. Run `.\scripts\verify-gold-gate.ps1` to require a published, actor-attributed dataset, at least 100 approved cases per demo tenant, and a completed GOLD run with pass rate at or above 95%.
+
+No script automatically approves GOLD cases. The v4 release gate stays open until a named human has reviewed a published dataset and its separate report exists.
 
 The Markdown summary includes pass rate, tool precision/recall, citation coverage, retrieval precision@k, unsupported claim rate, and poisoning block rate. Failed cases include observations and can link back to persisted trace ids in `/admin/traces`.
 

@@ -100,7 +100,7 @@ public class AdminAuthFilter extends OncePerRequestFilter {
                 return;
             }
             if (PLATFORM_ADMIN_PATHS.stream().anyMatch(path::startsWith) && !principal.platformAdmin()) {
-                writeUnauthorized(request, response, "管理员令牌已过期，请重新登录");
+                writeForbidden(request, response, "仅平台管理员可访问该资源");
                 return;
             }
         } catch (Exception e) {
@@ -141,5 +141,14 @@ public class AdminAuthFilter extends OncePerRequestFilter {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType("application/json;charset=UTF-8");
         response.getWriter().write(objectMapper.writeValueAsString(R.fail("401", message)));
+    }
+
+    private void writeForbidden(HttpServletRequest request, HttpServletResponse response, String message)
+            throws IOException {
+        log.warn("Authorization rejected: status=403, method={}, path={}, message={}",
+                request.getMethod(), request.getRequestURI(), message);
+        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+        response.setContentType("application/json;charset=UTF-8");
+        response.getWriter().write(objectMapper.writeValueAsString(R.fail("403", message)));
     }
 }

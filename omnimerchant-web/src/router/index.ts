@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
+import { canViewAdminPage, findAdminPage } from "@/config/adminNavigation";
 
 const router = createRouter({
   history: createWebHistory(),
@@ -181,11 +182,20 @@ const router = createRouter({
 
 router.beforeEach((to, _from, next) => {
   const authStore = useAuthStore();
-  if (to.meta.public || authStore.isLoggedIn) {
+  if (to.meta.public) {
     next();
-  } else {
-    next("/login");
+    return;
   }
+  if (!authStore.isLoggedIn) {
+    next("/login");
+    return;
+  }
+  const adminPage = findAdminPage(to.path);
+  if (adminPage && !canViewAdminPage(adminPage, authStore.roles, authStore.platformAdmin)) {
+    next("/admin");
+    return;
+  }
+  next();
 });
 
 export default router;

@@ -4,6 +4,9 @@ param(
     [string]$AdminPassword = $env:ADMIN_PASSWORD,
     [string]$OutputDir = "reports",
     [string]$Mode = "DETERMINISTIC",
+    [string]$DatasetKind = "CONTRACT",
+    [string]$DatasetVersion = "contract-v1",
+    [string]$ReportPrefix = "",
     [switch]$SkipThreshold
 )
 
@@ -12,6 +15,23 @@ $Lf = [string][char]10
 
 if (-not $AdminEmail -or -not $AdminPassword) {
     throw "ADMIN_EMAIL and ADMIN_PASSWORD must be set or passed as parameters."
+}
+$DatasetKind = $DatasetKind.Trim().ToUpperInvariant()
+if ($DatasetKind -notin @("CONTRACT", "GOLD")) {
+    throw "DatasetKind must be CONTRACT or GOLD."
+}
+if ($DatasetVersion -notmatch '^[A-Za-z0-9._-]{1,64}$') {
+    throw "DatasetVersion contains unsupported characters."
+}
+if (-not $ReportPrefix) {
+    $ReportPrefix = if ($DatasetKind -eq "CONTRACT" -and $DatasetVersion -eq "contract-v1") {
+        "agent-eval"
+    } else {
+        "agent-eval-$($DatasetKind.ToLowerInvariant())-$($DatasetVersion.ToLowerInvariant())"
+    }
+}
+if ($ReportPrefix -notmatch '^[A-Za-z0-9._-]{1,96}$') {
+    throw "ReportPrefix contains unsupported characters."
 }
 
 New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
@@ -54,8 +74,13 @@ $runSummaries = @()
 foreach ($tenantId in $tenantIds) {
     $headers = $headersBase.Clone()
     $headers["X-Tenant-Id"] = "$tenantId"
-    Write-Host ('Running evals for tenant {0} ({1})' -f $tenantId, $Mode)
-    $body = @{ mode = $Mode; failOnThreshold = $false } | ConvertTo-Json
+    Write-Host ('Running {0}/{1} evals for tenant {2} ({3})' -f $DatasetKind, $DatasetVersion, $tenantId, $Mode)
+    $body = @{
+        mode = $Mode
+        failOnThreshold = $false
+        datasetKind = $DatasetKind
+        datasetVersion = $DatasetVersion
+    } | ConvertTo-Json
     $report = Invoke-RestMethod -Method Post -Uri "$ApiBase/api/evals/run" -Headers $headers -ContentType "application/json" -Body $body
     $reports += $report.data
     $runs = Invoke-RestMethod -Method Get -Uri "$ApiBase/api/evals/runs?page=1&size=1" -Headers $headers
@@ -65,12 +90,14 @@ foreach ($tenantId in $tenantIds) {
     }
 }
 
-$jsonPath = Join-Path $OutputDir "agent-eval-report.json"
-$mdPath = Join-Path $OutputDir "agent-eval-report.md"
-$junitPath = Join-Path $OutputDir "agent-eval-junit.xml"
+$jsonPath = Join-Path $OutputDir "$ReportPrefix-report.json"
+$mdPath = Join-Path $OutputDir "$ReportPrefix-report.md"
+$junitPath = Join-Path $OutputDir "$ReportPrefix-junit.xml"
 $bundle = [pscustomobject]@{
     generatedAt = (Get-Date).ToString("o")
     mode = $Mode
+    datasetKind = $DatasetKind
+    datasetVersion = $DatasetVersion
     reports = $reports
     runSummaries = $runSummaries
 }
@@ -80,6 +107,7 @@ $lines = [System.Collections.Generic.List[string]]::new()
 Add-Line $lines '# OmniMerchant Agent Eval Report'
 Add-Line $lines ''
 Add-Line $lines ('Mode: `{0}`' -f $Mode)
+Add-Line $lines ('Dataset: `{0}/{1}`' -f $DatasetKind, $DatasetVersion)
 Add-Line $lines ''
 Add-Line $lines '| Tenant | Total | Passed | Failed | Pass Rate | Tool Precision | Tool Recall | Citation Coverage | Retrieval Precision@K | Recall@K | MRR | nDCG@K | No-answer Accuracy | P95 Retrieval Latency | Unsupported Claim Rate | Poisoning Block |'
 Add-Line $lines '|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|'

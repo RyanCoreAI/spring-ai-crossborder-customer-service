@@ -11,14 +11,14 @@ v4 has two separate release claims. Gate A is reproducible without private crede
 - [x] `npm audit --omit=dev --audit-level=high` has no high vulnerabilities.
 - [x] `docker compose -f compose.demo.yml config --quiet` succeeds with required placeholders.
 - [x] `scripts/verify-openapi.ps1` and `scripts/verify-evidence.ps1` succeed.
-- [ ] A fresh clone starts through `scripts/demo.ps1`; Flyway performs all schema and demo migrations.
+- [x] A fresh clone starts through `scripts/demo.ps1`; Flyway performs all schema and demo migrations.
 - [x] Admin login, Widget session, authenticated SSE, and 400/401/403 tenant contracts pass.
 - [x] Request-level specialist tool allowlists and execution-time tenant/risk/approval guards are covered by tests.
 - [ ] CONTRACT and human-reviewed GOLD datasets are reported separately.
 - [x] UI screenshots are generated from real backend DTOs at desktop and mobile widths.
 - [x] README, LICENSE, OpenAPI, reports, screenshots, and scope boundaries agree.
 
-Local evidence was refreshed on 2026-07-13 from the four committed v4 changesets. A fresh local clone completed Maven packaging, `npm ci`, the frontend build, and frontend unit tests without untracked workspace files. The full Compose startup remains unchecked because the local Docker Desktop Linux engine stopped responding during the clean-volume build; no database volume was deleted. The remaining Gate A boxes require green GitHub Actions, a successful Flyway-backed clean startup, or actual human GOLD review and must not be inferred from fixture evidence.
+Local evidence was refreshed on 2026-07-13 from an isolated clone of commit `1a57bb19` with the current release patch applied. A cold frontend image build completed with Node 22, MySQL applied 26 Flyway migrations, PostgreSQL applied its vector migration, both app and web containers became healthy, proxied admin login and Widget session returned 200, and an unauthenticated order request returned 401. The demo used a separate Compose project and alternate database ports; no existing database volume was deleted. GitHub Actions and CodeQL are green on `master`. The remaining Gate A checkbox requires actual named human GOLD review and must not be inferred from generated CONTRACT or fixture evidence.
 
 ## Gate B: Commercial Beta
 

@@ -6,7 +6,7 @@ This guide defines the public demo story for Phase 7. It intentionally uses seed
 
 1. Start infrastructure and backend.
 2. Run `scripts/demo.ps1` or `scripts/demo.sh`.
-3. Open `http://localhost:5173/widget`.
+3. Open `http://localhost:5188/widget`.
 4. Use tenant `OM-FASHION`.
 5. Ask:
    - `Where is my order #1001? My email is ava@example.com.`
@@ -74,6 +74,6 @@ This GIF is a compact GitHub README preview. The full 90-second recording flow r
 
 OmniMerchant should be described as:
 
-> An open-source Spring AI cross-border ecommerce customer-service platform with multi-tenant security, commerce tools, Shopify-first integration, billing controls, eval reports, trace replay, observability, and RAG safety review.
+> A Spring Boot 4 + Spring AI 2 trustworthy omnichannel ecommerce helpdesk candidate with multi-tenant security, evidence-grade RAG, controlled agent tools, human handoff, eval reports, trace replay, and connector backbones.
 
-Avoid claiming production parity with commercial helpdesks until a hosted demo, live provider-backed eval report, Shopify App Store embedded/billing flow, and broader channel connectors are complete.
+Avoid claiming production parity with commercial helpdesks until the hosted-demo gate, human-reviewed GOLD evidence, a live WeChat/KF channel, a Douyin test store, and the commercial-beta soak/security gates are complete.

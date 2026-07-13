@@ -25,7 +25,7 @@
         @open-change="onOpenChange"
         @click="onMenuClick"
       >
-        <template v-for="group in navigation" :key="group.key">
+        <template v-for="group in visibleNavigation" :key="group.key">
           <a-menu-item v-if="group.path" :key="group.path">
             <template #icon><component :is="group.icon" /></template>
             {{ group.label }}
@@ -85,7 +85,7 @@
         :open-keys="openKeys"
         @click="onMobileMenuClick"
       >
-        <template v-for="group in navigation" :key="group.key">
+        <template v-for="group in visibleNavigation" :key="group.key">
           <a-menu-item v-if="group.path" :key="group.path">
             <template #icon><component :is="group.icon" /></template
             >{{ group.label }}
@@ -187,7 +187,8 @@ import { useAuthStore } from "@/stores/auth";
 import { getStoredTenantId, setStoredTenantId } from "@/utils/tenant";
 import { tenantOptionLabel } from "@/utils/display";
 import {
-  adminNavigation as navigation,
+  adminNavigation,
+  canViewAdminPage,
   compatibilityAdminPages,
   type AdminNavItem,
 } from "@/config/adminNavigation";
@@ -209,8 +210,16 @@ const tenantRenderKey = ref(0);
 const tenantReady = ref(false);
 const runtime = ref<RuntimeSummary | null>(null);
 
+const visibleNavigation = computed(() =>
+  adminNavigation
+    .map((group) => ({
+      ...group,
+      children: visibleChildren(group.children),
+    }))
+    .filter((group) => group.path || group.children.length > 0),
+);
 const allPages = computed(() => [
-  ...navigation.flatMap((group) =>
+  ...visibleNavigation.value.flatMap((group) =>
     group.path
       ? [
           {
@@ -221,7 +230,7 @@ const allPages = computed(() => [
         ]
       : visibleChildren(group.children),
   ),
-  ...compatibilityAdminPages,
+  ...visibleChildren(compatibilityAdminPages),
 ]);
 const activeMenuKey = computed(() => {
   const exact = allPages.value.find((item) => route.path === item.path);
@@ -263,8 +272,8 @@ function onMenuClick({ key }: { key: string }) {
   router.push(key);
 }
 function visibleChildren(items?: AdminNavItem[]) {
-  return (items || []).filter(
-    (item) => !item.platformAdminOnly || authStore.platformAdmin,
+  return (items || []).filter((item) =>
+    canViewAdminPage(item, authStore.roles, authStore.platformAdmin),
   );
 }
 function onMobileMenuClick({ key }: { key: string }) {
@@ -325,7 +334,7 @@ async function handleLogout() {
 
 onMounted(() => {
   window.addEventListener("resize", updateViewport);
-  const group = navigation.find((item) =>
+  const group = visibleNavigation.value.find((item) =>
     item.children?.some((child) => route.path.startsWith(child.path)),
   );
   if (group) openKeys.value = [group.key];
