@@ -5,7 +5,7 @@ v4 has two separate release claims. Gate A is reproducible without private crede
 ## Gate A: Open-source Flagship
 
 - [x] Oracle JDK 21 on Windows: `mvn -q test`.
-- [ ] Temurin JDK 21 in GitHub Actions: backend, integration, deterministic eval, frontend, browser smoke, compose, and CodeQL are green on `master`.
+- [x] Temurin JDK 21 in GitHub Actions: backend, integration, deterministic eval, frontend, browser smoke, compose, and CodeQL are green on `master`.
 - [x] `mvn -q -DskipTests package` succeeds.
 - [x] `npm ci && npm run test && npm run build` succeeds.
 - [x] `npm audit --omit=dev --audit-level=high` has no high vulnerabilities.
