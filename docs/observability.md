@@ -1,6 +1,6 @@
 # Observability And Trace Replay
 
-OmniMerchant v3 uses DB-backed traces plus a Trust Console. The goal is to answer why an agent response succeeded or failed, whether eval/RAG safety gates are healthy, and how much the agent costs without storing raw PII-heavy prompts by default.
+OmniMerchant v4 uses DB-backed traces plus a Trust Console. The goal is to answer why an agent response succeeded or failed, whether eval/RAG safety gates are healthy, and how much the agent costs without storing raw PII-heavy prompts by default.
 
 ## Data Model
 

@@ -6,9 +6,9 @@ Goal: prove OmniMerchant is a cross-border ecommerce helpdesk platform, not a pl
 
 ## Setup
 
-1. Start backend and frontend.
-2. Load `sql/db_main.sql`, `sql/db_extensions.sql`, `sql/db_channels.sql`, `sql/db_helpdesk.sql`, `sql/db_sla.sql`, `sql/db_actions.sql`, `sql/db_observability.sql`, `sql/db_eval_v2.sql`, `sql/db_shopify_v2.sql`, `sql/db_qa.sql`, `sql/db_rbac_audit.sql`, `sql/db_slo.sql`, `sql/db_rag_safety.sql`, `sql/db_rag_deepening.sql`, `sql/demo_seed.sql`, and `sql/db_vector.sql`.
-3. Login as the configured admin and select tenant `OM-FASHION`.
+1. Copy `.env.example` to `.env` and fill the required local-only values.
+2. Run `scripts/demo.ps1`; Flyway applies the MySQL and PostgreSQL migrations and loads deterministic demo data.
+3. Open `http://127.0.0.1:5188`, login as the configured bootstrap admin, and select tenant `OM-FASHION`.
 
 ## Recording Flow
 
@@ -24,7 +24,7 @@ Goal: prove OmniMerchant is a cross-border ecommerce helpdesk platform, not a pl
 
 70-82s: Open `/admin/observability`, show AI resolution, escalation, tool success, failure buckets, and P95 latency.
 
-82-90s: Open `/admin/integrations`, show Shopify OAuth install, sync jobs, webhook inbox, and replay controls.
+82-90s: Open `/admin/integrations`, show the connector status, sync jobs, webhook inbox, and replay controls. Keep fixture and live status visibly distinct.
 
 ## Capture Checklist
 

@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
   title: OmniMerchant API
-  version: 0.3.0
-  description: Spring Boot 4 + Spring AI 2 ecommerce customer-service platform API. Static v3 contract for local demo and reviewer verification.
+  version: 0.4.0
+  description: Spring Boot 4 + Spring AI 2 trustworthy omnichannel ecommerce helpdesk API. This contract lists implemented v4 endpoints only; credential-gated Douyin live APIs remain a release gate.
 servers:
   - url: http://localhost:8090
 security:
@@ -14,12 +14,55 @@ paths:
       security: []
       responses:
         '200': { description: OK }
+  /api/system/runtime:
+    get:
+      summary: Return backend-authoritative runtime mode and demo seed metadata
+      responses:
+        '200': { description: Runtime mode, demoDataEnabled, and seedVersion }
   /api/admin/login:
     post:
       summary: Admin login
       security: []
       responses:
         '200': { description: JWT response }
+  /api/auth/login:
+    post:
+      summary: Login with a database-backed user account
+      security: []
+      responses:
+        '200': { description: Access token, refresh token, roles, and tenant memberships }
+        '401': { description: Invalid credentials }
+  /api/auth/refresh:
+    post:
+      summary: Rotate an access token with a stored refresh token
+      security: []
+      responses:
+        '200': { description: Rotated token pair }
+        '401': { description: Invalid, expired, revoked, or reused refresh token }
+  /api/auth/logout:
+    post:
+      summary: Revoke current access and refresh tokens
+      responses:
+        '200': { description: Logged out }
+  /api/auth/me:
+    get:
+      summary: Get the authenticated database user and memberships
+      responses:
+        '200': { description: Current identity }
+  /api/admin/users:
+    get:
+      summary: List application users; platform administrator only
+      responses:
+        '200': { description: User list }
+    post:
+      summary: Create a user and explicit tenant memberships; platform administrator only
+      responses:
+        '200': { description: Created user }
+  /api/admin/roles:
+    get:
+      summary: List enforceable RBAC roles and permissions
+      responses:
+        '200': { description: Role list }
   /api/widget/session:
     post:
       summary: Create public buyer widget session
@@ -145,6 +188,57 @@ paths:
         - $ref: '#/components/parameters/TenantId'
       responses:
         '200': { description: Channel account list }
+  /api/public/channels/wechat-kf/{callbackKey}:
+    get:
+      summary: Verify and decrypt a WeChat/KF URL challenge by opaque callback key
+      security: []
+      parameters:
+        - { name: callbackKey, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Decrypted challenge }
+        '403': { description: Signature, receiveId, or callback key rejected }
+    post:
+      summary: Verify, decrypt, deduplicate, persist, and enqueue a WeChat/KF callback
+      security: []
+      parameters:
+        - { name: callbackKey, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Fast callback acknowledgement }
+        '403': { description: Signature, AES payload, or receiveId rejected }
+  /api/channels/messages:
+    get:
+      summary: List channel message envelopes
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: accountId, in: query, schema: { type: integer, format: int64 } }
+        - { name: conversationUuid, in: query, schema: { type: string } }
+      responses:
+        '200': { description: Channel message page }
+  /api/channels/{accountId}/send:
+    post:
+      summary: Send outbound channel message; fixture only unless live credentials are configured
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: accountId, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200': { description: ChannelSendResultVO }
+  /api/channels/{accountId}/health:
+    get:
+      summary: Channel adapter health and live/fixture boundary
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: accountId, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200': { description: ChannelHealthVO }
+  /api/channels/accounts/{accountId}/credentials:
+    put:
+      summary: Encrypt and store WeChat/KF account credentials
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: accountId, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200': { description: Credential readiness without returning secret values }
+        '403': { description: Missing integration management permission }
   /api/inbox/queues:
     get:
       summary: Unified helpdesk queue counts
@@ -162,6 +256,15 @@ paths:
         - { name: size, in: query, schema: { type: integer, default: 20 } }
       responses:
         '200': { description: Inbox work item page }
+  /api/inbox/{conversationUuid}/context:
+    get:
+      summary: Load real messages, customer, orders, tickets, approvals, tools, and SLA context for an inbox conversation
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: conversationUuid, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: InboxContextVO }
+        '404': { description: Conversation not found in the current tenant }
   /api/tickets:
     get:
       summary: List first-class helpdesk tickets backed by the ticket table
@@ -270,6 +373,13 @@ paths:
         - { name: size, in: query, schema: { type: integer, default: 20 } }
       responses:
         '200': { description: QA review page }
+  /api/qa/summary:
+    get:
+      summary: Tenant-scoped QA queue totals and persisted score averages
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: QA summary backed by qa_review_queue }
   /api/qa/{id}/review:
     post:
       summary: Submit a human QA review
@@ -308,6 +418,72 @@ paths:
         - $ref: '#/components/parameters/TenantId'
       responses:
         '200': { description: SLO policy list }
+  /api/sre/snapshots:
+    get:
+      summary: List persisted SLO evaluation snapshots
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: SLO snapshot list }
+  /api/sre/alerts:
+    get:
+      summary: List persisted alert lifecycle events
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Alert list }
+  /api/sre/evaluate:
+    post:
+      summary: Evaluate current metrics and persist SLO snapshots and alerts
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Current SLO evaluation }
+  /api/sre/alerts/{id}/acknowledge:
+    post:
+      summary: Acknowledge an open alert with the authenticated actor
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200': { description: Updated alert }
+  /api/sre/alerts/{id}/close:
+    post:
+      summary: Close an alert with the authenticated actor
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200': { description: Updated alert }
+  /api/sre/rollouts:
+    get:
+      summary: List prompt, model, tool-policy, and RAG index rollout records
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Rollout list with enforcement mode }
+    post:
+      summary: Register a rollout; unsupported runtime controls remain observe-only
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Created rollout }
+  /api/sre/rollouts/{id}/activate:
+    post:
+      summary: Activate a runtime-enforced RAG index rollout or an observe-only record
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200': { description: Activated rollout }
+  /api/sre/rollouts/{id}/rollback:
+    post:
+      summary: Roll back a rollout and the active RAG index when applicable
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200': { description: Rolled back rollout }
   /api/agent/workflow:
     get:
       summary: Supervisor-worker agent workflow and policy boundary summary
@@ -421,12 +597,107 @@ paths:
       responses:
         '200': { description: Webhook replay result }
         '404': { description: Webhook event not found }
+  /api/integrations/shopify/privacy-requests:
+    get:
+      summary: List persisted Shopify mandatory privacy webhook requests
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Privacy request list }
+  /api/integrations/shopify/bulk:
+    get:
+      summary: List Shopify GraphQL bulk initial-sync operations
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Bulk operation list }
+    post:
+      summary: Start a read-only Shopify GraphQL bulk operation
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Started bulk operation }
+  /api/integrations/shopify/bulk/{id}/refresh:
+    post:
+      summary: Refresh a Shopify bulk operation status
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200': { description: Refreshed bulk operation }
+  /api/integrations/shopify/bulk/{id}/import:
+    post:
+      summary: Import the completed read-only bulk result into tenant caches
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200': { description: Import result }
   /api/webhooks/shopify:
     post:
       summary: Shopify webhook receiver
       security: []
       responses:
         '200': { description: Webhook accepted or rejected with app error code }
+  /api/integrations/domestic/platforms:
+    get:
+      summary: Domestic marketplace connector status; fixture/live boundary is explicit
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: DomesticPlatformVO list }
+  /api/integrations/domestic/douyin/fixture-sync:
+    post:
+      summary: Import Douyin Shop fixture data into real customer/order/product cache tables
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: DomesticFixtureSyncResult }
+  /api/integrations/domestic/douyin/fixture-webhook:
+    post:
+      summary: Process a Douyin Shop fixture webhook without external writes
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: DomesticFixtureSyncResult }
+  /api/multilingual/debug:
+    post:
+      summary: Debug language detection, inbound translation, outbound translation, and fallback status
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: MultilingualDebugVO }
+  /api/multilingual/detect:
+    post:
+      summary: Detect language with real Lingua confidence values and no simulated assistant reply
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Language detection evidence }
+  /api/multilingual/summary:
+    get:
+      summary: Multilingual conversation and translation fallback summary
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: MultilingualSummaryVO }
+  /api/multilingual/events:
+    get:
+      summary: List persisted language detection and translation evidence events
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: page, in: query, schema: { type: integer, default: 1 } }
+        - { name: size, in: query, schema: { type: integer, default: 20 } }
+      responses:
+        '200': { description: MultilingualEventVO page }
+  /api/multilingual/traces/{traceId}:
+    get:
+      summary: Fetch trace detail for language processing evidence
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: traceId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: TraceDetailVO }
   /api/evals:
     get:
       summary: List golden eval cases
@@ -458,6 +729,35 @@ paths:
         - { name: runId, in: path, required: true, schema: { type: integer, format: int64 } }
       responses:
         '200': { description: Eval run detail }
+  /api/evals/gold/cases:
+    get:
+      summary: List manually annotated GOLD eval cases separately from CONTRACT cases
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: GOLD case page }
+    post:
+      summary: Create a disabled GOLD draft in an existing draft dataset
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: GOLD draft }
+  /api/evals/gold/cases/{sourceCaseId}/copy:
+    post:
+      summary: Copy an existing case into a GOLD draft for human annotation
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: sourceCaseId, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200': { description: GOLD draft copy }
+  /api/evals/gold/cases/{id}/review:
+    post:
+      summary: Approve or reject a GOLD draft with the authenticated reviewer
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200': { description: Reviewed GOLD case }
   /api/observability/summary:
     get:
       summary: Tenant-scoped Trust Console summary with eval, RAG, cost, latency, and safety metrics
@@ -518,6 +818,76 @@ paths:
       responses:
         '200': { description: RAG debug response }
         '400': { description: Bad request }
+  /api/rag/datasets:
+    get:
+      summary: List CONTRACT and GOLD dataset versions
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Dataset version list }
+    post:
+      summary: Create a draft dataset version
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Draft dataset }
+  /api/rag/datasets/{id}/publish:
+    post:
+      summary: Publish an immutable reviewed dataset version
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200': { description: Published dataset }
+  /api/rag/feedback:
+    get:
+      summary: List RAG quality feedback from support reviewers
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Feedback list }
+    post:
+      summary: Submit citation, retrieval, stale-policy, or answer feedback
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Feedback item }
+  /api/rag/feedback/{id}/resolve:
+    post:
+      summary: Resolve a RAG quality feedback item with reviewer evidence
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200': { description: Resolved feedback }
+  /api/rag/index/releases:
+    get:
+      summary: List versioned RAG index releases
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Index release list }
+    post:
+      summary: Create a draft RAG index release
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Draft index release }
+  /api/rag/index/releases/{version}/activate:
+    post:
+      summary: Activate a reviewed RAG index version
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - { name: version, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Active index release }
+  /api/rag/index/releases/rollback:
+    post:
+      summary: Roll back to the previous RAG index release
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200': { description: Rolled back index release }
   /api/rag/health:
     get:
       summary: Knowledge health summary for RAG safety, stale docs, indexing failures, and low-evidence evals

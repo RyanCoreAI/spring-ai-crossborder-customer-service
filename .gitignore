@@ -36,6 +36,8 @@ build/
 # Node.js / Vue / Vite
 # ====================
 node_modules/
+playwright-report/
+test-results/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -83,6 +85,7 @@ nbdist/
 *.log
 logs/
 .codex-logs/
+backups/
 hs_err_pid*
 replay_pid*
 
@@ -179,3 +182,6 @@ __pycache__/
 # ====================
 .claude/
 .anthropic/
+docs/assets/runtime-screenshots-*/
+# Design-review exports are local references, not runtime evidence.
+docs/assets/ui-preview-v4/

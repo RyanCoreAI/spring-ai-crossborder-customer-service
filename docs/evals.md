@@ -1,6 +1,6 @@
 # Agent Evals
 
-OmniMerchant v3 keeps deterministic eval as a release gate. It is designed to prove tool-selection, tenant isolation, refusal behavior, citation requirements, retrieval evidence, RAG poisoning defense, and high-risk action gating without requiring a live LLM key.
+OmniMerchant v4 keeps deterministic eval as a release gate. It is designed to prove tool-selection, tenant isolation, refusal behavior, citation requirements, retrieval evidence, RAG poisoning defense, and high-risk action gating without requiring a live LLM key.
 
 ## Modes
 
@@ -13,7 +13,7 @@ The deterministic runner persists every run into `agent_eval_run` and every case
 
 ## Seed Coverage
 
-`sql/demo_seed.sql` seeds 200 enabled cases across two tenants:
+Flyway demo migration `V100__demo_seed.sql` seeds 200 enabled cases across two tenants. The maintained source fixture remains `sql/demo_seed.sql`:
 
 - order and logistics verification
 - product advice and price constraints

@@ -1,6 +1,6 @@
 # RAG Safety And Evidence Quality
 
-RAG improves factuality and freshness, but it also introduces poisoning and prompt-injection risks through uploaded documents, product descriptions, and retrieved chunks. OmniMerchant v3 keeps a deterministic ingestion review layer before content enters the retrieval path and reports RAG safety metrics through eval and Trust Console.
+RAG improves factuality and freshness, but it also introduces poisoning and prompt-injection risks through uploaded documents, product descriptions, and retrieved chunks. OmniMerchant v4 keeps a deterministic ingestion review layer before content enters the retrieval path and reports RAG safety metrics through eval and Trust Console.
 
 ## Ingestion Review
 
@@ -28,7 +28,7 @@ Review rows are written to `rag_safety_review` with status, risk metadata, sourc
 
 ## Evidence Metadata
 
-`sql/db_rag_deepening.sql` extends `knowledge_doc` with source trust and approval metadata. `sql/db_vector.sql` stores the evidence fields that the RAG Workbench reads from PGVector:
+Flyway migrations extend `knowledge_doc` with source trust and approval metadata and store the evidence fields that the RAG Workbench reads from PGVector. The corresponding maintained SQL sources are `sql/db_rag_deepening.sql` and `sql/db_vector.sql`:
 
 - `source_title`, `source_uri`, `source_type`, `source_trust_level`
 - `content_hash`, `doc_version`, `effective_from`, `effective_to`
