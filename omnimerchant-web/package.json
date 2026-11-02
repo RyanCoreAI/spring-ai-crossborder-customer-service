@@ -15,7 +15,7 @@
     "@ant-design/icons-vue": "^7.0.1",
     "ant-design-vue": "^4.2.6",
     "axios": "^1.7.9",
-    "dompurify": "^3.4.11",
+    "dompurify": "^3.4.17",
     "echarts": "6.1.0",
     "marked": "^15.0.4",
     "pinia": "^2.3.0",
