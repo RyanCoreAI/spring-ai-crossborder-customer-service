@@ -9,6 +9,9 @@ import org.apache.ibatis.annotations.Select;
 @Mapper
 public interface ChannelAccountMapper extends BaseMapper<ChannelAccount> {
 
+    @Select("SELECT * FROM channel_account WHERE id = #{accountId} FOR UPDATE")
+    ChannelAccount selectForSending(Long accountId);
+
     @InterceptorIgnore(tenantLine = "true")
     @Select("SELECT * FROM channel_account WHERE callback_key = #{callbackKey} LIMIT 1")
     ChannelAccount selectByCallbackKeyPublic(String callbackKey);

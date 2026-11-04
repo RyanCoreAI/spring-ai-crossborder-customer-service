@@ -30,6 +30,8 @@ import com.omnimerchant.tenant.context.TenantContextHolder;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
+import lombok.extern.slf4j.Slf4j;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -44,6 +46,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ChannelIntegrationService {
 
     private final ChannelAccountMapper channelAccountMapper;
@@ -58,6 +61,7 @@ public class ChannelIntegrationService {
     private final ChannelCredentialService credentialService;
     private final MultiLingualEngine multiLingualEngine;
     private final TranslationEvidenceService translationEvidenceService;
+    private final ChannelSendLedger sendLedger;
 
     private Map<String, ChannelAdapter> adapterMap() {
         return adapters.stream().collect(Collectors.toMap(ChannelAdapter::channel, Function.identity()));
@@ -152,39 +156,68 @@ public class ChannelIntegrationService {
                 mapping.getConversationUuid(), channelMessage.getExternalMessageId(), false);
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public IntegrationDtos.ChannelSendResultVO send(Long accountId, IntegrationDtos.ChannelSendRequest request) {
         var account = requireAccount(accountId, null);
         var adapter = requireAdapter(account.getChannel());
         if (request == null || request.message() == null || request.message().isBlank()) {
             throw new BusinessException(ErrorCode.BAD_REQUEST, "发送内容不能为空");
         }
+        if (request.idempotencyKey() == null || request.idempotencyKey().isBlank()
+                || request.idempotencyKey().length() > 128) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "发送需提供不超过 128 字符的 idempotencyKey，重试时保持相同值");
+        }
         var mapping = findMapping(account.getId(), request.conversationUuid(), request.externalThreadId());
         var externalThreadId = request.externalThreadId() == null && mapping != null
                 ? mapping.getExternalThreadId()
                 : request.externalThreadId();
-        var result = adapter.sendMessage(toConfig(account), new ChannelOutboundMessage(
-                request.conversationUuid(),
-                externalThreadId,
-                request.externalCustomerId(),
-                request.message().trim(),
-                request.idempotencyKey()));
-        if (!result.success()) {
-            throw new BusinessException(ErrorCode.CHANNEL_API_ERROR, result.errorMessage());
+        var conversationUuid = request.conversationUuid() == null && mapping != null
+                ? mapping.getConversationUuid() : request.conversationUuid();
+        if (conversationUuid == null || conversationUuid.isBlank()) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "发送需指定有效会话");
         }
-        var message = insertChannelMessage(account, request.conversationUuid(), result.providerMessageId(),
-                "OUTBOUND", "HUMAN", request.message(), result.deliveryStatus(),
-                request.idempotencyKey() == null ? "out:" + UUID.randomUUID() : request.idempotencyKey());
-        var receipt = new ChannelDeliveryReceipt();
-        receipt.setTenantId(requireTenant());
-        receipt.setChannelMessageId(message.getId());
-        receipt.setReceiptType(result.deliveryStatus());
-        receipt.setProviderEventId(result.providerMessageId());
-        receipt.setProviderPayloadHash(sha256(result.providerMessageId() + ":" + result.deliveryStatus()));
-        receipt.setObservedAt(LocalDateTime.now());
-        receiptMapper.insert(receipt);
-        return new IntegrationDtos.ChannelSendResultVO(message.getId(), result.providerMessageId(),
-                result.deliveryStatus(), result.mode(), result.errorCode(), result.errorMessage());
+        var config = toConfig(account); // Validate/decrypt credentials before creating an intent.
+        var body = request.message().trim();
+        var fingerprint = sha256(jsonFingerprint(accountId, conversationUuid, externalThreadId,
+                request.externalCustomerId(), body, request.idempotencyKey())).substring(0, 32);
+        var reservation = sendLedger.reserve(accountId, conversationUuid, body, request.idempotencyKey(), fingerprint);
+        var message = reservation.message();
+        if (!reservation.fresh()) {
+            var status = message.getDeliveryStatus();
+            if ("SENDING".equals(status) || "UNKNOWN".equals(status)) return unknownSend(message, config.fixtureMode());
+            return new IntegrationDtos.ChannelSendResultVO(message.getId(), message.getExternalMessageId(), status,
+                    config.fixtureMode() ? "FIXTURE" : "LIVE", "FAILED".equals(status) ? "DELIVERY_FAILED" : null,
+                    "FAILED".equals(status) ? "此前发送已失败；未重复调用外部渠道" : null);
+        }
+        com.omnimerchant.channel.ChannelSendResult result;
+        try {
+            result = adapter.sendMessage(config, new ChannelOutboundMessage(conversationUuid, externalThreadId,
+                    request.externalCustomerId(), body, message.getMessageUuid()));
+            sendLedger.complete(message, result);
+        } catch (RuntimeException e) {
+            // A response or local receipt write can fail after the provider accepted the message.
+            // The committed intent prevents a retry from dispatching it a second time.
+            log.warn("Channel send result needs verification: messageId={}", message.getId(), e);
+            try { sendLedger.markUnknown(message); }
+            catch (RuntimeException persistenceFailure) { log.warn("Intent {} remains SENDING; do not resend", message.getId(), persistenceFailure); }
+            return unknownSend(message, config.fixtureMode());
+        }
+        if ("UNKNOWN".equals(result.deliveryStatus())) return unknownSend(message, config.fixtureMode());
+        if (!result.success()) throw new BusinessException(ErrorCode.CHANNEL_API_ERROR, result.errorMessage());
+        return new IntegrationDtos.ChannelSendResultVO(message.getId(), result.providerMessageId(), result.deliveryStatus(),
+                result.mode(), result.errorCode(), result.errorMessage());
+    }
+
+    private IntegrationDtos.ChannelSendResultVO unknownSend(ChannelMessage message, boolean fixtureMode) {
+        return new IntegrationDtos.ChannelSendResultVO(message.getId(), null, "UNKNOWN", fixtureMode ? "FIXTURE" : "LIVE",
+                "DELIVERY_UNKNOWN", "发送结果未知，请核对渠道回执；相同幂等键不会重复发送");
+    }
+
+    private String jsonFingerprint(Long accountId, String conversationUuid, String threadId,
+                                   String customerId, String body, String key) {
+        try {
+            return objectMapper.writeValueAsString(new Object[]{accountId, conversationUuid, threadId, customerId, body, key});
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) { throw new IllegalStateException(e); }
     }
 
     public CommerceDtos.PageResult<IntegrationDtos.ChannelMessageVO> messages(Long accountId, String conversationUuid,

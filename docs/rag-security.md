@@ -37,6 +37,12 @@ Flyway migrations extend `knowledge_doc` with source trust and approval metadata
 
 High-risk or untrusted chunks are filtered out of retrieval. Neighbor UUIDs support context-window inspection without merging unrelated chunks into the prompt.
 
+## Retrieval-Time Eligibility
+
+Vector results, BM25 results, lexical fallback, and neighbor expansion all check the current tenant document and review before supplying evidence. Documents must remain published, undeleted, trusted, and within their effective dates. A quarantined or rejected review blocks retrieval even when an older vector still has low-risk metadata. Edited documents must be indexed again before their previous vectors can be used; document version and content hash must still match.
+
+The checks load documents and reviews in batches and cache the decision per document for the retrieval request. Legacy documents without a stored review are scanned before fallback use; high-risk content is rejected, and the actual risk label is retained. Existing vectors are not deleted by these read-time checks.
+
 ## Admin APIs
 
 | Method | Path | Purpose |
