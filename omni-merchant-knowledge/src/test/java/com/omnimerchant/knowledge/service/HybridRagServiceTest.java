@@ -28,6 +28,7 @@ class HybridRagServiceTest {
                 new RagContextPacker(),
                 mock(RagGovernanceService.class),
                 mock(KnowledgeDocMapper.class),
+                mock(RagEvidenceEligibility.class),
                 new OmniMerchantProperties());
 
         var answer = service.retrieve("what is the refund policy?");

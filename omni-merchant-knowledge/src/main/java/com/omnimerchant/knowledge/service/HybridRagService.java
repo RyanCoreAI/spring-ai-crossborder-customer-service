@@ -42,6 +42,7 @@ public class HybridRagService {
     private final RagContextPacker contextPacker;
     private final RagGovernanceService ragGovernanceService;
     private final KnowledgeDocMapper knowledgeDocMapper;
+    private final RagEvidenceEligibility evidenceEligibility;
     private final OmniMerchantProperties props;
     private ObservationRegistry observationRegistry = ObservationRegistry.NOOP;
 
@@ -85,18 +86,24 @@ public class HybridRagService {
             // Vector retrieval may be unavailable in a fresh local demo without embedding keys.
             // Keep the RAG workbench useful by falling back to lexical BM25 instead of failing the whole path.
             var vectorTopK = positiveOr(topKOverride, props.getKnowledge().getRetrieval().getVectorTopK());
-            var vectorResults = "BM25_ONLY".equals(retrievalMode)
+            var rawVectorResults = "BM25_ONLY".equals(retrievalMode)
                     ? List.<ChunkVectorRecord>of()
                     : safeVectorSearch(plan.rewrittenQuery(), tenantId, vectorTopK,
                     request == null ? null : request.docType(),
                     request == null ? null : request.language(), activeIndexVersion);
 
             var bm25TopK = positiveOr(topKOverride, props.getKnowledge().getRetrieval().getBm25TopK());
-            var bm25Results = "VECTOR_ONLY".equals(retrievalMode)
+            var rawBm25Results = "VECTOR_ONLY".equals(retrievalMode)
                     ? List.<ChunkVectorRecord>of()
                     : safeBm25Search(plan.rewrittenQuery(), tenantId, bm25TopK,
                     request == null ? null : request.docType(),
                     request == null ? null : request.language(), activeIndexVersion);
+
+            var candidates = new ArrayList<>(rawVectorResults);
+            candidates.addAll(rawBm25Results);
+            var eligibility = evidenceEligibility.forChunks(tenantId, candidates);
+            var vectorResults = rawVectorResults.stream().filter(eligibility::allows).toList();
+            var bm25Results = rawBm25Results.stream().filter(eligibility::allows).toList();
 
             // 3. Fusion.
             var rrfK = props.getKnowledge().getRetrieval().getRrfK();
@@ -111,7 +118,7 @@ public class HybridRagService {
             var reranked = rerankOutcome.results();
 
             // 5. Context expansion and packing.
-            var expanded = expandContext(reranked, tenantId);
+            var expanded = expandContext(reranked, tenantId, eligibility);
             var pack = contextPacker.pack(expanded);
             var answer = buildAnswer(pack);
             var elapsed = System.currentTimeMillis() - start;
@@ -198,7 +205,8 @@ public class HybridRagService {
             ps.setInt(4, Math.max(0, record.chunkIndex() - 1));
             ps.setInt(5, record.chunkIndex() + 1);
         }, this::mapVectorRow);
-        return new RagDtos.NeighborResponse(chunkUuid, rows.stream()
+        var eligibility = evidenceEligibility.forChunks(tenantId, rows);
+        return new RagDtos.NeighborResponse(chunkUuid, rows.stream().filter(eligibility::allows)
                 .map(r -> toCandidate(new HybridSearchResult(r, 0, 0, r.chunkIndex()), !r.chunkUuid().equals(chunkUuid)))
                 .toList());
     }
@@ -318,14 +326,16 @@ public class HybridRagService {
         if (docs.isEmpty()) {
             return List.of();
         }
+        var eligibility = evidenceEligibility.forDocuments(tenantId, docs);
         var tokens = queryTokens(query);
         return docs.stream()
+                .filter(eligibility::allows)
                 .map(doc -> new ScoredDoc(doc, lexicalScore(tokens, doc)))
                 .filter(item -> item.score() > 0)
                 .sorted(Comparator.comparingInt(ScoredDoc::score).reversed()
                         .thenComparing(item -> item.doc().getPriority() == null ? 0 : item.doc().getPriority(), Comparator.reverseOrder()))
                 .limit(Math.max(1, topK))
-                .map(item -> toKnowledgeDocRecord(item.doc(), item.score()))
+                .map(item -> toKnowledgeDocRecord(item.doc(), item.score(), eligibility.riskLevel(item.doc())))
                 .toList();
     }
 
@@ -340,7 +350,7 @@ public class HybridRagService {
                 .last("LIMIT 50"));
     }
 
-    private ChunkVectorRecord toKnowledgeDocRecord(KnowledgeDoc doc, int score) {
+    private ChunkVectorRecord toKnowledgeDocRecord(KnowledgeDoc doc, int score, String riskLevel) {
         var version = doc.getDocVersion() == null ? 1 : doc.getDocVersion();
         var chunkText = doc.getRawContent() == null ? valueOr(doc.getSummary(), "") : doc.getRawContent();
         return new ChunkVectorRecord(
@@ -364,7 +374,7 @@ public class HybridRagService {
                 doc.getContentHash(),
                 doc.getEffectiveFrom() == null ? null : doc.getEffectiveFrom().toString(),
                 doc.getEffectiveUntil() == null ? null : doc.getEffectiveUntil().toString(),
-                "LOW",
+                riskLevel,
                 "knowledge-doc-fallback-v1",
                 null,
                 null,
@@ -407,7 +417,8 @@ public class HybridRagService {
         return PolicyAnswer.of(pack.context(), pack.citations(), pack.evidenceLevel(), pack.refusalReason());
     }
 
-    private List<HybridSearchResult> expandContext(List<HybridSearchResult> results, Long tenantId) {
+    private List<HybridSearchResult> expandContext(List<HybridSearchResult> results, Long tenantId,
+                                                  RagEvidenceEligibility.Snapshot eligibility) {
         if (results.isEmpty()) {
             return results;
         }
@@ -415,6 +426,7 @@ public class HybridRagService {
         for (var result : results) {
             expanded.put(result.record().chunkUuid(), result);
             for (var neighbor : neighborRows(result.record(), tenantId)) {
+                if (!eligibility.allows(neighbor)) continue;
                 expanded.putIfAbsent(neighbor.chunkUuid(),
                         new HybridSearchResult(neighbor, result.rrfScore() * 0.5, result.rerankScore() * 0.5, result.fusedRank()));
             }
