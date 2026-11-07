@@ -29,6 +29,7 @@ import java.time.LocalDateTime;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
@@ -179,18 +180,36 @@ public class WechatWebhookRuntimeService {
                 var envelope = readEnvelope(credentialCipher.decrypt(event.getEncryptedPayload()));
                 var body = envelope.body();
                 var cursor = loadCursor(account.getId());
+                boolean hasMore = false;
 
                 for (int page = 0; page < MAX_SYNC_PAGES; page++) {
                     var batch = adapter.pullMessages(config, envelope.params(), Map.of(), body, cursor);
+                    hasMore = batch.hasMore();
+                    if (hasMore && (batch.nextCursor() == null || batch.nextCursor().isBlank()
+                            || Objects.equals(cursor, batch.nextCursor()))) {
+                        throw new IllegalStateException("WeChat synchronization cursor did not advance");
+                    }
                     for (var inbound : batch.messages()) {
                         channelIntegrationService.persistInbound(account, verificationMode(config), inbound);
                     }
                     cursor = batch.nextCursor();
-                    if (!batch.hasMore()) {
+                    if (!hasMore) {
                         break;
                     }
                 }
                 saveCursor(account.getId(), cursor);
+
+                if (hasMore) {
+                    // The page budget bounds one worker turn; it must not discard
+                    // the provider's continuation or publish a completed outbox.
+                    event.setStatus("RECEIVED");
+                    event.setProcessedAt(null);
+                    event.setNextAttemptAt(LocalDateTime.now().plusSeconds(1));
+                    event.setLastError(null);
+                    webhookEventMapper.updateById(event);
+                    completeOutbox(event, null);
+                    return null;
+                }
 
                 event.setStatus("SUCCESS");
                 event.setProcessedAt(LocalDateTime.now());
@@ -242,9 +261,10 @@ public class WechatWebhookRuntimeService {
         if (outbox == null) {
             return;
         }
+        boolean completed = error == null && "SUCCESS".equals(event.getStatus());
         outbox.setAttempts(event.getAttempts());
-        outbox.setStatus(error == null ? "PUBLISHED" : ("DEAD".equals(event.getStatus()) ? "DEAD" : "PENDING"));
-        outbox.setPublishedAt(error == null ? LocalDateTime.now() : null);
+        outbox.setStatus(completed ? "PUBLISHED" : ("DEAD".equals(event.getStatus()) ? "DEAD" : "PENDING"));
+        outbox.setPublishedAt(completed ? LocalDateTime.now() : null);
         outbox.setAvailableAt(event.getNextAttemptAt() == null ? LocalDateTime.now() : event.getNextAttemptAt());
         outbox.setLastError(error == null ? null : safe(error));
         outboxEventMapper.updateById(outbox);
