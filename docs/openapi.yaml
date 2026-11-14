@@ -217,11 +217,31 @@ paths:
   /api/channels/{accountId}/send:
     post:
       summary: Send outbound channel message; fixture only unless live credentials are configured
+      description: >-
+        Persist a send intent before dispatch. Supply a new stable idempotencyKey for
+        each intended message and reuse it for every retry. A key cannot be reused
+        with different content or recipients. UNKNOWN means the provider result or
+        local receipt needs verification; this key will not dispatch again. Existing
+        clients that omitted idempotencyKey must now provide it.
       parameters:
         - $ref: '#/components/parameters/TenantId'
         - { name: accountId, in: path, required: true, schema: { type: integer, format: int64 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message, idempotencyKey]
+              properties:
+                conversationUuid: { type: string, description: 'Existing conversation, or resolved from externalThreadId' }
+                externalThreadId: { type: string }
+                externalCustomerId: { type: string }
+                message: { type: string, minLength: 1 }
+                idempotencyKey: { type: string, minLength: 1, maxLength: 128 }
       responses:
-        '200': { description: ChannelSendResultVO }
+        '200': { description: ChannelSendResultVO; deliveryStatus can be SENT or UNKNOWN; UNKNOWN requires manual receipt verification }
+        '400': { description: 'Missing stable idempotencyKey, invalid conversation, or key reused for a different payload' }
   /api/channels/{accountId}/health:
     get:
       summary: Channel adapter health and live/fixture boundary

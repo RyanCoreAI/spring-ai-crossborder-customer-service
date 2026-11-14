@@ -1,6 +1,7 @@
 package com.omnimerchant.message.consumer;
 
 import com.omnimerchant.common.event.TokenUsageEvent;
+import com.omnimerchant.tenant.context.TenantContextHolder;
 import com.omnimerchant.tenant.entity.TokenUsageDaily;
 import com.omnimerchant.tenant.mapper.TokenUsageDailyMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +32,12 @@ public class TokenUsageConsumer implements RocketMQListener<TokenUsageEvent> {
 
     @Override
     public void onMessage(TokenUsageEvent event) {
+        if (event == null || event.getTenantId() == null || event.getTenantId() <= 0) {
+            throw new IllegalArgumentException("Token usage event requires a valid tenantId");
+        }
+        var previousTenant = TenantContextHolder.get();
         try {
+            TenantContextHolder.set(event.getTenantId());
             var usageDate = event.getTimestamp() != null
                     ? LocalDate.ofInstant(event.getTimestamp().atZone(ZoneId.systemDefault()).toInstant(),
                           ZoneId.systemDefault())
@@ -77,6 +83,13 @@ public class TokenUsageConsumer implements RocketMQListener<TokenUsageEvent> {
         } catch (Exception e) {
             log.error("Failed to persist token usage event: tenant={}, model={}, error={}",
                     event.getTenantId(), event.getModelName(), e.getMessage());
+            throw new IllegalStateException("Token usage persistence failed", e);
+        } finally {
+            if (previousTenant == null) {
+                TenantContextHolder.clear();
+            } else {
+                TenantContextHolder.set(previousTenant);
+            }
         }
     }
 }

@@ -161,7 +161,7 @@ public class WechatKfChannelAdapter implements ChannelAdapter {
             }
             return new ChannelSendResult(true, response.getMsgId(), "SENT", "LIVE", null, null);
         } catch (Exception e) {
-            return new ChannelSendResult(false, null, "FAILED", "LIVE",
+            return new ChannelSendResult(false, null, "UNKNOWN", "LIVE",
                     "WECHAT_API_ERROR", safeMessage(e));
         }
     }

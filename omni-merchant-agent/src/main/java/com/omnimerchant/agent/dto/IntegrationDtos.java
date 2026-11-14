@@ -126,6 +126,8 @@ public final class IntegrationDtos {
             String externalThreadId,
             String externalCustomerId,
             String message,
+            @jakarta.validation.constraints.NotBlank
+            @jakarta.validation.constraints.Size(max = 128)
             String idempotencyKey) {
     }
 

@@ -16,6 +16,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.http.ResponseEntity;
+import com.omnimerchant.common.exception.BusinessException;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/channels")
@@ -36,8 +40,14 @@ public class ChannelIntegrationController {
     @PostMapping("/{accountId}/send")
     @PreAuthorize("@tenantAuthorization.hasPermission('inbox:reply')")
     public R<?> send(@PathVariable Long accountId,
-                     @RequestBody IntegrationDtos.ChannelSendRequest request) {
+                     @Valid @RequestBody IntegrationDtos.ChannelSendRequest request) {
         return R.ok(service.send(accountId, request));
+    }
+
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<R<Void>> handleInvalidChannelRequest(BusinessException error) {
+        return ResponseEntity.status("400".equals(error.getCode()) ? 400 : 200)
+                .body(R.fail(error.getCode(), error.getMessage()));
     }
 
     @GetMapping("/{accountId}/health")
